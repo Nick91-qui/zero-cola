@@ -194,4 +194,4 @@ O MVP é considerado concluído quando:
 
 # 10. Execução
 
-Os detalhes de execução devem ser definidos nos módulos de backend, frontend e infraestrutura conforme o repositório evoluir.
+Os detalhes de execução devem ser definidos nos módulos de backend, frontend e infraestrutura conforme o repositório evoluir.# zero-cola
