@@ -25,9 +25,9 @@ A prova é uma configuração de entrega. A entidade principal do domínio é a 
 
 # 2. Arquitetura
 
-- Frontend: Next.js
-- Backend: FastAPI
-- Banco de dados: PostgreSQL
+- Frontend: Next.js 16.2.x, React 19.2.x, TypeScript 5.9.x, TailwindCSS 4.3.x
+- Backend: Python 3.12, FastAPI 0.137.x, SQLAlchemy 2.0.x, Alembic 1.18.x, Pydantic 2.13.x
+- Banco de dados: PostgreSQL 16.14
 - Infraestrutura: Docker e Docker Compose
 
 Princípios principais:
@@ -194,4 +194,25 @@ O MVP é considerado concluído quando:
 
 # 10. Execução
 
-Os detalhes de execução devem ser definidos nos módulos de backend, frontend e infraestrutura conforme o repositório evoluir.# zero-cola
+Configuração inicial recomendada:
+
+- backend com Python 3.12 para equilibrar compatibilidade ampla com dependências e suporte ativo
+- frontend com Next.js 16.2.x, React 19.2.x e TypeScript 5.9.x para reduzir risco de incompatibilidades iniciais
+- PostgreSQL 16.14 como linha estável e atualizada de banco
+- TailwindCSS 4.3.x no frontend
+- lint obrigatório desde o início
+- Prettier obrigatório no frontend e nos arquivos compartilhados compatíveis
+
+Estratégia de qualidade desde a base:
+
+- aplicar TDD nos módulos críticos do MVP
+- ciclo obrigatório: teste falha, implementação mínima, refatoração
+- prioridades de TDD:
+  - autenticação
+  - autorização
+  - entrega de questão
+  - submissão de resposta
+  - monitoramento
+- lint e formatação devem rodar antes de merge
+
+Os detalhes de execução devem ser definidos nos módulos de backend, frontend e infraestrutura conforme o repositório evoluir.

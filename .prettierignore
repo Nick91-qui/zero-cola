@@ -1,0 +1,5 @@
+node_modules
+.next
+coverage
+backend/.pytest_cache
+backend/.ruff_cache

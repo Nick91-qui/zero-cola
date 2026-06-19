@@ -55,24 +55,26 @@ Não coletar:
 
 ### Backend
 
-- Python
-- FastAPI
-- SQLAlchemy
-- Alembic
-- PostgreSQL
-- Pydantic
+- Python 3.12
+- FastAPI 0.137.x
+- SQLAlchemy 2.0.x
+- Alembic 1.18.x
+- PostgreSQL 16.14
+- Pydantic 2.13.x
 
 ### Frontend
 
-- Next.js
-- React
-- TypeScript
-- TailwindCSS
+- Next.js 16.2.x
+- React 19.2.x
+- TypeScript 5.9.x
+- TailwindCSS 4.3.x
 
 ### Infraestrutura
 
 - Docker
 - Docker Compose
+- lint desde a fundação do projeto
+- Prettier no frontend e em arquivos compatíveis de configuração
 
 ## 4. Estrutura de diretórios alvo
 
@@ -444,6 +446,12 @@ Registrar ações sensíveis como:
 
 ## 12. Testes obrigatórios
 
+Abordagem obrigatória para módulos críticos:
+
+- aplicar TDD nas partes com maior risco funcional e de segurança
+- ciclo: escrever teste que falha, implementar o mínimo para passar, refatorar sem quebrar comportamento
+- todo bug crítico corrigido deve receber teste de regressão
+
 Prioridade de cobertura:
 
 1. autenticação
@@ -452,6 +460,7 @@ Prioridade de cobertura:
 4. submissão de resposta
 5. correção
 6. monitoramento
+7. healthcheck, contratos básicos de API e integrações essenciais da fundação
 
 ## 13. Ordem de implementação
 
@@ -461,9 +470,12 @@ Prioridade de cobertura:
 - estrutura inicial do frontend Next.js
 - configuração PostgreSQL
 - configuração Docker e Docker Compose
-- autenticação com JWT
+- configuração de lint
+- configuração de Prettier
+- healthcheck com TDD
+- autenticação com JWT guiada por TDD
 - modelo `User`
-- RBAC básico
+- RBAC básico guiado por TDD
 
 ### Fase 2 — Banco de questões
 

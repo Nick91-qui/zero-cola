@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: docker.io/library/postgres:16.14
+    container_name: cola-zero-postgres
+    environment:
+      POSTGRES_DB: colazero
+      POSTGRES_USER: colazero
+      POSTGRES_PASSWORD: colazero
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U colazero -d colazero"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

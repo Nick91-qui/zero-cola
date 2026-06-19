@@ -68,6 +68,8 @@ Checklist do bloco:
 - [ ] FastAPI sobe localmente
 - [ ] PostgreSQL conecta com sucesso
 - [ ] migration inicial executa upgrade e downgrade
+- [ ] lint do backend está configurado
+- [ ] primeiro teste de fundação falha antes da implementação e passa depois
 
 ### Bloco 2 — Identidade e segurança base
 
@@ -100,6 +102,8 @@ Checklist do bloco:
 - [ ] usuário autentica com sucesso
 - [ ] refresh token funciona
 - [ ] endpoints protegidos retornam erro de permissão quando necessário
+- [ ] autenticação foi iniciada por testes automatizados
+- [ ] autorização crítica possui cobertura inicial de teste
 
 ### Bloco 3 — Fundação do frontend de autenticação
 
@@ -128,6 +132,8 @@ Checklist do bloco:
 - [ ] frontend sobe localmente
 - [ ] login funciona pela interface
 - [ ] sessão autenticada é mantida conforme regra definida
+- [ ] lint do frontend está configurado
+- [ ] Prettier do frontend está configurado
 
 ### Bloco 4 — Modelo central do domínio
 
@@ -333,6 +339,8 @@ Após cada bloco:
 - revisar contratos de API
 - revisar permissões
 - executar testes disponíveis
+- executar lint
+- executar Prettier check quando aplicável
 - validar manualmente o fluxo entregue
 
 ## 7. Riscos e decisões que devem ser resolvidas cedo

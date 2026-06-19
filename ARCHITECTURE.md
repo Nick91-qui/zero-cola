@@ -36,10 +36,10 @@ Responsabilidades:
 
 Tecnologias:
 
-- Next.js
-- React
-- TypeScript
-- TailwindCSS
+- Next.js 16.2.x
+- React 19.2.x
+- TypeScript 5.9.x
+- TailwindCSS 4.3.x
 
 ---
 
@@ -59,11 +59,11 @@ Responsabilidades:
 
 Tecnologias:
 
-- Python
-- FastAPI
-- SQLAlchemy
-- Alembic
-- Pydantic
+- Python 3.12
+- FastAPI 0.137.x
+- SQLAlchemy 2.0.x
+- Alembic 1.18.x
+- Pydantic 2.13.x
 
 ---
 
@@ -176,10 +176,32 @@ Princípios de implementação:
 - páginas pequenas e focadas
 - lógica de negócio fora dos componentes visuais
 - renderização segura para ambiente Next.js
+- lint obrigatório
+- Prettier obrigatório para consistência de formatação
 
 ---
 
-# 7. Segurança
+# 7. Estratégia de qualidade
+
+Princípios obrigatórios:
+
+- TDD nas áreas críticas do MVP
+- ciclo: teste falha, implementação mínima, refatoração
+- teste de regressão para bug crítico corrigido
+- lint deve bloquear desvios básicos de qualidade
+- Prettier deve padronizar arquivos compatíveis do frontend e configurações relacionadas
+
+Prioridades de TDD:
+
+- autenticação
+- autorização
+- delivery de questão
+- submissão de resposta
+- monitoramento
+
+---
+
+# 8. Segurança
 
 ## 7.1 Camada de autenticação
 
@@ -210,7 +232,7 @@ Ações sensíveis devem gerar registros auditáveis, incluindo:
 
 ---
 
-# 8. Monitoramento
+# 9. Monitoramento
 
 COLA-ZERO não é um lockdown browser.
 
@@ -240,7 +262,7 @@ O sistema não deve afirmar que consegue:
 
 ---
 
-# 9. LGPD
+# 10. LGPD
 
 Requisitos mínimos da arquitetura:
 
@@ -259,7 +281,7 @@ Dados fora de escopo de coleta:
 
 ---
 
-# 10. Critério arquitetural de MVP
+# 11. Critério arquitetural de MVP
 
 O MVP está alinhado quando a arquitetura sustenta:
 
