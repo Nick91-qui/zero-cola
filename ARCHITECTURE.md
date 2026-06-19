@@ -1,0 +1,273 @@
+# COLA-ZERO — Arquitetura do Sistema
+
+---
+
+# 1. Visão geral
+
+O COLA-ZERO é uma plataforma de avaliação online orientada por:
+
+> Question Bank + Attempt Engine
+
+A arquitetura parte do princípio de que a entidade principal do domínio é a questão. Provas são coleções de questões. Tentativas representam a interação do aluno com a prova.
+
+Pilares arquiteturais:
+
+- banco de questões reutilizável
+- entrega de uma questão por vez
+- persistência imediata de respostas
+- monitoramento transparente de eventos
+- segurança por padrão
+- conformidade com LGPD
+
+---
+
+# 2. Componentes principais
+
+## 2.1 Frontend
+
+Responsabilidades:
+
+- autenticação do usuário
+- dashboard por perfil
+- interface de tentativa
+- exibição de uma questão por vez
+- envio imediato de respostas
+- captura de eventos suportados de monitoramento
+
+Tecnologias:
+
+- Next.js
+- React
+- TypeScript
+- TailwindCSS
+
+---
+
+## 2.2 Backend
+
+Responsabilidades:
+
+- autenticação e autorização
+- gestão de usuários
+- banco de questões
+- composição e publicação de provas
+- motor de tentativas
+- persistência de respostas
+- correção automática e manual
+- auditoria e eventos de monitoramento
+- recursos de LGPD
+
+Tecnologias:
+
+- Python
+- FastAPI
+- SQLAlchemy
+- Alembic
+- Pydantic
+
+---
+
+## 2.3 Banco de dados
+
+Banco relacional PostgreSQL com foco em rastreabilidade e histórico.
+
+Entidades centrais:
+
+- users
+- questions
+- exams
+- exam_questions
+- attempts
+- answers
+- monitoring_events
+- audit_logs
+
+Regras:
+
+- chaves primárias com UUID
+- sem IDs incrementais
+- preservação de histórico acadêmico
+- preferência por soft delete ou arquivamento quando aplicável
+
+---
+
+# 3. Modelo de domínio
+
+## 3.1 Banco de questões
+
+Uma questão pode ser reutilizada em várias provas.
+
+Relacionamento principal:
+
+`Exam -> ExamQuestion -> Question`
+
+A prova não deve conter cópias independentes do conteúdo da questão.
+
+---
+
+## 3.2 Motor de tentativas
+
+A tentativa controla:
+
+- início da prova
+- ordem de entrega das questões
+- tempo total
+- submissão incremental de respostas
+- finalização
+- cálculo de score
+
+A tentativa é a unidade operacional da execução da prova.
+
+---
+
+# 4. Fluxo da prova
+
+## 4.1 Inicialização
+
+1. aluno autentica
+2. aluno inicia tentativa
+3. backend cria a tentativa
+4. frontend solicita a próxima questão
+
+---
+
+## 4.2 Execução
+
+1. backend retorna apenas uma questão
+2. frontend exibe a questão atual
+3. aluno envia resposta
+4. backend persiste imediatamente
+5. frontend solicita a próxima questão
+
+Regra obrigatória:
+
+O frontend nunca deve receber todas as questões da prova em uma única resposta.
+
+---
+
+## 4.3 Finalização
+
+1. tentativa é encerrada
+2. backend consolida score
+3. eventos e auditoria permanecem associados à tentativa
+4. resultado pode ser liberado conforme regra pedagógica
+
+---
+
+# 5. Estratégia de backend
+
+Princípios de implementação:
+
+- rotas finas
+- lógica de negócio concentrada em services
+- uso de repositories quando útil para persistência
+- dependency injection
+- validação via schemas
+- sem acesso direto ao banco dentro de controladores
+
+---
+
+# 6. Estratégia de frontend
+
+Princípios de implementação:
+
+- componentes reutilizáveis
+- tipagem forte
+- páginas pequenas e focadas
+- lógica de negócio fora dos componentes visuais
+- renderização segura para ambiente Next.js
+
+---
+
+# 7. Segurança
+
+## 7.1 Camada de autenticação
+
+- JWT access token
+- JWT refresh token
+- Argon2 preferencialmente
+- bcrypt como alternativa aceitável
+
+---
+
+## 7.2 Camada de autorização
+
+- RBAC obrigatório
+- perfis `student`, `teacher` e `admin`
+- validação de permissão em todos os endpoints
+
+---
+
+## 7.3 Auditoria
+
+Ações sensíveis devem gerar registros auditáveis, incluindo:
+
+- login
+- troca de senha
+- criação de prova
+- publicação de prova
+- alteração de nota
+
+---
+
+# 8. Monitoramento
+
+COLA-ZERO não é um lockdown browser.
+
+Eventos suportados:
+
+- visibilitychange
+- blur
+- focus
+- fullscreen enter
+- fullscreen exit
+
+Objetivo do monitoramento:
+
+- detectar eventos
+- registrar eventos
+- gerar relatórios
+
+Limitações assumidas:
+
+O sistema não deve afirmar que consegue:
+
+- detectar uso de ChatGPT
+- detectar outro dispositivo
+- detectar telefones externos
+- detectar capturas de tela de forma confiável
+- impedir toda forma de cola
+
+---
+
+# 9. LGPD
+
+Requisitos mínimos da arquitetura:
+
+- transparência sobre monitoramento
+- minimização de dados
+- exportação de dados do usuário
+- anonimização quando legalmente permitida
+- retenção compatível com requisitos acadêmicos e legais
+
+Dados fora de escopo de coleta:
+
+- arquivos pessoais
+- conteúdo do dispositivo
+- histórico de navegação
+- dados sem finalidade definida
+
+---
+
+# 10. Critério arquitetural de MVP
+
+O MVP está alinhado quando a arquitetura sustenta:
+
+- autenticação segura
+- banco de questões reutilizável
+- criação e publicação de provas
+- execução por tentativa
+- uma questão por vez
+- correção e score
+- monitoramento com transparência
+- requisitos essenciais de LGPD
