@@ -1,0 +1,625 @@
+# COLA-ZERO — Backlog Técnico Inicial
+
+## 1. Objetivo
+
+Este backlog traduz os documentos de produto, arquitetura, roadmap e banco de dados em itens técnicos iniciais para execução do MVP.
+
+Princípios obrigatórios:
+
+- foco em `Question Bank + Attempt Engine`
+- segurança por padrão
+- privacidade por padrão
+- uma questão por vez
+- auditoria e rastreabilidade
+- conformidade com LGPD desde o início
+
+## 2. Convenções de priorização
+
+- `P0`: bloqueia o início do MVP
+- `P1`: necessário para o MVP funcional
+- `P2`: importante para operação inicial
+- `P3`: melhoria posterior
+
+Status inicial de todos os itens:
+
+- `todo`
+
+## 3. Épico A — Fundação do repositório
+
+### CZ-A01 — Estruturar backend FastAPI
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: nenhuma
+- Entregas:
+  - criar estrutura `backend/app`
+  - configurar `main.py`
+  - configurar módulos `core`, `db`, `models`, `schemas`, `api`, `services`, `utils`
+- Critérios de aceite:
+  - aplicação sobe localmente
+  - rota de healthcheck responde com sucesso
+
+### CZ-A02 — Estruturar frontend Next.js
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: nenhuma
+- Entregas:
+  - criar estrutura `frontend/app`
+  - configurar layout base
+  - criar rota inicial de login
+- Critérios de aceite:
+  - aplicação sobe localmente
+  - página inicial renderiza sem erro
+
+### CZ-A03 — Configurar Docker e Docker Compose
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-A01, CZ-A02
+- Entregas:
+  - `backend/Dockerfile`
+  - `frontend/Dockerfile`
+  - `infra/docker-compose.yml`
+- Critérios de aceite:
+  - backend, frontend e PostgreSQL sobem juntos
+
+### CZ-A04 — Definir variáveis de ambiente
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-A01, CZ-A02, CZ-A03
+- Entregas:
+  - criar `.env.example`
+  - documentar variáveis mínimas de backend e frontend
+- Critérios de aceite:
+  - projeto pode ser iniciado a partir de `.env.example`
+
+### CZ-A05 — Configurar observabilidade mínima
+- Prioridade: `P2`
+- Status: `todo`
+- Dependências: CZ-A01
+- Entregas:
+  - logging estruturado básico no backend
+  - logs mínimos de erro e inicialização
+- Critérios de aceite:
+  - erros principais aparecem de forma rastreável nos logs
+
+## 4. Épico B — Banco de dados e persistência
+
+### CZ-B01 — Configurar SQLAlchemy, sessão e base declarativa
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-A01
+- Entregas:
+  - configuração de conexão PostgreSQL
+  - sessão do banco
+  - base dos modelos
+- Critérios de aceite:
+  - backend conecta no banco com sucesso
+
+### CZ-B02 — Configurar Alembic
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-B01
+- Entregas:
+  - configuração de migrações
+  - primeira migration funcional
+- Critérios de aceite:
+  - migration sobe e desce com sucesso
+
+### CZ-B03 — Implementar modelo `users`
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-B02
+- Entregas:
+  - model SQLAlchemy
+  - constraints de email único
+  - timestamps
+- Critérios de aceite:
+  - tabela criada com UUID e campos obrigatórios
+
+### CZ-B04 — Implementar modelos centrais do domínio
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-B02
+- Entregas:
+  - `questions`
+  - `classes`
+  - `class_students`
+  - `exams`
+  - `exam_questions`
+  - `attempts`
+  - `answers`
+  - `monitoring_events`
+  - `audit_logs`
+- Critérios de aceite:
+  - relacionamentos principais funcionam
+  - schema reflete `DATABASE.MD`
+
+### CZ-B05 — Criar índices iniciais do MVP
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-B04
+- Entregas:
+  - índices para email, questões, provas, tentativas, respostas, eventos e auditoria
+- Critérios de aceite:
+  - migration inclui índices recomendados
+
+## 5. Épico C — Segurança e identidade
+
+### CZ-C01 — Implementar hash de senha
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-B03
+- Entregas:
+  - utilitário com Argon2 preferencialmente
+  - alternativa segura se necessário
+- Critérios de aceite:
+  - senhas nunca são armazenadas em texto puro
+
+### CZ-C02 — Implementar autenticação JWT
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-C01
+- Entregas:
+  - access token
+  - refresh token
+  - expiração configurável
+- Critérios de aceite:
+  - login retorna tokens válidos
+  - refresh emite novo access token
+
+### CZ-C03 — Implementar rotas de autenticação
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-C02
+- Entregas:
+  - `POST /auth/login`
+  - `POST /auth/refresh`
+  - `POST /auth/logout`
+- Critérios de aceite:
+  - fluxos principais autenticam e renovam sessão
+
+### CZ-C04 — Implementar RBAC
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-C03
+- Entregas:
+  - perfis `student`, `teacher`, `admin`
+  - dependências de autorização por endpoint
+- Critérios de aceite:
+  - acesso indevido retorna erro de permissão
+
+### CZ-C05 — Implementar auditoria de ações sensíveis
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-B04, CZ-C03
+- Entregas:
+  - log de login
+  - log de troca de senha
+  - log de criação/publicação de prova
+  - log de alteração de nota
+- Critérios de aceite:
+  - ações sensíveis persistem em `audit_logs`
+
+## 6. Épico D — Frontend de autenticação e shell da aplicação
+
+### CZ-D01 — Criar página de login
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-A02, CZ-C03
+- Entregas:
+  - formulário de login
+  - tratamento de erro básico
+- Critérios de aceite:
+  - usuário consegue autenticar pela interface
+
+### CZ-D02 — Persistir sessão no frontend
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-D01
+- Entregas:
+  - armazenamento seguro de sessão compatível com a estratégia escolhida
+  - renovação de sessão
+- Critérios de aceite:
+  - usuário autenticado permanece logado conforme política definida
+
+### CZ-D03 — Proteger rotas por perfil
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-D02, CZ-C04
+- Entregas:
+  - proteção de páginas de aluno, professor e admin
+- Critérios de aceite:
+  - acesso indevido é redirecionado ou bloqueado
+
+### CZ-D04 — Criar layout base e dashboard inicial por perfil
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-D03
+- Entregas:
+  - layout principal
+  - navegação mínima
+  - dashboard inicial
+- Critérios de aceite:
+  - perfis acessam sua área inicial
+
+## 7. Épico E — Banco de questões
+
+### CZ-E01 — Implementar modelo e schema de `Question`
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-B04
+- Entregas:
+  - model
+  - schema de criação, leitura e atualização
+- Critérios de aceite:
+  - payloads válidos persistem corretamente
+
+### CZ-E02 — Implementar CRUD de questões no backend
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-E01, CZ-C04
+- Entregas:
+  - `POST /questions`
+  - `GET /questions`
+  - `GET /questions/{id}`
+  - `PATCH /questions/{id}`
+- Critérios de aceite:
+  - professor gerencia questões com autorização correta
+
+### CZ-E03 — Implementar filtros de questões
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-E02
+- Entregas:
+  - filtros por disciplina
+  - filtros por dificuldade
+  - filtros por tags
+- Critérios de aceite:
+  - listagem responde aos filtros combinados
+
+### CZ-E04 — Criar interface de gestão de questões no frontend
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-E02, CZ-E03
+- Entregas:
+  - formulário de criação e edição
+  - listagem e busca
+- Critérios de aceite:
+  - professor cria e consulta questões pela interface
+
+## 8. Épico F — Provas
+
+### CZ-F01 — Implementar modelo e schema de `Exam`
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-B04
+- Entregas:
+  - model
+  - schema de criação e leitura
+- Critérios de aceite:
+  - prova pode ser criada em estado `draft`
+
+### CZ-F02 — Implementar vínculo `ExamQuestion`
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-F01, CZ-E01
+- Entregas:
+  - associação entre prova e questão
+  - ordenação e peso
+- Critérios de aceite:
+  - prova reutiliza questões sem duplicar conteúdo
+
+### CZ-F03 — Implementar rotas de prova no backend
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-F02, CZ-C04
+- Entregas:
+  - `POST /exams`
+  - `GET /exams`
+  - `GET /exams/{id}`
+  - `POST /exams/{id}/questions`
+  - `POST /exams/{id}/publish`
+- Critérios de aceite:
+  - professor cria, compõe e publica provas
+
+### CZ-F04 — Criar interface de criação e publicação de provas
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-F03, CZ-E04
+- Entregas:
+  - formulário de prova
+  - seleção de questões
+  - publicação
+- Critérios de aceite:
+  - professor monta prova a partir do banco de questões
+
+## 9. Épico G — Attempt Engine
+
+### CZ-G01 — Implementar lifecycle de tentativa
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-B04, CZ-F03
+- Entregas:
+  - criação de tentativa
+  - mudança de status
+  - encerramento
+- Critérios de aceite:
+  - tentativa evolui entre estados previstos
+
+### CZ-G02 — Implementar endpoint de próxima questão
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-G01
+- Entregas:
+  - `GET /attempts/{id}/next-question`
+- Critérios de aceite:
+  - backend retorna apenas a questão atual
+  - frontend nunca recebe a prova inteira
+
+### CZ-G03 — Implementar submissão imediata de resposta
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-G01
+- Entregas:
+  - `POST /attempts/{id}/answers`
+  - persistência imediata em `answers`
+- Critérios de aceite:
+  - resposta fica registrada logo após envio
+
+### CZ-G04 — Implementar finalização de tentativa
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-G02, CZ-G03
+- Entregas:
+  - `POST /attempts/{id}/submit`
+  - consolidação do estado final
+- Critérios de aceite:
+  - tentativa finalizada não aceita fluxo inválido
+
+### CZ-G05 — Criar tela de tentativa no frontend
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-G02, CZ-G03
+- Entregas:
+  - exibição da questão atual
+  - envio da resposta
+  - solicitação da próxima questão
+- Critérios de aceite:
+  - aluno realiza prova pela interface em fluxo sequencial
+
+### CZ-G06 — Implementar temporizador da tentativa
+- Prioridade: `P2`
+- Status: `todo`
+- Dependências: CZ-G05
+- Entregas:
+  - timer visual
+  - sincronização mínima com backend
+- Critérios de aceite:
+  - tempo restante é exibido corretamente
+
+## 10. Épico H — Correção e resultados
+
+### CZ-H01 — Implementar correção automática de questões objetivas
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-G03, CZ-E01
+- Entregas:
+  - serviço de correção automática
+  - marcação de `is_correct`
+- Critérios de aceite:
+  - respostas objetivas são avaliadas corretamente
+
+### CZ-H02 — Consolidar score da tentativa
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-H01, CZ-G04
+- Entregas:
+  - cálculo de score total
+  - persistência em `attempts.score`
+- Critérios de aceite:
+  - score final corresponde aos pesos da prova
+
+### CZ-H03 — Criar visualização de resultado para aluno
+- Prioridade: `P2`
+- Status: `todo`
+- Dependências: CZ-H02
+- Entregas:
+  - página de resultado liberado
+- Critérios de aceite:
+  - aluno visualiza score quando permitido
+
+### CZ-H04 — Criar painel básico de correção para professor
+- Prioridade: `P2`
+- Status: `todo`
+- Dependências: CZ-H02
+- Entregas:
+  - listagem de tentativas
+  - revisão básica de respostas
+- Critérios de aceite:
+  - professor visualiza tentativas e resultados
+
+## 11. Épico I — Monitoramento
+
+### CZ-I01 — Implementar captura de eventos suportados no frontend
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-G05
+- Entregas:
+  - hook `useMonitoring`
+  - captura de `visibilitychange`, `blur`, `focus`, `fullscreen_enter`, `fullscreen_exit`
+- Critérios de aceite:
+  - eventos são capturados apenas no contexto da tentativa
+
+### CZ-I02 — Implementar ingestão de eventos no backend
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-B04, CZ-I01
+- Entregas:
+  - `POST /attempts/{id}/monitoring-events`
+  - persistência em `monitoring_events`
+- Critérios de aceite:
+  - eventos válidos são registrados com `attempt_id`
+
+### CZ-I03 — Criar relatório básico de monitoramento para professor
+- Prioridade: `P2`
+- Status: `todo`
+- Dependências: CZ-I02
+- Entregas:
+  - listagem de eventos por tentativa
+  - resumo básico por prova
+- Critérios de aceite:
+  - professor consegue visualizar eventos registrados
+
+### CZ-I04 — Exibir aviso de monitoramento ao usuário
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-G05
+- Entregas:
+  - componente de transparência antes e durante a tentativa
+- Critérios de aceite:
+  - usuário é informado sobre o monitoramento
+
+## 12. Épico J — LGPD
+
+### CZ-J01 — Implementar exportação de dados do usuário
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-B04, CZ-C03
+- Entregas:
+  - `GET /me/data-export`
+- Critérios de aceite:
+  - usuário obtém seus dados essenciais em formato estruturado
+
+### CZ-J02 — Implementar solicitação de anonimização
+- Prioridade: `P2`
+- Status: `todo`
+- Dependências: CZ-J01
+- Entregas:
+  - `POST /me/anonymization-request`
+  - fluxo inicial de tratamento
+- Critérios de aceite:
+  - solicitação fica registrada para processamento conforme regra legal
+
+### CZ-J03 — Definir política técnica de retenção
+- Prioridade: `P2`
+- Status: `todo`
+- Dependências: CZ-B04
+- Entregas:
+  - regras técnicas para retenção de logs, respostas e registros acadêmicos
+- Critérios de aceite:
+  - política mínima documentada e aplicável ao sistema
+
+## 13. Épico K — Qualidade
+
+### CZ-K01 — Implementar testes de autenticação
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-C03
+- Critérios de aceite:
+  - login e refresh cobertos por testes automatizados
+
+### CZ-K02 — Implementar testes de autorização
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-C04
+- Critérios de aceite:
+  - cenários de permissão e negação cobertos
+
+### CZ-K03 — Implementar testes de entrega da prova
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-G02
+- Critérios de aceite:
+  - teste garante entrega de uma questão por vez
+
+### CZ-K04 — Implementar testes de submissão de resposta
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-G03
+- Critérios de aceite:
+  - teste garante persistência imediata da resposta
+
+### CZ-K05 — Implementar testes de correção
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-H01, CZ-H02
+- Critérios de aceite:
+  - score e correção automática cobertos
+
+### CZ-K06 — Implementar testes de monitoramento
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-I02
+- Critérios de aceite:
+  - ingestão de eventos suportados coberta por testes
+
+## 14. Ordem prática recomendada de execução
+
+1. CZ-A01
+2. CZ-B01
+3. CZ-B02
+4. CZ-B03
+5. CZ-B04
+6. CZ-C01
+7. CZ-C02
+8. CZ-C03
+9. CZ-C04
+10. CZ-A02
+11. CZ-D01
+12. CZ-D02
+13. CZ-E01
+14. CZ-E02
+15. CZ-E03
+16. CZ-F01
+17. CZ-F02
+18. CZ-F03
+19. CZ-G01
+20. CZ-G02
+21. CZ-G03
+22. CZ-G05
+23. CZ-H01
+24. CZ-H02
+25. CZ-I01
+26. CZ-I02
+27. CZ-I04
+28. CZ-J01
+29. CZ-K01
+30. CZ-K02
+31. CZ-K03
+32. CZ-K04
+33. CZ-K05
+34. CZ-K06
+
+## 15. Recorte mínimo para primeira milestone
+
+Primeira milestone sugerida:
+
+- fundação técnica do backend e frontend
+- PostgreSQL e migrações
+- autenticação JWT
+- RBAC básico
+- CRUD inicial de questões
+- criação de prova
+- início de tentativa
+- próxima questão
+- submissão de resposta
+
+Resultado esperado da milestone:
+
+- um professor cria questões e uma prova
+- um aluno autentica, inicia tentativa e responde sequencialmente
+- o sistema persiste respostas com segurança
+
+## 16. Recorte mínimo para segunda milestone
+
+Segunda milestone sugerida:
+
+- correção automática
+- score consolidado
+- monitoramento suportado
+- relatório básico para professor
+- exportação de dados do usuário
+- testes principais do fluxo crítico
+
+Resultado esperado da milestone:
+
+- o fluxo principal do MVP fica funcional com rastreabilidade e requisitos essenciais de LGPD
