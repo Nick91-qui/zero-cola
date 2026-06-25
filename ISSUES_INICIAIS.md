@@ -245,7 +245,7 @@ Convenções:
   - `exam_questions`
   - `attempts`
   - `answers`
-  - `monitoring_events`
+  - `security_events`
   - `audit_logs`
 - Critérios de aceite:
   - schema reflete `DATABASE.MD`
@@ -515,8 +515,8 @@ Convenções:
 - Descrição:
   - persistir eventos suportados associados à tentativa
 - Escopo:
-  - `POST /attempts/{id}/monitoring-events`
-  - persistência em `monitoring_events`
+  - `POST /attempts/{id}/security-events`
+  - persistência em `security_events`
 - Critérios de aceite:
   - eventos válidos são persistidos com `attempt_id`
 - Checklist:
@@ -756,6 +756,15 @@ Convenções:
 - Tipo: `backend`
 - Status: `todo`
 - Dependências: `ISSUE-028`
+- Descrição:
+  - permitir ao usuário solicitar a anonimização de seus dados
+- Escopo:
+  - `POST /me/request-anonymization`
+- Critérios de aceite:
+  - solicitação de anonimização persiste o status no banco para análise
+- Checklist:
+  - [ ] criar rota
+  - [ ] implementar lógica de persistência
 
 ### ISSUE-050 — Definir política técnica de retenção
 - ID técnico: `CZ-J03`
@@ -763,6 +772,44 @@ Convenções:
 - Tipo: `product-tech`
 - Status: `todo`
 - Dependências: `ISSUE-012`
+- Descrição:
+  - estabelecer prazos e rotinas para arquivamento e exclusão de logs e dados
+- Escopo:
+  - regras técnicas de expiração
+- Critérios de aceite:
+  - política de retenção documentada e integrada aos scripts do banco
+
+### ISSUE-051 — Implementar endpoint de política de privacidade
+- ID técnico: `CZ-J04`
+- Prioridade: `P1`
+- Tipo: `backend`
+- Status: `todo`
+- Dependências: `ISSUE-001`
+- Descrição:
+  - disponibilizar a política de privacidade do COLA-ZERO
+- Escopo:
+  - `GET /privacy-policy`
+- Critérios de aceite:
+  - retorna o documento oficial de privacidade da instituição
+- Checklist:
+  - [ ] criar rota
+  - [ ] cadastrar texto padrão de privacidade
+
+### ISSUE-052 — Implementar registro de consentimento de monitoramento
+- ID técnico: `CZ-J05`
+- Prioridade: `P1`
+- Tipo: `backend`
+- Status: `todo`
+- Dependências: `ISSUE-012`
+- Descrição:
+  - gravar o aceite explícito do estudante quanto ao registro de eventos
+- Escopo:
+  - `POST /consents/monitoring`
+- Critérios de aceite:
+  - o consentimento é registrado com timestamp e ID do usuário
+- Checklist:
+  - [ ] criar rota
+  - [ ] implementar persistência
 
 ## 5. Ordem sugerida de abertura
 
@@ -800,6 +847,24 @@ Convenções:
 32. ISSUE-032
 33. ISSUE-033
 34. ISSUE-034
+35. ISSUE-035
+36. ISSUE-036
+37. ISSUE-037
+38. ISSUE-038
+39. ISSUE-039
+40. ISSUE-040
+41. ISSUE-041
+42. ISSUE-042
+43. ISSUE-043
+44. ISSUE-044
+45. ISSUE-045
+46. ISSUE-046
+47. ISSUE-047
+48. ISSUE-048
+49. ISSUE-049
+50. ISSUE-050
+51. ISSUE-051
+52. ISSUE-052
 
 ## 6. Resultado esperado após milestone 2
 

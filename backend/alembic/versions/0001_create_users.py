@@ -18,11 +18,10 @@ branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None
 
 
-user_role = sa.Enum("student", "teacher", "admin", name="user_role")
+user_role = sa.String(length=20)
 
 
 def upgrade() -> None:
-    user_role.create(op.get_bind(), checkfirst=True)
     op.create_table(
         "users",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -42,6 +41,10 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint(
+            "role IN ('student', 'teacher', 'admin')",
+            name="ck_users_role_valid",
+        ),
     )
     op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
 
@@ -49,4 +52,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index(op.f("ix_users_email"), table_name="users")
     op.drop_table("users")
-    user_role.drop(op.get_bind(), checkfirst=True)

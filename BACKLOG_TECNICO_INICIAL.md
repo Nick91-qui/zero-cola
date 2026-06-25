@@ -127,7 +127,7 @@ Status inicial de todos os itens:
   - `exam_questions`
   - `attempts`
   - `answers`
-  - `monitoring_events`
+  - `security_events`
   - `audit_logs`
 - Critérios de aceite:
   - relacionamentos principais funcionam
@@ -454,8 +454,8 @@ Status inicial de todos os itens:
 - Status: `todo`
 - Dependências: CZ-B04, CZ-I01
 - Entregas:
-  - `POST /attempts/{id}/monitoring-events`
-  - persistência em `monitoring_events`
+  - `POST /attempts/{id}/security-events`
+  - persistência em `security_events`
 - Critérios de aceite:
   - eventos válidos são registrados com `attempt_id`
 
@@ -494,7 +494,7 @@ Status inicial de todos os itens:
 - Status: `todo`
 - Dependências: CZ-J01
 - Entregas:
-  - `POST /me/anonymization-request`
+  - `POST /me/request-anonymization`
   - fluxo inicial de tratamento
 - Critérios de aceite:
   - solicitação fica registrada para processamento conforme regra legal
@@ -507,6 +507,24 @@ Status inicial de todos os itens:
   - regras técnicas para retenção de logs, respostas e registros acadêmicos
 - Critérios de aceite:
   - política mínima documentada e aplicável ao sistema
+
+### CZ-J04 — Implementar página/endpoint de política de privacidade
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-A01
+- Entregas:
+  - `GET /privacy-policy`
+- Critérios de aceite:
+  - política de privacidade exibida de forma clara
+
+### CZ-J05 — Implementar registro de consentimento de monitoramento
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-B04
+- Entregas:
+  - `POST /consents/monitoring`
+- Critérios de aceite:
+  - registro do consentimento do aluno persistido no banco
 
 ## 13. Épico K — Qualidade
 

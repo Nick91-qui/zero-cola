@@ -40,13 +40,9 @@ Everything revolves around:
 
 > Question Bank + Attempt Engine
 
-The primary entity is NOT the exam.
+The Question Bank is the core content repository. Exams are delivery configurations composed of reusable questions. Academic history is represented by Attempts and Answers.
 
-The primary entity is the Question.
-
-Exams are collections of questions.
-
-Attempts are student interactions with exams.
+Domain flow: Question -> Exam -> Attempt -> Answer
 
 ---
 
@@ -256,11 +252,54 @@ No answer should depend on a final submit action.
 
 ---
 
+# Exam Publication Rules
+
+An exam may only be published if:
+
+- It has a title
+- It contains at least 1 question
+- All referenced questions exist
+- All question weights are greater than 0
+- Total weight equals 100
+- A class is assigned
+- A valid time limit is configured
+- The publishing user is the owner teacher or an admin
+
+---
+
+# Attempt Rules
+
+The attempt model and rules are defined as follows:
+
+Exam fields:
+- `max_attempts` (INTEGER, default = 1)
+- `time_limit`
+- `randomize` (or `randomization_enabled`)
+- `status`
+
+Attempt fields:
+- `attempt_number` (INTEGER, NOT NULL)
+- `status`
+- `score`
+
+Rules:
+- Only one active attempt (`in_progress`) is allowed per student per exam.
+- Existing active attempts must be resumed instead of creating a new one.
+- A new attempt can only be created if `max_attempts` is not exceeded.
+- Submitted attempts cannot be modified.
+- Graded attempts are immutable.
+
+---
+
 # Monitoring Rules
 
-COLA-ZERO is not a lockdown browser.
+COLA-ZERO is not a lockdown browser and must never claim:
+- Detection of ChatGPT usage
+- Detection of external devices
+- Prevention of screenshots
+- Prevention of all cheating
 
-Agents must never claim that the platform can prevent cheating.
+The platform only records and reports observable browser events (stored in `security_events` table).
 
 The platform can only:
 
@@ -342,8 +381,10 @@ Academic records may have retention requirements.
 
 Required:
 
-- JWT Access Token
-- JWT Refresh Token
+- JWT Access Token: Must be stored in a secure HttpOnly cookie (Secure, SameSite=Lax, short expiration 15–30 min).
+- JWT Refresh Token: Must be stored in a secure HttpOnly cookie (Secure, SameSite=Strict, long expiration 7–30 days).
+
+Do not use localStorage or sessionStorage for JWT storage.
 
 Passwords:
 

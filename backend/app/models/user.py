@@ -10,4 +10,7 @@ class User(BaseModel):
 
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole, name="user_role", native_enum=False, validate_strings=True),
+        nullable=False,
+    )

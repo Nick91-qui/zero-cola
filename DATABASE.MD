@@ -8,7 +8,9 @@ O modelo de dados do COLA-ZERO é orientado por:
 
 > Question Bank + Attempt Engine
 
-A entidade principal do domínio é a questão. Provas são composições de questões. Tentativas representam a execução da prova por um aluno.
+O banco de questões (Question Bank) é o repositório central de conteúdo. As provas (Exams) são configurações de entrega compostas por questões reutilizáveis. O histórico acadêmico é representado por tentativas (Attempts) e respostas (Answers).
+
+Fluxo do domínio: Question -> Exam -> Attempt -> Answer
 
 Princípios do banco:
 
@@ -16,7 +18,7 @@ Princípios do banco:
 - não usar IDs incrementais
 - preservar histórico acadêmico
 - evitar duplicação de conteúdo de questão em provas
-- registrar auditoria e eventos de monitoramento
+- registrar auditoria e eventos de segurança (security_events)
 - coletar apenas dados necessários ao produto
 
 ---
@@ -146,6 +148,7 @@ title TEXT NOT NULL
 class_id UUID NOT NULL
 status TEXT NOT NULL
 total_time_seconds INT
+max_attempts INT NOT NULL DEFAULT 1
 randomization_enabled BOOLEAN NOT NULL DEFAULT FALSE
 created_by UUID NOT NULL
 created_at TIMESTAMP NOT NULL
@@ -194,6 +197,7 @@ Representa a tentativa de um aluno em uma prova.
 id UUID PRIMARY KEY
 exam_id UUID NOT NULL
 student_id UUID NOT NULL
+attempt_number INT NOT NULL
 status TEXT NOT NULL
 started_at TIMESTAMP
 ended_at TIMESTAMP
@@ -213,6 +217,8 @@ Observações:
 
 - `exam_id` referencia `exams.id`
 - `student_id` referencia `users.id`
+- `attempt_number` indica a ordem da tentativa para o aluno no exame (começa em 1)
+- a quantidade máxima de tentativas é configurada em `exams.max_attempts`
 
 ---
 
@@ -239,9 +245,9 @@ Observações:
 
 ---
 
-## 3.9 monitoring_events
+## 3.9 security_events
 
-Representa eventos de monitoramento associados à tentativa.
+Representa eventos de segurança associados à tentativa.
 
 ```sql
 id UUID PRIMARY KEY
@@ -316,7 +322,7 @@ Exam
 
 Attempt
  ├── Answer.attempt_id
- └── MonitoringEvent.attempt_id
+ └── SecurityEvent.attempt_id
 ```
 
 ---
@@ -362,7 +368,7 @@ CREATE INDEX idx_exam_questions_question_id ON exam_questions(question_id);
 CREATE INDEX idx_attempts_exam_id ON attempts(exam_id);
 CREATE INDEX idx_attempts_student_id ON attempts(student_id);
 CREATE INDEX idx_answers_attempt_id ON answers(attempt_id);
-CREATE INDEX idx_monitoring_events_attempt_id ON monitoring_events(attempt_id);
+CREATE INDEX idx_security_events_attempt_id ON security_events(attempt_id);
 CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX idx_audit_logs_event_type ON audit_logs(event_type);
 ```
@@ -397,6 +403,6 @@ O modelo de banco do MVP deve sustentar:
 - criação e publicação de provas
 - tentativas com uma questão por vez
 - persistência de respostas
-- registro de eventos de monitoramento
+- registro de eventos de segurança (security_events)
 - auditoria de ações sensíveis
 - capacidades básicas de LGPD

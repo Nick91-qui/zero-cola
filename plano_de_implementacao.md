@@ -16,7 +16,9 @@ O eixo central da arquitetura é:
 
 **Question Bank + Attempt Engine**
 
-A prova é uma configuração de entrega de questões. A entidade principal do domínio é a questão.
+O banco de questões (Question Bank) é o repositório central de conteúdo. As provas (Exams) são configurações de entrega compostas por questões reutilizáveis. O histórico acadêmico é representado por tentativas (Attempts) e respostas (Answers).
+
+Fluxo do domínio: Question -> Exam -> Attempt -> Answer
 
 ## 2. Princípios obrigatórios
 
@@ -162,6 +164,7 @@ cola-zero/
 - class_id
 - status (`draft`, `published`, `archived`)
 - total_time_seconds
+- max_attempts (default = 1)
 - randomization_enabled
 - created_by
 - created_at
@@ -179,6 +182,7 @@ cola-zero/
 - id
 - exam_id
 - student_id
+- attempt_number
 - status (`not_started`, `in_progress`, `submitted`, `graded`)
 - started_at
 - ended_at
@@ -193,7 +197,7 @@ cola-zero/
 - is_correct
 - answered_at
 
-#### MonitoringEvent
+#### SecurityEvent
 
 - id
 - attempt_id
@@ -289,14 +293,16 @@ Pode:
 
 - `POST /attempts/{id}/answers`
 
-#### Monitoramento
+#### Eventos de Segurança
 
-- `POST /attempts/{id}/monitoring-events`
+- `POST /attempts/{id}/security-events`
 
 #### LGPD
 
 - `GET /me/data-export`
-- `POST /me/anonymization-request`
+- `POST /me/request-anonymization`
+- `GET /privacy-policy`
+- `POST /consents/monitoring`
 
 ### 7.3 Fluxo crítico da prova
 
@@ -331,6 +337,33 @@ Regras:
 - salvar imediatamente
 - permitir correção automática quando aplicável
 - registrar auditoria quando necessário
+
+### 7.4 Regras de Negócio Críticas
+
+#### Regras de Publicação de Prova
+
+Uma prova só pode ser publicada (`POST /exams/{id}/publish`) se:
+
+- Possuir um título
+- Conter pelo menos 1 questão associada
+- Todas as questões associadas existirem no banco de dados
+- Todos os pesos de questões forem maiores que 0
+- A soma total do peso das questões (`ExamQuestion.weight`) for exatamente 100
+- Estiver associada a uma turma (`class_id`)
+- Possuir um limite de tempo válido configurado (`total_time_seconds` maior que 0)
+- O usuário requisitante for o professor dono da prova ou um administrador
+
+#### Regras de Tentativa
+
+A configuração `max_attempts` da prova (tabela `exams`) define o número máximo de tentativas permitidas (padrão = 1).
+
+Regras de controle no backend:
+
+- Permitir apenas uma tentativa ativa (`in_progress`) por aluno por prova.
+- Se uma tentativa ativa já existir, o backend deve reutilizar/retornar a tentativa ativa em vez de criar uma nova.
+- Uma nova tentativa só pode ser criada se a contagem total de tentativas finalizadas/submetidas for menor que `max_attempts`.
+- Tentativas submetidas (`submitted`) não podem ser alteradas.
+- Tentativas corrigidas (`graded`) são imutáveis.
 
 ## 8. Frontend
 
@@ -378,23 +411,25 @@ frontend/
 7. backend persiste e retorna estado atualizado
 8. frontend solicita próxima questão
 
-## 9. Monitoramento
+## 9. Eventos de Segurança (Security Events) e Monitoramento
 
 COLA-ZERO não é um lockdown browser.
 
 A plataforma pode:
 
 - detectar eventos
-- registrar eventos
+- registrar eventos em `security_events`
 - gerar relatórios
 
-A plataforma não deve afirmar que consegue:
+Lembrete de Segurança (A plataforma não deve alegar/afirmar que consegue):
 
 - detectar uso de ChatGPT
 - detectar outro dispositivo
 - detectar telefones externos
 - detectar capturas de tela de forma confiável
 - impedir toda forma de cola
+
+A plataforma apenas registra e reporta eventos observáveis do navegador.
 
 ### 9.1 Eventos suportados
 
@@ -423,8 +458,9 @@ Desde a primeira versão, implementar:
 
 ### 11.1 Autenticação
 
-- JWT access token
-- JWT refresh token
+- JWT Access Token: HttpOnly, Secure, SameSite=Lax, expiração curta (15-30 min).
+- JWT Refresh Token: HttpOnly, Secure, SameSite=Strict, expiração longa (7-30 dias).
+- Não utilizar localStorage ou sessionStorage para armazenar JWTs.
 - Argon2 preferencialmente
 - bcrypt como alternativa aceitável
 - nunca armazenar senha em texto puro
@@ -462,75 +498,66 @@ Prioridade de cobertura:
 6. monitoramento
 7. healthcheck, contratos básicos de API e integrações essenciais da fundação
 
-## 13. Ordem de implementação
+## 13. Ordem de implementação (Milestone Order)
 
-### Fase 1 — Fundação
-
-- estrutura inicial do backend FastAPI
-- estrutura inicial do frontend Next.js
-- configuração PostgreSQL
-- configuração Docker e Docker Compose
-- configuração de lint
-- configuração de Prettier
+### Fase 1 — Autenticação e RBAC (Backend)
+- estrutura inicial do backend FastAPI, conexão PostgreSQL, Docker e Docker Compose, lint e Prettier
 - healthcheck com TDD
-- autenticação com JWT guiada por TDD
 - modelo `User`
-- RBAC básico guiado por TDD
+- hash de senha Argon2 e geração de JWT (cookies HttpOnly)
+- dependências e middlewares de RBAC (`student`, `teacher`, `admin`)
 
-### Fase 2 — Banco de questões
+### Fase 2 — Modelagem Completa de Domínio e Migrações (Backend)
+- criação de tabelas e migrations via Alembic:
+  - `questions`, `classes`, `class_students`, `exams`, `exam_questions`, `attempts`, `answers`, `security_events`, `audit_logs`
+- estabilização do modelo de dados do domínio antes do frontend
 
-- modelo `Question`
-- CRUD de questões
-- filtros por disciplina, dificuldade e tags
-- associação de questões a professores
+### Fase 3 — Login e Gerenciamento de Sessão no Frontend
+- estrutura inicial do frontend Next.js
+- tela de login integrada
+- persistência de sessão utilizando cookies seguros HttpOnly
+- proteção de rotas por middleware no frontend
 
-### Fase 3 — Provas
+### Fase 4 — Banco de Questões (Question Bank)
+- CRUD de questões pelo professor no backend
+- filtros de questões por disciplina, dificuldade e tags
+- interface de busca e criação de questões no frontend
 
-- modelo `Exam`
-- modelo `ExamQuestion`
-- criação e edição de provas
-- publicação de provas
+### Fase 5 — Exam Engine (Motor de Provas)
+- criação, composição e regras de publicação de provas (Exams)
+- associação de questões via `ExamQuestion` (ordem e peso)
+- interface de seleção de questões e publicação no frontend
 
-### Fase 4 — Tentativas
+### Fase 6 — Attempt Engine (Motor de Tentativas)
+- lifecycle da tentativa (`Attempt`), incluindo ordem de tentativas e autosave de respostas (`Answer`)
+- entrega de uma questão por vez e envio sequencial
+- finalização e correção automática de questões objetivas
 
-- modelo `Attempt`
-- lifecycle da tentativa
-- entrega de uma questão por vez
-- temporizador da prova
+### Fase 7 — Eventos de Segurança (Security Events) e Auditoria
+- captura de eventos de tela no frontend
+- persistência na tabela `security_events`
+- logs de auditoria para ações administrativas e pedagógicas no backend
+- relatório de integridade para professores
 
-### Fase 5 — Respostas e correção
+### Fase 8 — Recursos de LGPD
+- aviso e consentimento transparente de monitoramento
+- endpoints operacionais: `GET /me/data-export`, `POST /me/request-anonymization`, `GET /privacy-policy`, `POST /consents/monitoring`
 
-- modelo `Answer`
-- submissão imediata de respostas
-- correção automática para questões objetivas
-- score consolidado
-
-### Fase 6 — Monitoramento e auditoria
-
-- captura de eventos suportados no frontend
-- persistência de `MonitoringEvent`
-- `AuditLog` para ações sensíveis
-- relatório simples para professores
-
-### Fase 7 — LGPD
-
-- aviso de transparência
-- exportação de dados
-- anonimização quando aplicável
-- retenção e governança de dados
+### Fase 9 — Qualidade, Hardening e Testes
+- testes integrados de ponta a ponta dos fluxos críticos
+- rate limiting e hardening de segurança
 
 ## 14. Critérios de MVP concluído
 
 O MVP é considerado pronto quando:
-
-- usuários autenticam com segurança
-- professores criam questões
-- professores criam e publicam provas
-- alunos realizam tentativas
+- usuários autenticam com segurança via cookies HttpOnly
+- professores gerenciam o Question Bank
+- professores criam e publicam provas válidas
+- alunos realizam tentativas sequenciais respeitando a regra de uma questão por vez
 - respostas são persistidas e corrigidas
-- eventos de monitoramento são registrados
-- relatórios básicos são gerados
-- requisitos essenciais de LGPD são atendidos
+- eventos do navegador são salvos em `security_events`
+- relatórios básicos e logs de auditoria são gerados
+- requisitos essenciais e endpoints operacionais de LGPD estão disponíveis
 
 ## 15. Fora do escopo do MVP
 

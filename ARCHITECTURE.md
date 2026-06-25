@@ -8,7 +8,10 @@ O COLA-ZERO é uma plataforma de avaliação online orientada por:
 
 > Question Bank + Attempt Engine
 
-A arquitetura parte do princípio de que a entidade principal do domínio é a questão. Provas são coleções de questões. Tentativas representam a interação do aluno com a prova.
+O banco de questões (Question Bank) é o repositório central de conteúdo. As provas (Exams) são configurações de entrega compostas por questões reutilizáveis. O histórico acadêmico é representado por tentativas (Attempts) e respostas (Answers).
+
+Fluxo do domínio:
+Question -> Exam -> Attempt -> Answer
 
 Pilares arquiteturais:
 
@@ -79,7 +82,7 @@ Entidades centrais:
 - exam_questions
 - attempts
 - answers
-- monitoring_events
+- security_events
 - audit_logs
 
 Regras:
@@ -205,8 +208,10 @@ Prioridades de TDD:
 
 ## 7.1 Camada de autenticação
 
-- JWT access token
-- JWT refresh token
+- Persistência de sessão utilizando cookies seguros HttpOnly.
+- Access Token: HttpOnly, Secure, SameSite=Lax, expiração curta (15-30 minutos).
+- Refresh Token: HttpOnly, Secure, SameSite=Strict, expiração longa (7-30 dias).
+- Não utilizar localStorage ou sessionStorage para armazenamento de JWT.
 - Argon2 preferencialmente
 - bcrypt como alternativa aceitável
 
@@ -232,11 +237,11 @@ Ações sensíveis devem gerar registros auditáveis, incluindo:
 
 ---
 
-# 9. Monitoramento
+# 9. Monitoramento e Eventos de Segurança (Security Events)
 
 COLA-ZERO não é um lockdown browser.
 
-Eventos suportados:
+Eventos suportados (armazenados em `security_events`):
 
 - visibilitychange
 - blur
@@ -246,19 +251,20 @@ Eventos suportados:
 
 Objetivo do monitoramento:
 
-- detectar eventos
-- registrar eventos
-- gerar relatórios
+- detectar eventos de tela no frontend
+- registrar eventos em `security_events` no backend
+- gerar relatórios básicos de integridade
 
-Limitações assumidas:
+Lembrete de Segurança (Limitações assumidas):
 
-O sistema não deve afirmar que consegue:
+O sistema NUNCA deve alegar ou prometer:
 
-- detectar uso de ChatGPT
-- detectar outro dispositivo
-- detectar telefones externos
-- detectar capturas de tela de forma confiável
-- impedir toda forma de cola
+- Detecção de uso de ChatGPT
+- Detecção de outros dispositivos
+- Prevenção de capturas de tela
+- Prevenção de todas as formas de cola
+
+A plataforma apenas registra e reporta eventos observáveis do navegador.
 
 ---
 
@@ -271,6 +277,12 @@ Requisitos mínimos da arquitetura:
 - exportação de dados do usuário
 - anonimização quando legalmente permitida
 - retenção compatível com requisitos acadêmicos e legais
+
+Endpoints operacionais planejados para conformidade com a LGPD:
+- `GET /me/data-export` (exportação de dados estruturados do usuário)
+- `POST /me/request-anonymization` (solicitação de anonimização/exclusão sob conformidade jurídica)
+- `GET /privacy-policy` (política de privacidade do sistema)
+- `POST /consents/monitoring` (registro de consentimento transparente de monitoramento)
 
 Dados fora de escopo de coleta:
 
