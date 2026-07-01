@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: cola_zero_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: colazero
+      POSTGRES_USER: colazero
+      POSTGRES_PASSWORD: colazero
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: cola_zero_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://colazero:colazero@postgres:5432/colazero
+      SECRET_KEY: "dev-secret-key-change-in-production"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: cola_zero_frontend
+    command: pnpm dev --hostname 0.0.0.0
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:
