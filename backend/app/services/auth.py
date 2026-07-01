@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import jwt
-from pwdlib import PasswordHash
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -14,18 +14,21 @@ class AuthService:
     def __init__(self, db: Session):
         self.db = db
         self.user_repo = UserRepository(db)
-        self.pwd_hash = PasswordHash()
 
     def hash_password(self, password: str) -> str:
-        return str(self.pwd_hash.hash(password))
+        """Hash password using bcrypt."""
+        salt = bcrypt.gensalt()
+        return bcrypt.hashpw(password.encode(), salt).decode()
 
     def verify_password(self, password: str, password_hash: str) -> bool:
+        """Verify password against hash."""
         try:
-            return self.pwd_hash.verify(password, password_hash)
+            return bcrypt.checkpw(password.encode(), password_hash.encode())
         except Exception:
             return False
 
     def register_user(self, user_create: UserCreate) -> dict:
+        """Register a new user."""
         existing_user = self.user_repo.get_by_email(user_create.email)
         if existing_user:
             raise ValueError("Email already registered")
@@ -40,6 +43,7 @@ class AuthService:
         }
 
     def authenticate_user(self, login: UserLogin) -> dict | None:
+        """Authenticate user and return tokens."""
         user = self.user_repo.get_by_email(login.email)
         if not user or not self.verify_password(login.password, user.password_hash):
             return None
@@ -59,6 +63,7 @@ class AuthService:
         }
 
     def create_access_token(self, user_id, role: UserRole, expires_delta: timedelta | None = None) -> str:
+        """Create JWT access token."""
         if expires_delta is None:
             expires_delta = timedelta(minutes=15)
 
@@ -73,6 +78,7 @@ class AuthService:
         return encoded_jwt
 
     def create_refresh_token(self, user_id, expires_delta: timedelta | None = None) -> str:
+        """Create JWT refresh token."""
         if expires_delta is None:
             expires_delta = timedelta(days=7)
 
@@ -86,6 +92,7 @@ class AuthService:
         return encoded_jwt
 
     def verify_token(self, token: str) -> dict | None:
+        """Verify and decode JWT token."""
         try:
             payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
             user_id: str = payload.get("sub")
@@ -96,6 +103,7 @@ class AuthService:
             return None
 
     def refresh_access_token(self, refresh_token: str) -> dict | None:
+        """Refresh access token using refresh token."""
         payload = self.verify_token(refresh_token)
         if not payload or payload.get("type") != "refresh":
             return None
