@@ -1,26 +1,24 @@
-# Makefile with convenient commands for development
+# Makefile with convenient commands for development (podman)
 
-.PHONY: up down ps logs migrate test-backend
-
-COMPOSE_CMD := $(shell (command -v podman >/dev/null 2>&1 && echo "podman compose") || (command -v docker-compose >/dev/null 2>&1 && echo "docker-compose") || (command -v docker >/dev/null 2>&1 && echo "docker compose"))
+.PHONY: up down ps logs migrate migrate-downgrade test-backend
 
 up:
-	@$(COMPOSE_CMD) up -d --build
+	@podman compose up -d --build
 
 down:
-	@$(COMPOSE_CMD) down --volumes
+	@podman compose down --volumes
 
 ps:
-	@$(COMPOSE_CMD) ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+	@podman compose ps
 
 logs:
-	@$(COMPOSE_CMD) logs -f
+	@podman compose logs -f
 
 migrate:
-	@$(COMPOSE_CMD) run --rm backend alembic upgrade head
+	@podman compose run --rm backend alembic upgrade head
 
 migrate-downgrade:
-	@$(COMPOSE_CMD) run --rm backend alembic downgrade -1
+	@podman compose run --rm backend alembic downgrade -1
 
 test-backend:
-	@$(COMPOSE_CMD) run --rm backend pytest -q
+	@podman compose run --rm backend pytest -q
