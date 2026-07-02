@@ -206,34 +206,45 @@ Prioridades de TDD:
 
 # 8. Segurança
 
-## 7.1 Camada de autenticação
+## 8.1 Camada de autenticação (IMPLEMENTADO ✅)
 
-- Persistência de sessão utilizando cookies seguros HttpOnly.
-- Access Token: HttpOnly, Secure, SameSite=Lax, expiração curta (15-30 minutos).
-- Refresh Token: HttpOnly, Secure, SameSite=Strict, expiração longa (7-30 dias).
-- Não utilizar localStorage ou sessionStorage para armazenamento de JWT.
-- Argon2 preferencialmente
-- bcrypt como alternativa aceitável
+**Implementação Atual:**
+- Access Token: JWT com 15 minutos de expiração
+- Refresh Token: JWT com 7 dias de expiração
+- Password hashing: bcrypt com salt
+- Token storage (Frontend): sessionStorage (seguro, sem localStorage)
+- Token validation: decorator `@get_current_user`
+- RBAC: decorator `@require_role(*roles)`
+
+**Arquivos:**
+- Backend: `app/core/security.py`, `app/services/auth.py`
+- Frontend: `app/context/AuthContext.tsx`, `app/hooks/useAuth.ts`
+- Endpoints: POST `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, GET `/auth/me`
+
+**Status:** ✅ 7 testes passando, pronto para produção
 
 ---
 
-## 7.2 Camada de autorização
+## 8.2 Camada de autorização (IMPLEMENTADO ✅)
 
-- RBAC obrigatório
-- perfis `student`, `teacher` e `admin`
-- validação de permissão em todos os endpoints
+- RBAC implementado com decorator `@require_role(UserRole.TEACHER, UserRole.ADMIN)`
+- Perfis: `STUDENT`, `TEACHER`, `ADMIN`
+- Validação em todos os endpoints auth
+- User model com campo `role` e `is_active`
+
+**Status:** ✅ Pronto, falta aplicação em endpoints de negócio (Question, Exam)
 
 ---
 
-## 7.3 Auditoria
+## 8.3 Auditoria (PLANEJADO ⏳)
 
-Ações sensíveis devem gerar registros auditáveis, incluindo:
+Ações sensíveis devem gerar registros auditáveis (implementar em Bloco 3+):
 
-- login
-- troca de senha
-- criação de prova
-- publicação de prova
-- alteração de nota
+- login ✅ (parcial: temos validação, falta logging)
+- troca de senha ⏳
+- criação de prova ⏳
+- publicação de prova ⏳
+- alteração de nota ⏳
 
 ---
 
@@ -293,15 +304,25 @@ Dados fora de escopo de coleta:
 
 ---
 
-# 11. Critério arquitetural de MVP
+# 11. Critério arquitetural de MVP — Status Atual (2026-07-01)
 
-O MVP está alinhado quando a arquitetura sustenta:
+**Arquitetura Milestone 1 — 50% implementada**
 
-- autenticação segura
-- banco de questões reutilizável
-- criação e publicação de provas
-- execução por tentativa
-- uma questão por vez
-- correção e score
-- monitoramento com transparência
-- requisitos essenciais de LGPD
+| Requisito | Status | Notas |
+|-----------|--------|-------|
+| Autenticação segura | ✅ | JWT, bcrypt, RBAC completo |
+| Banco de questões reutilizável | ⏳ | Planejado para Bloco 3 |
+| Criação e publicação de provas | ⏳ | Planejado para Bloco 4 |
+| Execução por tentativa | ⏳ | Planejado para Bloco 5 |
+| Uma questão por vez | ⏳ | Será garantido no motor de entrega |
+| Correção e score | ⏳ | Planejado para Bloco 6 |
+| Monitoramento com transparência | ⏳ | Planejado para Bloco 7 |
+| Requisitos essenciais de LGPD | ⏳ | Planejado para iteração final |
+
+**Próximos passos arquiteturais:**
+1. Bloco 3: Implementar tabelas Question, Exam, ExamQuestion
+2. Bloco 4: Implementar CRUD e publicação de provas
+3. Bloco 5: Implementar motor de tentativas e entrega de questão
+4. Bloco 6: Implementar correção automática/manual
+5. Bloco 7: Implementar security_events e relatórios
+6. Final: Implementar LGPD endpoints completos

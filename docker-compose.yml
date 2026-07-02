@@ -20,7 +20,7 @@ services:
     depends_on:
       - postgres
     environment:
-      DATABASE_URL: postgresql://colazero:colazero@postgres:5432/colazero
+      DATABASE_URL: postgresql+psycopg://colazero:colazero@postgres:5432/colazero
       SECRET_KEY: "dev-secret-key-change-in-production"
     volumes:
       - ./backend:/app

@@ -16,7 +16,7 @@ Convenções:
 - ID técnico: `CZ-A01`
 - Prioridade: `P0`
 - Tipo: `backend`
-- Status: `todo`
+- Status: `done`
 - Dependências: nenhuma
 - Descrição:
   - criar a base do backend com FastAPI e organizar a estrutura inicial do projeto
@@ -30,15 +30,15 @@ Convenções:
   - rota de healthcheck responde com sucesso
   - estrutura inicial está consistente com os documentos do projeto
 - Checklist:
-  - [ ] criar estrutura de diretórios
-  - [ ] configurar app FastAPI
-  - [ ] criar endpoint de healthcheck
+  - [x] criar estrutura de diretórios
+  - [x] configurar app FastAPI
+  - [x] criar endpoint de healthcheck
 
 ### ISSUE-002 — Configurar SQLAlchemy e conexão com PostgreSQL
 - ID técnico: `CZ-B01`
 - Prioridade: `P0`
 - Tipo: `backend`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-001`
 - Descrição:
   - configurar persistência base do backend com SQLAlchemy e sessão de banco
@@ -50,15 +50,15 @@ Convenções:
   - backend conecta no PostgreSQL
   - sessão pode ser injetada nas rotas e serviços
 - Checklist:
-  - [ ] configurar conexão
-  - [ ] configurar sessão
-  - [ ] criar base dos modelos
+  - [x] configurar conexão
+  - [x] configurar sessão
+  - [x] criar base dos modelos
 
 ### ISSUE-003 — Configurar Alembic e primeira migration
 - ID técnico: `CZ-B02`
 - Prioridade: `P0`
 - Tipo: `backend`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-002`
 - Descrição:
   - configurar migrações do banco para suportar evolução do schema
@@ -68,15 +68,15 @@ Convenções:
 - Critérios de aceite:
   - migrations sobem e descem corretamente
 - Checklist:
-  - [ ] inicializar Alembic
-  - [ ] integrar com SQLAlchemy
-  - [ ] validar upgrade e downgrade
+  - [x] inicializar Alembic
+  - [x] integrar com SQLAlchemy
+  - [x] validar upgrade e downgrade
 
 ### ISSUE-004 — Implementar modelo de usuário
 - ID técnico: `CZ-B03`
 - Prioridade: `P0`
 - Tipo: `backend`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-003`
 - Descrição:
   - criar a tabela e o modelo de usuários com UUID e papéis do sistema
@@ -89,15 +89,15 @@ Convenções:
   - tabela criada com schema esperado
   - UUID é usado como chave primária
 - Checklist:
-  - [ ] criar model
-  - [ ] criar migration
-  - [ ] validar constraints
+  - [x] criar model
+  - [x] criar migration
+  - [x] validar constraints
 
 ### ISSUE-005 — Implementar hash de senha seguro
 - ID técnico: `CZ-C01`
 - Prioridade: `P0`
 - Tipo: `security`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-004`
 - Descrição:
   - implementar utilitário de hash de senha seguro para autenticação
@@ -109,15 +109,15 @@ Convenções:
   - senha nunca é armazenada em texto puro
   - hash e verificação funcionam corretamente
 - Checklist:
-  - [ ] criar utilitário de hash
-  - [ ] criar utilitário de verificação
-  - [ ] validar com testes unitários
+  - [x] criar utilitário de hash
+  - [x] criar utilitário de verificação
+  - [x] validar com testes unitários
 
 ### ISSUE-006 — Implementar autenticação JWT
 - ID técnico: `CZ-C02`
 - Prioridade: `P0`
 - Tipo: `security`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-005`
 - Descrição:
   - implementar emissão e validação de access token e refresh token
@@ -129,15 +129,15 @@ Convenções:
   - login pode retornar tokens válidos
   - refresh token gera novo access token
 - Checklist:
-  - [ ] implementar geração de tokens
-  - [ ] implementar validação
-  - [ ] definir expiração configurável
+  - [x] implementar geração de tokens
+  - [x] implementar validação
+  - [x] definir expiração configurável
 
 ### ISSUE-007 — Implementar rotas de autenticação
 - ID técnico: `CZ-C03`
 - Prioridade: `P0`
 - Tipo: `backend`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-006`
 - Descrição:
   - expor autenticação via API
@@ -150,15 +150,15 @@ Convenções:
   - refresh funciona com token válido
   - logout invalida o fluxo definido
 - Checklist:
-  - [ ] criar schemas
-  - [ ] criar rotas
-  - [ ] integrar serviço de autenticação
+  - [x] criar schemas
+  - [x] criar rotas
+  - [x] integrar serviço de autenticação
 
 ### ISSUE-008 — Implementar RBAC
 - ID técnico: `CZ-C04`
 - Prioridade: `P0`
 - Tipo: `security`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-007`
 - Descrição:
   - implementar autorização baseada em papéis
@@ -168,15 +168,15 @@ Convenções:
 - Critérios de aceite:
   - endpoints protegidos bloqueiam perfis indevidos
 - Checklist:
-  - [ ] criar dependências de autorização
-  - [ ] aplicar em endpoints críticos
-  - [ ] validar cenários de permissão e negação
+  - [x] criar dependências de autorização
+  - [x] aplicar em endpoints críticos
+  - [x] validar cenários de permissão e negação
 
 ### ISSUE-009 — Estruturar frontend Next.js
 - ID técnico: `CZ-A02`
 - Prioridade: `P0`
 - Tipo: `frontend`
-- Status: `todo`
+- Status: `done`
 - Dependências: nenhuma
 - Descrição:
   - criar a base do frontend e organizar a estrutura inicial da aplicação
@@ -188,15 +188,15 @@ Convenções:
   - frontend sobe localmente
   - layout inicial renderiza sem erro
 - Checklist:
-  - [ ] criar estrutura de diretórios
-  - [ ] configurar app router
-  - [ ] criar layout base
+  - [x] criar estrutura de diretórios
+  - [x] configurar app router
+  - [x] criar layout base
 
 ### ISSUE-010 — Criar página de login no frontend
 - ID técnico: `CZ-D01`
 - Prioridade: `P0`
 - Tipo: `frontend`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-007`, `ISSUE-009`
 - Descrição:
   - implementar interface de login integrada ao backend
@@ -207,15 +207,15 @@ Convenções:
 - Critérios de aceite:
   - usuário consegue autenticar pela interface
 - Checklist:
-  - [ ] criar formulário
-  - [ ] integrar com API
-  - [ ] tratar estados de erro e loading
+  - [x] criar formulário
+  - [x] integrar com API
+  - [x] tratar estados de erro e loading
 
 ### ISSUE-011 — Persistir sessão no frontend
 - ID técnico: `CZ-D02`
 - Prioridade: `P0`
 - Tipo: `frontend`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-010`
 - Descrição:
   - manter a sessão autenticada do usuário no frontend
@@ -225,9 +225,9 @@ Convenções:
 - Critérios de aceite:
   - usuário autenticado permanece logado conforme regra escolhida
 - Checklist:
-  - [ ] implementar persistência
-  - [ ] implementar renovação
-  - [ ] proteger acesso autenticado básico
+  - [x] implementar persistência
+  - [x] implementar renovação
+  - [x] proteger acesso autenticado básico
 
 ### ISSUE-012 — Implementar modelos centrais do domínio
 - ID técnico: `CZ-B04`
@@ -563,22 +563,22 @@ Convenções:
 - ID técnico: `CZ-K01`
 - Prioridade: `P0`
 - Tipo: `qa`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-007`
 - Descrição:
   - cobrir login e refresh com testes automatizados
 - Critérios de aceite:
   - fluxos principais de autenticação estão cobertos
 - Checklist:
-  - [ ] testar login válido
-  - [ ] testar login inválido
-  - [ ] testar refresh
+  - [x] testar login válido
+  - [x] testar login inválido
+  - [x] testar refresh
 
 ### ISSUE-030 — Implementar testes de autorização
 - ID técnico: `CZ-K02`
 - Prioridade: `P0`
 - Tipo: `qa`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-008`
 - Descrição:
   - cobrir cenários de autorização e negação de acesso
@@ -586,9 +586,9 @@ Convenções:
   - perfis corretos acessam o que devem
   - perfis incorretos são bloqueados
 - Checklist:
-  - [ ] testar acesso permitido
-  - [ ] testar acesso negado
-  - [ ] validar RBAC nas rotas críticas
+  - [x] testar acesso permitido
+  - [x] testar acesso negado
+  - [x] validar RBAC nas rotas críticas
 
 ### ISSUE-031 — Implementar testes de entrega de uma questão por vez
 - ID técnico: `CZ-K03`
@@ -656,21 +656,21 @@ Convenções:
 - ID técnico: `CZ-A03`
 - Prioridade: `P0`
 - Tipo: `infra`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-001`, `ISSUE-009`
 
 ### ISSUE-036 — Definir variáveis de ambiente do projeto
 - ID técnico: `CZ-A04`
 - Prioridade: `P0`
 - Tipo: `infra`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-001`, `ISSUE-009`, `ISSUE-035`
 
 ### ISSUE-037 — Configurar observabilidade mínima
 - ID técnico: `CZ-A05`
 - Prioridade: `P2`
 - Tipo: `infra`
-- Status: `todo`
+- Status: `done`
 - Dependências: `ISSUE-001`
 
 ### ISSUE-038 — Criar índices iniciais do banco

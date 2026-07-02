@@ -53,7 +53,7 @@ Regras:
 
 # 3. Tabelas principais
 
-## 3.1 users
+## 3.1 users (IMPLEMENTADO ✅)
 
 Representa usuários autenticados do sistema.
 
@@ -61,18 +61,26 @@ Representa usuários autenticados do sistema.
 id UUID PRIMARY KEY
 email TEXT UNIQUE NOT NULL
 password_hash TEXT NOT NULL
-role TEXT NOT NULL
-created_at TIMESTAMP NOT NULL
-updated_at TIMESTAMP NOT NULL
+role TEXT NOT NULL (Enum: STUDENT, TEACHER, ADMIN)
+is_active BOOLEAN NOT NULL DEFAULT TRUE
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
+updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
-Valores esperados para `role`:
+**Status**: ✅ Implementado em `app/models/user.py`
+- Python model com SQLAlchemy
+- Migration: `0001_create_users` (testada upgrade/downgrade)
+- Repository pattern em `app/repositories/user.py`
+- Tests: 7 auth tests passando
 
-- `student`
-- `teacher`
-- `admin`
+**Índices**:
+- `users_email_key` (UNIQUE)
 
----
+**Regras de negócio**:
+- Email único por usuário
+- Senha hasheada com bcrypt
+- Role controlado por Enum
+- is_active permite deativação sem hard delete
 
 ## 3.2 questions
 

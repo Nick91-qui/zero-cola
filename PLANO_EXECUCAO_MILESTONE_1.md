@@ -65,11 +65,12 @@ Risco principal:
 
 Checklist do bloco:
 
-- [ ] FastAPI sobe localmente
-- [ ] PostgreSQL conecta com sucesso
-- [ ] migration inicial executa upgrade e downgrade
-- [ ] lint do backend está configurado
-- [ ] primeiro teste de fundação falha antes da implementação e passa depois
+- [x] FastAPI sobe localmente
+- [x] PostgreSQL conecta com sucesso
+- [x] migration inicial executa upgrade e downgrade
+- [x] lint do backend está configurado
+- [x] primeiro teste de fundação falha antes da implementação e passa depois
+- [x] **BLOCO COMPLETADO** (FastAPI, PostgreSQL connection, migrations, health check)
 
 ### Bloco 2 — Identidade e segurança base
 
@@ -99,11 +100,12 @@ Risco principal:
 
 Checklist do bloco:
 
-- [ ] usuário autentica com sucesso
-- [ ] refresh token funciona
-- [ ] endpoints protegidos retornam erro de permissão quando necessário
-- [ ] autenticação foi iniciada por testes automatizados
-- [ ] autorização crítica possui cobertura inicial de teste
+- [x] usuário autentica com sucesso
+- [x] refresh token funciona
+- [x] endpoints protegidos retornam erro de permissão quando necessário
+- [x] autenticação foi iniciada por testes automatizados
+- [x] autorização crítica possui cobertura inicial de teste
+- [x] **BLOCO COMPLETADO** (7 testes de auth passando)
 
 ### Bloco 3 — Fundação do frontend de autenticação
 
@@ -129,11 +131,12 @@ Risco principal:
 
 Checklist do bloco:
 
-- [ ] frontend sobe localmente
-- [ ] login funciona pela interface
-- [ ] sessão autenticada é mantida conforme regra definida
-- [ ] lint do frontend está configurado
-- [ ] Prettier do frontend está configurado
+- [x] frontend sobe localmente
+- [x] login funciona pela interface
+- [x] sessão autenticada é mantida conforme regra definida
+- [x] lint do frontend está configurado
+- [x] Prettier do frontend está configurado
+- [x] **BLOCO COMPLETADO** (AuthContext, login/register pages, ProtectedRoute)
 
 ### Bloco 4 — Modelo central do domínio
 

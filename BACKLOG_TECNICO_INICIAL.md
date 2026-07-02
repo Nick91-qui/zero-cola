@@ -28,7 +28,7 @@ Status inicial de todos os itens:
 
 ### CZ-A01 — Estruturar backend FastAPI
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: nenhuma
 - Entregas:
   - criar estrutura `backend/app`
@@ -40,7 +40,7 @@ Status inicial de todos os itens:
 
 ### CZ-A02 — Estruturar frontend Next.js
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: nenhuma
 - Entregas:
   - criar estrutura `frontend/app`
@@ -52,7 +52,7 @@ Status inicial de todos os itens:
 
 ### CZ-A03 — Configurar Docker e Docker Compose
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-A01, CZ-A02
 - Entregas:
   - `backend/Dockerfile`
@@ -63,7 +63,7 @@ Status inicial de todos os itens:
 
 ### CZ-A04 — Definir variáveis de ambiente
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-A01, CZ-A02, CZ-A03
 - Entregas:
   - criar `.env.example`
@@ -73,7 +73,7 @@ Status inicial de todos os itens:
 
 ### CZ-A05 — Configurar observabilidade mínima
 - Prioridade: `P2`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-A01
 - Entregas:
   - logging estruturado básico no backend
@@ -85,7 +85,7 @@ Status inicial de todos os itens:
 
 ### CZ-B01 — Configurar SQLAlchemy, sessão e base declarativa
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-A01
 - Entregas:
   - configuração de conexão PostgreSQL
@@ -96,7 +96,7 @@ Status inicial de todos os itens:
 
 ### CZ-B02 — Configurar Alembic
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-B01
 - Entregas:
   - configuração de migrações
@@ -106,7 +106,7 @@ Status inicial de todos os itens:
 
 ### CZ-B03 — Implementar modelo `users`
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-B02
 - Entregas:
   - model SQLAlchemy
@@ -146,7 +146,7 @@ Status inicial de todos os itens:
 
 ### CZ-C01 — Implementar hash de senha
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-B03
 - Entregas:
   - utilitário com Argon2 preferencialmente
@@ -156,7 +156,7 @@ Status inicial de todos os itens:
 
 ### CZ-C02 — Implementar autenticação JWT
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-C01
 - Entregas:
   - access token
@@ -168,7 +168,7 @@ Status inicial de todos os itens:
 
 ### CZ-C03 — Implementar rotas de autenticação
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-C02
 - Entregas:
   - `POST /auth/login`
@@ -179,7 +179,7 @@ Status inicial de todos os itens:
 
 ### CZ-C04 — Implementar RBAC
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-C03
 - Entregas:
   - perfis `student`, `teacher`, `admin`
@@ -203,7 +203,7 @@ Status inicial de todos os itens:
 
 ### CZ-D01 — Criar página de login
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-A02, CZ-C03
 - Entregas:
   - formulário de login
@@ -213,7 +213,7 @@ Status inicial de todos os itens:
 
 ### CZ-D02 — Persistir sessão no frontend
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-D01
 - Entregas:
   - armazenamento seguro de sessão compatível com a estratégia escolhida
@@ -223,7 +223,7 @@ Status inicial de todos os itens:
 
 ### CZ-D03 — Proteger rotas por perfil
 - Prioridade: `P1`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-D02, CZ-C04
 - Entregas:
   - proteção de páginas de aluno, professor e admin
@@ -232,7 +232,7 @@ Status inicial de todos os itens:
 
 ### CZ-D04 — Criar layout base e dashboard inicial por perfil
 - Prioridade: `P1`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-D03
 - Entregas:
   - layout principal
@@ -530,14 +530,14 @@ Status inicial de todos os itens:
 
 ### CZ-K01 — Implementar testes de autenticação
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-C03
 - Critérios de aceite:
   - login e refresh cobertos por testes automatizados
 
 ### CZ-K02 — Implementar testes de autorização
 - Prioridade: `P0`
-- Status: `todo`
+- Status: `done`
 - Dependências: CZ-C04
 - Critérios de aceite:
   - cenários de permissão e negação cobertos

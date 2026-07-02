@@ -179,16 +179,33 @@ cola-zero/
 
 # 9. Estado do MVP
 
-O MVP é considerado concluído quando:
+## Status Atual (2026-07-01)
 
-- usuários autenticam com segurança
-- professores criam questões
-- professores criam e publicam provas
-- alunos realizam tentativas
-- respostas são persistidas e corrigidas
-- eventos de monitoramento são registrados
-- relatórios básicos são gerados
-- requisitos essenciais de LGPD são atendidos
+**Milestone 1: Fundação - 50% completo**
+
+- ✅ Bloco 1 (Fundação Backend): COMPLETO
+  - FastAPI, PostgreSQL, Alembic, Docker Compose
+  - 7 testes de fundação passando
+  
+- ✅ Bloco 2 (Autenticação Backend + Frontend): COMPLETO
+  - Backend: 5 endpoints auth, JWT tokens, bcrypt hashing, RBAC
+  - Frontend: AuthContext, login/register pages, ProtectedRoute
+  - 14 testes passando (7 auth-specific)
+  
+- ⏳ Bloco 3-6 (Question Bank, Exams, Attempts): EM PLANEJAMENTO
+
+**Detalhes em**: [STATUS_ATUAL.md](./STATUS_ATUAL.md)
+
+## O MVP será considerado concluído quando:
+
+- usuários autenticam com segurança ✅ (em progresso)
+- professores criam questões ⏳
+- professores criam e publicam provas ⏳
+- alunos realizam tentativas ⏳
+- respostas são persistidas e corrigidas ⏳
+- eventos de monitoramento são registrados ⏳
+- relatórios básicos são gerados ⏳
+- requisitos essenciais de LGPD são atendidos ⏳
 
 ---
 
