@@ -45,3 +45,36 @@ def override_get_db(test_db_session):
     app.dependency_overrides[get_db] = get_db_override
     yield
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def auth_headers(override_get_db, test_db_session):
+    """Creates a teacher user and returns authorization headers."""
+    from app.models.enums import UserRole
+    from app.repositories.user import UserRepository
+    from app.services.auth import AuthService
+
+    service = AuthService(test_db_session)
+    user_create = type(
+        "UserCreate",
+        (),
+        {
+            "email": "teacher_api_global@cola-zero.edu",
+            "password": "teacherpass123",
+            "role": UserRole.TEACHER,
+        },
+    )()
+    password_hash = service.hash_password("teacherpass123")
+
+    repo = UserRepository(test_db_session)
+    repo.create(user_create, password_hash)
+
+    user_login = type(
+        "UserLogin",
+        (),
+        {"email": "teacher_api_global@cola-zero.edu", "password": "teacherpass123"},
+    )()
+    token_data = service.authenticate_user(user_login)
+    access_token = token_data["access_token"]
+    return {"Authorization": f"Bearer {access_token}"}
+
