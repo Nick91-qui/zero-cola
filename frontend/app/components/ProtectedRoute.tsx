@@ -1,20 +1,29 @@
 'use client';
 
-import React, { ReactNode, useEffect } from 'react';
+import React, { ReactNode, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
 
+export type UserRole = 'student' | 'teacher' | 'admin';
+
 export interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRole?: 'student' | 'teacher' | 'admin';
+  requiredRole?: UserRole;
+  requiredRoles?: UserRole[];
 }
 
 export function ProtectedRoute({
   children,
   requiredRole,
+  requiredRoles,
 }: ProtectedRouteProps) {
   const router = useRouter();
   const { isAuthenticated, user, isLoading } = useAuth();
+  const allowedRoles = useMemo(() => {
+    if (requiredRoles) return requiredRoles;
+    if (requiredRole) return [requiredRole];
+    return undefined;
+  }, [requiredRole, requiredRoles]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -24,10 +33,10 @@ export function ProtectedRoute({
       return;
     }
 
-    if (requiredRole && user && user.role !== requiredRole) {
+    if (allowedRoles && user && !allowedRoles.includes(user.role)) {
       router.push('/unauthorized');
     }
-  }, [isAuthenticated, user, requiredRole, isLoading, router]);
+  }, [isAuthenticated, user, allowedRoles, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -41,7 +50,7 @@ export function ProtectedRoute({
     return null;
   }
 
-  if (requiredRole && user && user.role !== requiredRole) {
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return null;
   }
 
