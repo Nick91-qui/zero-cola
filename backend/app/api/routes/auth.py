@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.db.session import get_db
-from app.repositories.user import UserRepository
 from app.schemas import UserCreate, UserLogin, UserResponse
 from app.services.auth import AuthService
 

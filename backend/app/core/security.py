@@ -4,7 +4,6 @@ from typing import Callable
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.db.session import get_db
 from app.models.enums import UserRole
 from app.repositories.user import UserRepository
@@ -52,6 +51,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
 
 def require_role(*roles: UserRole):
     """Decorator to enforce role-based access control (RBAC)."""
+
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, current_user=None, **kwargs):

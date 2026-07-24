@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.enums import UserRole
-from app.models.user import User
 from app.repositories.user import UserRepository
 from app.services.auth import AuthService
 
@@ -24,11 +23,15 @@ def test_user_data():
 def create_test_user(test_db_session, test_user_data):
     """Create a test user."""
     service = AuthService(test_db_session)
-    user_create = type("UserCreate", (), {
-        "email": test_user_data["email"],
-        "password": test_user_data["password"],
-        "role": UserRole.STUDENT,
-    })()
+    user_create = type(
+        "UserCreate",
+        (),
+        {
+            "email": test_user_data["email"],
+            "password": test_user_data["password"],
+            "role": UserRole.STUDENT,
+        },
+    )()
     password_hash = service.hash_password(test_user_data["password"])
 
     repo = UserRepository(test_db_session)
@@ -46,7 +49,12 @@ def test_register_user_success(override_get_db, test_db_session, test_user_data)
     assert "id" in data
 
 
-def test_register_user_duplicate_email(override_get_db, test_db_session, test_user_data, create_test_user):
+def test_register_user_duplicate_email(
+    override_get_db,
+    test_db_session,
+    test_user_data,
+    create_test_user,
+):
     """Test registration fails with duplicate email."""
     response = client.post("/api/v1/auth/register", json=test_user_data)
     assert response.status_code == 400

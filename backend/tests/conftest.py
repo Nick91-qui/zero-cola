@@ -2,7 +2,6 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.core.config import settings
 from app.db.models import BaseModel
 
 
@@ -26,9 +25,9 @@ def test_db_session(test_db_engine):
     transaction = connection.begin()
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=connection)
     session = TestingSessionLocal()
-    
+
     yield session
-    
+
     session.close()
     transaction.rollback()
     connection.close()
@@ -37,8 +36,8 @@ def test_db_session(test_db_engine):
 @pytest.fixture
 def override_get_db(test_db_session):
     """Override FastAPI dependency for database session."""
-    from app.main import app
     from app.db.session import get_db
+    from app.main import app
 
     def get_db_override():
         return test_db_session

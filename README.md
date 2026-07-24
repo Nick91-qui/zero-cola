@@ -176,27 +176,27 @@ cola-zero/
 
 # 9. Estado do MVP
 
-## Status Atual (2026-07-03)
+## Status Atual (2026-07-24)
 
-**Milestone 1: Fundação & Autenticação - COMPLETA (100% dos testes passando)**
+**Milestone 1: Fundação & Autenticação - COMPLETA**
 
 - ✅ Bloco 1 (Fundação Backend): COMPLETO
   - FastAPI, PostgreSQL, Alembic, Docker Compose
-  - 7 testes de fundação passando
   
 - ✅ Bloco 2 (Autenticação Backend + Frontend): COMPLETO
   - Backend: 5 endpoints auth, JWT via cookies HttpOnly, bcrypt hashing, RBAC
   - Frontend: AuthContext integrado a cookies HttpOnly, login/register pages, ProtectedRoute
-  - 14/14 testes passando
   
-- ⏳ Milestone OMR (Gabaritos Impressos & Correção Automática): EM PLANEJAMENTO (Próximo passo prioritário)
+- ✅ Milestone 2 OMR — Backend: COMPLETO
+  - Models/migration (`omr_templates`, `omr_scans`, `grades`), layouts, PDF, OpenCV engine, API
+- ⏳ Milestone 2 OMR — Frontend: PENDENTE (upload e revisão visual)
 
 **Detalhes em**: [STATUS_ATUAL.md](./STATUS_ATUAL.md)
 
 ## O MVP será considerado concluído quando:
 
 - usuários autenticam com segurança ✅ (fluxo pronto, pendente logs de auditoria de login)
-- módulo OMR independente implementado ⏳ (próximo passo prioritário)
+- módulo OMR independente implementado ⏳ (backend pronto; frontend pendente)
 - professores gerenciam o Question Bank ⏳
 - professores criam e publicam provas válidas ⏳
 - alunos realizam tentativas online sequenciais (uma questão por vez) ⏳

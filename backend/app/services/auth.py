@@ -62,7 +62,12 @@ class AuthService:
             },
         }
 
-    def create_access_token(self, user_id, role: UserRole, expires_delta: timedelta | None = None) -> str:
+    def create_access_token(
+        self,
+        user_id,
+        role: UserRole,
+        expires_delta: timedelta | None = None,
+    ) -> str:
         """Create JWT access token."""
         if expires_delta is None:
             expires_delta = timedelta(minutes=15)
