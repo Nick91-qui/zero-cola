@@ -48,7 +48,13 @@ class AuthService:
                 raise ValueError("student_code already registered")
 
         password_hash = self.hash_password(user_create.password)
-        user = self.user_repo.create(user_create, password_hash)
+        try:
+            user = self.user_repo.create(user_create, password_hash)
+        except Exception as e:
+            self.db.rollback()
+            if "duplicate" in str(e).lower() or "unique" in str(e).lower() or "integrityerror" in type(e).__name__.lower():
+                raise ValueError("Email or student_code already registered")
+            raise e
         return self._user_payload(user)
 
     def update_user(self, user_id, user_update: UserUpdate):

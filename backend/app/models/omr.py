@@ -46,6 +46,7 @@ class OMRScan(BaseModel):
             name="omr_scan_status",
             native_enum=False,
             validate_strings=True,
+            values_callable=lambda x: [e.value for e in x],
         ),
         default=OMRScanStatus.PROCESSING,
         nullable=False,

@@ -23,7 +23,7 @@ services:
       DATABASE_URL: postgresql+psycopg://colazero:colazero@postgres:5432/colazero
       SECRET_KEY: "dev-secret-key-change-in-production"
     volumes:
-      - ./backend:/app
+      - ./backend:/app:Z
     ports:
       - "8000:8000"
 
@@ -31,15 +31,23 @@ services:
     build:
       context: ./frontend
     container_name: cola_zero_frontend
-    command: pnpm dev --hostname 0.0.0.0
+    # Prefer Turbopack; native bindings install for linux/glibc via bookworm + npm ci.
+    command: npm run dev -- --hostname 0.0.0.0
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      # Ensure Next binds correctly inside the container network namespace.
+      HOSTNAME: 0.0.0.0
+      WATCHPACK_POLLING: "true"
     volumes:
-      - ./frontend:/app
+      # Hot reload from host sources…
+      - ./frontend:/app:Z
+      # …but keep Linux-native node_modules inside the container (not the host copy).
+      - frontend-node-modules:/app/node_modules
     ports:
       - "3000:3000"
 
 volumes:
   db-data:
+  frontend-node-modules:

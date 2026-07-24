@@ -23,6 +23,7 @@ class Grade(BaseModel):
             name="grade_source_type",
             native_enum=False,
             validate_strings=True,
+            values_callable=lambda x: [e.value for e in x],
         ),
         nullable=False,
     )

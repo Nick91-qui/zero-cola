@@ -67,7 +67,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_users_student_code'), 'users', ['student_code'], unique=True)
     op.alter_column('users', 'role',
                existing_type=sa.VARCHAR(length=20),
-               type_=sa.Enum('STUDENT', 'TEACHER', 'ADMIN', name='user_role', native_enum=False),
+               type_=sa.Enum('student', 'teacher', 'admin', name='user_role', native_enum=False),
                existing_nullable=False)
     # ### end Alembic commands ###
 
