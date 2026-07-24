@@ -187,16 +187,16 @@ cola-zero/
   - Backend: 5 endpoints auth, JWT via cookies HttpOnly, bcrypt hashing, RBAC
   - Frontend: AuthContext integrado a cookies HttpOnly, login/register pages, ProtectedRoute
   
-- ✅ Milestone 2 OMR — Backend: COMPLETO
-  - Models/migration (`omr_templates`, `omr_scans`, `grades`), layouts, PDF, OpenCV engine, API
-- ⏳ Milestone 2 OMR — Frontend: PENDENTE (upload e revisão visual)
+- ✅ Milestone 2 OMR — Backend + Frontend (modo avulso): COMPLETO
+  - Criar gabarito, PDF/preview, upload, revisão e confirmação de nota
+- ⏳ Calibração com foto real impressa / modo integrado a Exam: PENDENTE
 
 **Detalhes em**: [STATUS_ATUAL.md](./STATUS_ATUAL.md)
 
 ## O MVP será considerado concluído quando:
 
 - usuários autenticam com segurança ✅ (fluxo pronto, pendente logs de auditoria de login)
-- módulo OMR independente implementado ⏳ (backend pronto; frontend pendente)
+- módulo OMR independente implementado ✅ (modo avulso; foto real e Exam integrado pendentes)
 - professores gerenciam o Question Bank ⏳
 - professores criam e publicam provas válidas ⏳
 - alunos realizam tentativas online sequenciais (uma questão por vez) ⏳
