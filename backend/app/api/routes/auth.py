@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.db.session import get_db
-from app.schemas import UserCreate, UserLogin, UserResponse
+from app.schemas import UserCreate, UserLogin, UserResponse, UserUpdate
 from app.services.auth import AuthService
 
 router = APIRouter()
@@ -62,3 +62,17 @@ async def logout(current_user=Depends(get_current_user)):
 async def get_current_user_info(current_user=Depends(get_current_user)):
     """Get current authenticated user info."""
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_current_user(
+    user_in: UserUpdate,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update current authenticated user profile (e.g. student_code)."""
+    service = AuthService(db)
+    try:
+        return service.update_user(current_user.id, user_in)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

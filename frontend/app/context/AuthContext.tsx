@@ -7,6 +7,7 @@ export interface User {
   email: string;
   role: 'student' | 'teacher' | 'admin';
   is_active: boolean;
+  student_code?: string | null;
 }
 
 export interface AuthContextType {
@@ -16,7 +17,12 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, role?: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    role?: string,
+    studentCode?: string | null,
+  ) => Promise<void>;
   refreshToken: () => Promise<void>;
   error: string | null;
 }
@@ -111,23 +117,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [accessToken, API_URL]);
 
   const register = useCallback(
-    async (email: string, password: string, role: string = 'student') => {
+    async (
+      email: string,
+      password: string,
+      role: string = 'student',
+      studentCode: string | null = null,
+    ) => {
       setIsLoading(true);
       setError(null);
 
       try {
+        const body: Record<string, string> = { email, password, role };
+        if (role === 'student' && studentCode) {
+          body.student_code = studentCode;
+        }
+
         const response = await fetch(`${API_URL}/auth/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email, password, role }),
+          body: JSON.stringify(body),
           credentials: 'include',
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.detail || 'Registration failed');
+          const detail = errorData.detail;
+          const message =
+            typeof detail === 'string'
+              ? detail
+              : Array.isArray(detail)
+                ? detail.map((item: { msg?: string }) => item.msg).join('; ')
+                : 'Registration failed';
+          throw new Error(message);
         }
 
         // After registration, automatically log in

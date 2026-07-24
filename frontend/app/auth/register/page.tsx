@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [role, setRole] = useState('student');
+  const [studentCode, setStudentCode] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -33,8 +34,15 @@ export default function RegisterPage() {
       return;
     }
 
+    if (role === 'student') {
+      if (!/^\d{5}$/.test(studentCode)) {
+        setLocalError('Student code must be exactly 5 digits');
+        return;
+      }
+    }
+
     try {
-      await register(email, password, role);
+      await register(email, password, role, role === 'student' ? studentCode : null);
       router.push('/dashboard');
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Registration failed');
@@ -85,6 +93,28 @@ export default function RegisterPage() {
               <option value="teacher">Teacher</option>
             </select>
           </div>
+
+          {role === 'student' && (
+            <div>
+              <label htmlFor="studentCode" className="block text-sm font-medium text-gray-700">
+                Student code (OMR)
+              </label>
+              <input
+                id="studentCode"
+                type="text"
+                inputMode="numeric"
+                pattern="\d{5}"
+                maxLength={5}
+                value={studentCode}
+                onChange={(e) => setStudentCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                disabled={isLoading}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                placeholder="10234"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">Exactly 5 digits, printed on the answer sheet</p>
+            </div>
+          )}
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">

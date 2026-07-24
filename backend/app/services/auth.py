@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.enums import UserRole
 from app.repositories.user import UserRepository
-from app.schemas import UserCreate, UserLogin
+from app.schemas import UserCreate, UserLogin, UserUpdate
 
 
 class AuthService:
@@ -27,20 +27,42 @@ class AuthService:
         except Exception:
             return False
 
+    def _user_payload(self, user) -> dict:
+        return {
+            "id": str(user.id),
+            "email": user.email,
+            "role": user.role.value,
+            "is_active": user.is_active,
+            "student_code": user.student_code,
+        }
+
     def register_user(self, user_create: UserCreate) -> dict:
         """Register a new user."""
         existing_user = self.user_repo.get_by_email(user_create.email)
         if existing_user:
             raise ValueError("Email already registered")
 
+        if user_create.student_code:
+            existing_code = self.user_repo.get_by_student_code(user_create.student_code)
+            if existing_code:
+                raise ValueError("student_code already registered")
+
         password_hash = self.hash_password(user_create.password)
         user = self.user_repo.create(user_create, password_hash)
+        return self._user_payload(user)
 
-        return {
-            "id": str(user.id),
-            "email": user.email,
-            "role": user.role.value,
-        }
+    def update_user(self, user_id, user_update: UserUpdate):
+        """Update profile fields for the authenticated user."""
+        data = user_update.model_dump(exclude_unset=True)
+        if "student_code" in data and data["student_code"]:
+            existing = self.user_repo.get_by_student_code(data["student_code"])
+            if existing and str(existing.id) != str(user_id):
+                raise ValueError("student_code already registered")
+
+        user = self.user_repo.update(user_id, **data)
+        if not user:
+            raise ValueError("User not found")
+        return user
 
     def authenticate_user(self, login: UserLogin) -> dict | None:
         """Authenticate user and return tokens."""
@@ -55,11 +77,7 @@ class AuthService:
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
-            "user": {
-                "id": str(user.id),
-                "email": user.email,
-                "role": user.role.value,
-            },
+            "user": self._user_payload(user),
         }
 
     def create_access_token(

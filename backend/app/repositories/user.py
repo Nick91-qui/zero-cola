@@ -15,6 +15,7 @@ class UserRepository:
             email=user_create.email,
             password_hash=password_hash,
             role=user_create.role,
+            student_code=getattr(user_create, "student_code", None),
         )
         self.db.add(db_user)
         self.db.commit()
@@ -23,6 +24,9 @@ class UserRepository:
 
     def get_by_email(self, email: str) -> User | None:
         return self.db.query(User).filter(User.email == email).first()
+
+    def get_by_student_code(self, student_code: str) -> User | None:
+        return self.db.query(User).filter(User.student_code == student_code).first()
 
     def get_by_id(self, user_id: str | UUID) -> User | None:
         if isinstance(user_id, str):
