@@ -1,0 +1,89 @@
+from datetime import datetime
+from decimal import Decimal
+from typing import Dict, List, Optional
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
+
+from app.schemas.skill import SkillResponse
+
+
+class QuestionBase(BaseModel):
+    question_number: int
+    statement: Optional[str] = None
+    correct_option: Optional[str] = None
+    weight: Decimal = Decimal("1.00")
+
+
+class QuestionCreate(QuestionBase):
+    skill_ids: Optional[List[UUID]] = None
+
+
+class QuestionResponse(QuestionBase):
+    id: UUID
+    exam_id: UUID
+    skills: List[SkillResponse] = []
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExamBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    class_id: Optional[str] = None
+    omr_template_id: Optional[UUID] = None
+    total_questions: int = 20
+    max_score: Decimal = Decimal("10.00")
+
+
+class ExamCreate(ExamBase):
+    correct_answers: Optional[Dict[str, str]] = None
+    layout_version: Optional[str] = "v1_std_20q"
+    questions: Optional[List[QuestionCreate]] = None
+
+
+class ExamUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    class_id: Optional[str] = None
+    max_score: Optional[Decimal] = None
+    is_active: Optional[bool] = None
+
+
+class ExamResponse(ExamBase):
+    id: UUID
+    teacher_id: UUID
+    is_active: bool
+    deleted_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExamDetailResponse(ExamResponse):
+    questions: List[QuestionResponse] = []
+
+
+class QuestionStatistic(BaseModel):
+    question_number: int
+    statement: Optional[str] = None
+    correct_option: Optional[str] = None
+    skills: List[SkillResponse] = []
+    total_responses: int
+    correct_count: int
+    incorrect_count: int
+    accuracy_percentage: float
+    error_percentage: float
+
+
+class ExamStatisticsResponse(BaseModel):
+    exam_id: UUID
+    exam_title: str
+    total_attempts: int
+    class_id: Optional[str] = None
+    average_score: float
+    max_score: float
+    question_statistics: List[QuestionStatistic]

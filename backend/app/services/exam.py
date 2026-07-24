@@ -1,0 +1,282 @@
+from datetime import datetime, timezone
+from decimal import Decimal
+from typing import Any, Dict, List, Optional
+from uuid import UUID
+
+from sqlalchemy.orm import Session
+
+from app.models.attempt import Attempt, AttemptAnswer
+from app.models.enums import GradeSourceType, OMRScanStatus, UserRole
+from app.models.exam import Exam
+from app.models.omr import OMRScan, OMRTemplate
+from app.models.question import Question
+from app.models.user import User
+from app.repositories.attempt import AttemptRepository
+from app.repositories.exam import ExamRepository
+from app.repositories.grade import GradeRepository
+from app.repositories.omr import OMRScanRepository, OMRTemplateRepository
+from app.repositories.skill import SkillRepository
+from app.schemas.exam import ExamCreate, ExamUpdate
+from app.schemas.omr import OMRTemplateCreate
+from app.services.export import ExportService
+
+
+class ExamService:
+    def __init__(self, db: Session):
+        self.db = db
+        self.exam_repo = ExamRepository(db)
+        self.attempt_repo = AttemptRepository(db)
+        self.template_repo = OMRTemplateRepository(db)
+        self.scan_repo = OMRScanRepository(db)
+        self.grade_repo = GradeRepository(db)
+        self.skill_repo = SkillRepository(db)
+
+    def create_exam(self, exam_in: ExamCreate, teacher_id: UUID) -> Exam:
+        # 1. If omr_template_id not provided, create an OMRTemplate automatically
+        omr_template_id = exam_in.omr_template_id
+        if not omr_template_id and exam_in.correct_answers:
+            layout_ver = exam_in.layout_version or (
+                "v1_std_50q" if exam_in.total_questions > 20 else "v1_std_20q"
+            )
+            template_in = OMRTemplateCreate(
+                layout_version=layout_ver,
+                total_questions=exam_in.total_questions,
+                options_per_question=5,
+                correct_answers=exam_in.correct_answers,
+            )
+            tmpl = self.template_repo.create(template_in)
+            omr_template_id = tmpl.id
+
+        exam_in.omr_template_id = omr_template_id
+        exam = self.exam_repo.create(exam_in, teacher_id=teacher_id)
+
+        # 2. Link OMRTemplate back to exam
+        if omr_template_id:
+            tmpl = self.template_repo.get_by_id(omr_template_id)
+            if tmpl:
+                tmpl.exam_id = exam.id
+                tmpl.title = exam.title
+                self.db.commit()
+
+        # 3. Create questions records
+        if exam_in.correct_answers:
+            self.exam_repo.create_questions_bulk(
+                exam_id=exam.id,
+                correct_answers=exam_in.correct_answers,
+            )
+
+        self.db.refresh(exam)
+        return exam
+
+    def get_exam(self, exam_id: UUID) -> Optional[Exam]:
+        return self.exam_repo.get_by_id(exam_id)
+
+    def list_exams(
+        self, teacher_id: Optional[UUID] = None, class_id: Optional[str] = None
+    ) -> List[Exam]:
+        return self.exam_repo.get_all(teacher_id=teacher_id, class_id=class_id)
+
+    def update_exam(self, exam_id: UUID, update_in: ExamUpdate) -> Optional[Exam]:
+        return self.exam_repo.update(exam_id, update_in)
+
+    def soft_delete_exam(self, exam_id: UUID) -> bool:
+        """
+        Soft deletes an exam (sets is_active=False, deleted_at=now()).
+        Preserves historical Attempt, AttemptAnswer and Grade records!
+        """
+        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+        if not exam:
+            return False
+        # Also soft delete linked template if exists
+        if exam.omr_template_id:
+            tmpl = self.template_repo.get_by_id(exam.omr_template_id)
+            if tmpl:
+                tmpl.is_active = False
+                tmpl.deleted_at = datetime.now(timezone.utc)
+        return self.exam_repo.soft_delete(exam_id)
+
+    def soft_delete_template(self, template_id: UUID) -> bool:
+        """
+        Soft deletes an OMR template (sets is_active=False, deleted_at=now()).
+        Preserves OMR scans and historical grades.
+        """
+        tmpl = self.template_repo.get_by_id(template_id)
+        if not tmpl:
+            return False
+        tmpl.is_active = False
+        tmpl.deleted_at = datetime.now(timezone.utc)
+        self.db.commit()
+        return True
+
+    def calculate_attempt_score(
+        self,
+        total_questions: int,
+        correct_answers: int,
+        max_score: Decimal,
+    ) -> Dict[str, Any]:
+        incorrect_answers = total_questions - correct_answers
+        accuracy_percentage = (
+            (Decimal(correct_answers) / Decimal(total_questions)) * Decimal("100.00")
+            if total_questions > 0
+            else Decimal("0.00")
+        )
+        raw_score = Decimal(correct_answers)
+        final_score = (
+            (Decimal(correct_answers) / Decimal(total_questions)) * max_score
+            if total_questions > 0
+            else Decimal("0.00")
+        )
+        return {
+            "total_questions": total_questions,
+            "correct_answers": correct_answers,
+            "incorrect_answers": incorrect_answers,
+            "accuracy_percentage": accuracy_percentage.quantize(Decimal("0.01")),
+            "raw_score": raw_score.quantize(Decimal("0.01")),
+            "final_score": final_score.quantize(Decimal("0.01")),
+        }
+
+    def get_exam_statistics(self, exam_id: UUID) -> Dict[str, Any]:
+        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+        if not exam:
+            raise ValueError(f"Exam {exam_id} not found.")
+
+        attempts = self.attempt_repo.get_by_exam_id(exam_id)
+        total_attempts = len(attempts)
+
+        # Get questions
+        questions = self.db.query(Question).filter(Question.exam_id == exam_id).order_by(Question.question_number.asc()).all()
+        template = self.template_repo.get_by_id(exam.omr_template_id) if exam.omr_template_id else None
+
+        question_stats = []
+        for i in range(1, exam.total_questions + 1):
+            q_model = next((q for q in questions if q.question_number == i), None)
+            correct_opt = (
+                q_model.correct_option
+                if q_model and q_model.correct_option
+                else (template.correct_answers.get(f"q{i}") or template.correct_answers.get(str(i)) if template and template.correct_answers else None)
+            )
+
+            # Query answers for question_number i
+            answers_for_q = (
+                self.db.query(AttemptAnswer)
+                .join(Attempt)
+                .filter(Attempt.exam_id == exam_id, AttemptAnswer.question_number == i)
+                .all()
+            )
+
+            total_resp = len(answers_for_q)
+            correct_cnt = sum(1 for a in answers_for_q if a.is_correct)
+            incorrect_cnt = total_resp - correct_cnt
+            accuracy_pct = (correct_cnt / total_resp * 100.0) if total_resp > 0 else 0.0
+            error_pct = (incorrect_cnt / total_resp * 100.0) if total_resp > 0 else 0.0
+
+            q_skills = [
+                {
+                    "id": s.id,
+                    "code": s.code,
+                    "description": s.description,
+                    "subject": s.subject,
+                    "grade_level": s.grade_level,
+                    "curriculum": s.curriculum,
+                }
+                for s in (q_model.skills if q_model else [])
+            ]
+
+            question_stats.append(
+                {
+                    "question_number": i,
+                    "statement": q_model.statement if q_model else None,
+                    "correct_option": correct_opt,
+                    "skills": q_skills,
+                    "total_responses": total_resp,
+                    "correct_count": correct_cnt,
+                    "incorrect_count": incorrect_cnt,
+                    "accuracy_percentage": round(accuracy_pct, 2),
+                    "error_percentage": round(error_pct, 2),
+                }
+            )
+
+        avg_score = (
+            sum(float(a.final_score) for a in attempts) / total_attempts
+            if total_attempts > 0
+            else 0.0
+        )
+
+        return {
+            "exam_id": exam.id,
+            "exam_title": exam.title,
+            "total_attempts": total_attempts,
+            "class_id": exam.class_id,
+            "average_score": round(avg_score, 2),
+            "max_score": float(exam.max_score),
+            "question_statistics": question_stats,
+        }
+
+    def export_exam_pdf(self, exam_id: UUID) -> bytes:
+        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+        if not exam:
+            raise ValueError(f"Exam {exam_id} not found.")
+
+        teacher = self.db.query(User).filter(User.id == exam.teacher_id).first()
+        teacher_name = teacher.email if teacher else "Professor"
+
+        stats = self.get_exam_statistics(exam_id)
+        attempts_db = self.attempt_repo.get_by_exam_id(exam_id)
+
+        attempts_list = []
+        for att in attempts_db:
+            st_user = self.db.query(User).filter(User.id == att.student_id).first() if att.student_id else None
+            attempts_list.append(
+                {
+                    "student_code": att.student_code,
+                    "student_name": st_user.email if st_user else f"Aluno ({att.student_code or 'Desconhecido'})",
+                    "correct_answers": att.correct_answers,
+                    "accuracy_percentage": float(att.accuracy_percentage),
+                    "final_score": float(att.final_score),
+                }
+            )
+
+        return ExportService.generate_exam_pdf_report(
+            exam_title=exam.title,
+            class_id=exam.class_id or "Geral",
+            teacher_name=teacher_name,
+            max_score=float(exam.max_score),
+            total_questions=exam.total_questions,
+            attempts=attempts_list,
+            question_stats=stats["question_statistics"],
+        )
+
+    def export_exam_xlsx(self, exam_id: UUID) -> bytes:
+        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+        if not exam:
+            raise ValueError(f"Exam {exam_id} not found.")
+
+        teacher = self.db.query(User).filter(User.id == exam.teacher_id).first()
+        teacher_name = teacher.email if teacher else "Professor"
+
+        stats = self.get_exam_statistics(exam_id)
+        attempts_db = self.attempt_repo.get_by_exam_id(exam_id)
+
+        attempts_list = []
+        for att in attempts_db:
+            st_user = self.db.query(User).filter(User.id == att.student_id).first() if att.student_id else None
+            attempts_list.append(
+                {
+                    "student_code": att.student_code,
+                    "student_name": st_user.email if st_user else f"Aluno ({att.student_code or 'Desconhecido'})",
+                    "correct_answers": att.correct_answers,
+                    "incorrect_answers": att.incorrect_answers,
+                    "accuracy_percentage": float(att.accuracy_percentage),
+                    "final_score": float(att.final_score),
+                }
+            )
+
+        return ExportService.generate_exam_xlsx_report(
+            exam_title=exam.title,
+            class_id=exam.class_id or "Geral",
+            teacher_name=teacher_name,
+            max_score=float(exam.max_score),
+            total_questions=exam.total_questions,
+            attempts=attempts_list,
+            question_stats=stats["question_statistics"],
+        )
