@@ -54,7 +54,11 @@ logs/
 
 # Local tooling
 .abacusai/
+*.db
+*.sqlite
+*.sqlite3
 
 # Runtime uploads (OMR scans, etc.)
 backend/uploads/scans/*
 !backend/uploads/scans/.gitkeep
+
