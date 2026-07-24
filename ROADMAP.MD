@@ -1,6 +1,8 @@
-# COLA-ZERO — Roadmap de Implementação
-
 Este documento define a ordem de desenvolvimento do COLA-ZERO com foco em MVP, segurança por padrão, privacidade e arquitetura centrada em Question Bank + Attempt Engine.
+
+**Nota sobre Priorização e Arquitetura**:
+- A **avaliação online (Online Assessment)** continua sendo a arquitetura de plataforma primária do COLA-ZERO.
+- A decisão de implementar o módulo **COLA-ZERO OMR** (Fases 2 a 4) antes do fluxo completo de tentativas digitais é uma decisão de **PRIORIDADE DE PRODUTO** e não uma dependência ou limitação arquitetural. O OMR é um subsistema independente e desacoplado que pode ser adicionado ou removido sem influenciar o core do motor online.
 
 ---
 
@@ -19,174 +21,152 @@ Estruturar a base técnica do sistema.
 
 ---
 
-# Fase 1 — Autenticação e RBAC (Backend)
+# Fase 1 — Autenticação e RBAC (Backend & Frontend)
 
 ## Objetivo
-Criar a base de identidade e segurança do backend antes do desenvolvimento de features do domínio.
+Estabelecer a identidade e o controle de acesso baseado em regras (RBAC) com segurança avançada, sem armazenamento vulnerável no cliente.
 
 ## Entregas
-- modelo `User` com UUID
-- hash de senha com Argon2 preferencialmente
-- geração de JWT com a estratégia de sessão aprovada:
-  - Access Token: expiração curta (15–30 minutos)
-  - Refresh Token: expiração longa (7–30 dias)
-- suporte a controle de acesso baseado em regras (RBAC) com perfis `student`, `teacher` e `admin`
-- endpoints `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
+- Modelo `User` com UUID.
+- Hash de senha com bcrypt temporariamente (ADR-001); Argon2 planejado para o futuro.
+- Geração de tokens JWT gerenciados por cookies:
+  - Access Token: expiração de 15 minutos, armazenado em cookie seguro HttpOnly (`Secure`, `SameSite=Lax`).
+  - Refresh Token: expiração de 7 dias, armazenado em cookie seguro HttpOnly (`Secure`, `SameSite=Strict`).
+  - **Proibido:** Uso de `localStorage` ou `sessionStorage` para guardar tokens JWT no frontend.
+- Controle de acesso baseado em regras (RBAC) com perfis `STUDENT`, `TEACHER` e `ADMIN`.
+- Endpoints: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`.
+- **Restrição de Produção:** Logs de auditoria de login (sucesso/falha) estão marcados como obrigatórios pendentes antes da homologação final em produção.
 
 ---
 
-# Fase 2 — Modelagem Completa de Domínio e Migrações (Backend)
+# Fase 2 — Módulo OMR (MVP) — Banco de Dados e Layouts em Código
 
 ## Objetivo
-Modelar, criar e estabilizar o schema do banco de dados relacional e migrações antes de construir interfaces.
+Estruturar o armazenamento e a definição geométrica do módulo de correção de gabaritos impressos de forma independente.
 
 ## Entregas
-- criação de tabelas e modelos SQLAlchemy com UUID:
-  - `users`
-  - `classes`
-  - `class_students`
-  - `questions`
-  - `exams`
-  - `exam_questions`
-  - `attempts`
-  - `answers`
-  - `security_events` (substituindo o termo anterior `monitoring_events`)
-  - `audit_logs`
-- aplicação de migrações com Alembic
-- definição do modelo de Tentativas aprovado:
-  - `exams`: `max_attempts` (INTEGER, default=1), `time_limit`, `randomize`, `status`
-  - `attempts`: `attempt_number` (INTEGER), `status`, `score`
+- Criação das tabelas de OMR (`omr_templates` e `omr_scans`) com UUID.
+- Criação da tabela de notas unificada (`grades`), responsável por unificar o histórico de notas de qualquer fonte de avaliação (ONLINE ou OMR).
+- Definição do relacionamento com `exams` como opcional (permitindo Modo Avulso e Modo Integrado).
+- Implementação do sistema de layouts versionados mantidos diretamente no código-fonte (`app/core/omr_layouts.py`). O banco apenas salvará a string referencial no campo `layout_version`.
+- Migrações do banco via Alembic.
 
 ---
 
-# Fase 3 — Login e Gerenciamento de Sessão no Frontend
+# Fase 3 — Módulo OMR (MVP) — Geração de PDF e OpenCV Engine
 
 ## Objetivo
-Criar a interface de autenticação do usuário utilizando a política de cookies HttpOnly estabelecida.
+Desenvolver a geração de folhas de respostas preenchidas e a inteligência de processamento de imagem por OMR.
 
 ## Entregas
-- tela de login no Next.js
-- persistência de sessão e tratamento de tokens:
-  - Cookies seguros HttpOnly gerenciados pelo backend
-  - Access Token: HttpOnly, Secure, SameSite=Lax
-  - Refresh Token: HttpOnly, Secure, SameSite=Strict
-  - **Nota:** Proibido armazenar JWTs em `localStorage` ou `sessionStorage`
-- middleware de proteção de rotas no Next.js com base no perfil do usuário
+- Geração de gabarito em PDF (com **ReportLab**) contendo 4 âncoras nos cantos para alinhamento e o identificador de 5 dígitos do estudante (`student_code`) pré-preenchido (sombreado) no próprio PDF.
+- Algoritmo de visão computacional em OpenCV + NumPy para:
+  - Alinhamento de perspectiva de imagem (deskew & warp) através de contornos das âncoras.
+  - Leitura do código do aluno (5 colunas $\times$ 10 linhas).
+  - Detecção de bolhas de respostas das questões baseado em densidade relativa de cor (calibração dinâmica usando densidades das âncoras pretas e fundo branco).
 
 ---
 
-# Fase 4 — Banco de Questões (Question Bank)
+# Fase 4 — Módulo OMR (MVP) — Upload API, Correção Automática e Revisão UI
 
 ## Objetivo
-Construir o núcleo de conteúdo do domínio de forma reutilizável.
+Unificar o backend e frontend OMR, permitindo upload, processamento assíncrono em background, correção e revisão visual das notas.
 
 ## Entregas
-- Question Bank como repositório central de conteúdo
-- CRUD de questões pelo professor no backend (`POST /questions`, `GET /questions`, `PATCH /questions/{id}`)
-- filtros de questões por disciplina, dificuldade e tags
-- interface no frontend para o professor gerenciar e buscar questões no banco
+- Endpoint `POST /api/v1/omr/scans/upload` aceitando exclusivamente uploads de **imagens individuais (JPG, JPEG, PNG)**.
+- Lógica de processamento assíncrona em background para execução da leitura e cálculo automático da nota.
+- Tela no frontend para upload das imagens.
+- Interface de revisão visual para o professor com overlay colorido (Verde/Vermelho) em cima das bolhas detectadas e suporte a ajustes manuais de leitura de bolhas ou código do estudante.
+- Confirmação final das notas e gravação na tabela unificada `grades`.
 
 ---
 
-# Fase 5 — Exam Engine (Motor de Provas)
+# Fase 5 — Modelagem Completa de Domínio Acadêmico Core e Migrações
 
 ## Objetivo
-Permitir que professores componham provas (Exams) como configurações de entrega compostas por questões reutilizáveis.
+Modelar, criar e estabilizar o schema do banco de dados relacional e migrações para o fluxo online.
+*Nota: O domínio acadêmico core (AcademicYear, Classes, Student Codes, RBAC, Question Bank, Attempt Engine) é considerado congelado e alterações exigem ADR.*
 
 ## Entregas
-- CRUD de provas no backend e frontend
-- relação de composição `ExamQuestion` (vínculo de questões com ordem e peso)
-- regras de publicação de prova:
-  - Possui título
-  - Contém pelo menos 1 questão associada
-  - Todas as questões existem no banco de dados
-  - Todos os pesos de questões são maiores que 0
-  - Soma total dos pesos é exatamente 100
-  - Turma (`class_id`) está atribuída
-  - Limite de tempo válido configurado
-  - Usuário requisitante é o professor dono ou administrador
+- Criação de tabelas e modelos SQLAlchemy com UUID:
+  - `classes`, `class_students`, `questions` (com suporte a imutabilidade por versão e parent_id), `exams`, `exam_questions`, `attempts`, `answers`, `security_events`, `audit_logs`
+- Aplicação de migrações com Alembic.
 
 ---
 
-# Fase 6 — Attempt Engine (Motor de Tentativas)
+# Fase 6 — Banco de Questões (Question Bank) e Provas (Exam Engine)
 
 ## Objetivo
-Implementar o fluxo operacional de realização de provas pelos alunos.
+Construir o gerenciamento de conteúdo e provas do sistema de forma reutilizável.
 
 ## Entregas
-- ciclo de vida de tentativas e respostas (`Attempt -> Answer`)
-- entrega obrigatória de uma questão por vez (`GET /attempts/{id}/next-question`)
-- autosave de respostas (`POST /attempts/{id}/answers`) e cálculo de nota automática/manual
-- aplicação das regras de tentativa:
-  - Apenas uma tentativa ativa (`in_progress`) por aluno por prova.
-  - Tentativas ativas existentes devem ser resumidas em vez de criar uma nova.
-  - Nova tentativa só pode ser criada se `max_attempts` da prova não foi excedido.
-  - Tentativas enviadas (`submitted`) não podem ser modificadas.
-  - Tentativas corrigidas (`graded`) são imutáveis.
-- tela de realização de prova no frontend consumindo de forma sequencial
+- CRUD de questões e filtros (disciplina, dificuldade, tags) no backend e frontend.
+- CRUD e regras de publicação de provas (Exam composto por ExamQuestion).
 
 ---
 
-# Fase 7 — Eventos de Segurança (Security Events) e Auditoria
+# Fase 7 — Motor de Tentativas Online (Attempt Engine)
 
 ## Objetivo
-Registrar eventos de tela do navegador relacionados à integridade do exame e ações sensíveis de usuários.
+Implementar o fluxo operacional e dinâmico de realização de provas online pelos alunos.
 
 ## Entregas
-- captura de eventos no frontend (`visibilitychange`, `blur`, `focus`, `fullscreen_enter`, `fullscreen_exit`)
-- ingestão e persistência de eventos no backend na tabela `security_events`
-- relatórios de segurança e integridade para professores
-- logs de auditoria imutáveis no backend para ações administrativas e pedagógicas
-- **Aviso de Segurança (Remind):** O COLA-ZERO não é um lockdown browser. É expressamente proibido alegar ou prometer detecção de uso de ChatGPT, detecção de dispositivos externos, prevenção de capturas de tela ou bloqueio de toda e qualquer fraude. O sistema apenas registra e relata eventos observáveis do navegador.
+- Ciclo de vida da tentativa (`Attempt`), incluindo ordem de tentativas e autosave de respostas (`Answer`).
+- Endpoint de entrega de **uma questão por vez** e envio sequencial de respostas no frontend.
+- Consolidação de notas e scores automáticos.
 
 ---
 
-# Fase 8 — Recursos de LGPD
+# Fase 8 — Eventos de Segurança (Security Events) e Auditoria de Sistema
 
 ## Objetivo
-Implementar governança de dados, consentimento explícito e direitos de privacidade dos usuários.
+Capturar eventos do navegador relacionados ao comportamento da tela da tentativa online e auditar ações sensíveis de negócio.
 
 ## Entregas
-- aviso claro e consentimento de monitoramento antes do início da prova
-- implementação e exposição dos seguintes endpoints operacionais de LGPD:
-  - `GET /me/data-export` (exportação de dados do titular)
-  - `POST /me/request-anonymization` (pedido de anonimização)
-  - `GET /privacy-policy` (política de privacidade do sistema)
-  - `POST /consents/monitoring` (registro do consentimento de eventos de segurança)
+- Captura de eventos do navegador (`visibilitychange`, `blur`, `focus`, `fullscreen_enter`, `fullscreen_exit`) salvos na tabela `security_events`.
+- Ingestão de logs de auditoria imutáveis no backend para ações administrativas, pedagógicas e eventos sensíveis (troca de senha, criação/publicação de prova, alteração de notas).
 
 ---
 
-# Fase 9 — Qualidade, Hardening e Testes
+# Fase 9 — Recursos de LGPD
 
 ## Objetivo
-Reforçar a robustez da aplicação antes da entrega final do MVP.
+Disponibilizar governança, consentimento explícito e direitos de privacidade dos usuários.
 
 ## Entregas
-- testes automatizados de autenticação, autorização, entrega de questão, submissão de respostas, correção e ingestão de `security_events`
-- rate limiting de endpoints
-- validações de segurança e sanitização de dados de entrada
+- Aviso claro e consentimento de monitoramento registrado em banco (`POST /consents/monitoring`).
+- Endpoints de exportação estruturada (`GET /me/data-export`) e solicitação de anonimização (`POST /me/request-anonymization`).
+- Endpoint de política de privacidade (`GET /privacy-policy`).
+
+---
+
+# Fase 10 — Qualidade, Hardening, Auditoria de Login e Testes E2E
+
+## Objetivo
+Reforçar a robustez técnica, auditoria completa de autenticação e validação ponta a ponta da plataforma.
+
+## Entregas
+- Implementação de logs de auditoria de login (sucesso/falha) obrigatórios antes da entrega de produção.
+- Testes automatizados de integração e cobertura dos fluxos críticos online e offline (OMR).
+- Rate limiting de endpoints e sanitização de dados.
 
 ---
 
 # Critério de conclusão do MVP
 
 O MVP é considerado concluído quando:
-- usuários autenticam com segurança usando cookies HttpOnly
-- professores gerenciam o Question Bank
-- professores criam e publicam provas válidas
-- alunos realizam tentativas sequenciais respeitando a regra de uma questão por vez
-- respostas são salvas imediatamente e avaliadas
-- eventos do navegador são salvos em `security_events`
-- relatórios básicos e logs de auditoria são gerados
-- requisitos essenciais e endpoints operacionais de LGPD estão disponíveis
+- Usuários autenticam com segurança usando cookies HttpOnly (Lax/Strict) e logs de auditoria de login estão ativos.
+- Módulo OMR independente de correção offline de imagens de gabaritos funciona (standalone e integrado).
+- Professores gerenciam o Question Bank e criam/publicam provas válidas.
+- Alunos realizam tentativas online sequenciais (uma questão por vez) com autosave.
+- Eventos de segurança (security_events) e auditoria de ações sensíveis são persistidos.
+- Recursos operacionais de conformidade com a LGPD estão disponíveis.
 
 ---
 
 # Fora do escopo imediato
 
-- geração assistida por IA de questões
-- análise estatística de itens
-- calibração de dificuldade
-- learning analytics
-- multi-tenancy institucional avançado
-- integração com Safe Exam Browser
+- Geração assistida por IA de questões.
+- Análise estatística de itens e calibração de dificuldade.
+- Processamento em lote de PDFs multipágina (OMR).
+- Integração com Safe Exam Browser.

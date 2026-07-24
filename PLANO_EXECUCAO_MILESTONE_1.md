@@ -1,42 +1,24 @@
 # COLA-ZERO — Plano de Execução Prático da Milestone 1
 
-## 1. Objetivo da milestone
+## 1. Objetivo da milestone (Milestone 1 — Concluído)
 
-Entregar o primeiro fluxo funcional do MVP com os seguintes resultados:
+Entregar a fundação técnica e de identidade do sistema:
 
-- professor autentica
-- professor cria questões
-- professor cria prova
-- aluno autentica
-- aluno inicia tentativa
-- backend entrega uma questão por vez
-- aluno envia respostas sequencialmente
-- respostas ficam persistidas com segurança
+- professor e aluno conseguem se registrar e se autenticar com segurança
+- controle de acesso baseado em regras (RBAC) protege endpoints no backend
+- persistência em banco e migrations configuradas
+- suporte a cookies seguros HttpOnly para JWT gerenciado pelo backend
 
-Escopo principal desta milestone:
-
-- fundação técnica do backend e frontend
-- PostgreSQL e migrações
-- autenticação JWT
-- RBAC básico
-- CRUD inicial de questões
-- criação e publicação de provas
-- início de tentativa
-- próxima questão
-- submissão de resposta
+*Nota: O escopo original de criação de questões, provas e tentativas online foi postergado para a Milestone 3. A próxima milestone prioritária é a Milestone 2 (COLA-ZERO OMR). Esta priorização é uma decisão de produto, não uma dependência ou restrição arquitetural. A plataforma de avaliação digital (Online Assessment) continua sendo o core principal da arquitetura do COLA-ZERO, enquanto o OMR atua de forma independente e totalmente desacoplada.*
 
 ## 2. Critério de pronto da milestone
 
-A milestone é considerada pronta quando:
+A milestone 1 é considerada pronta e concluída pois:
 
-- backend e frontend sobem localmente
-- autenticação funciona com JWT
-- RBAC bloqueia acessos indevidos
-- professor consegue criar e consultar questões
-- professor consegue criar, compor e publicar prova
-- aluno consegue iniciar tentativa
-- backend entrega apenas a questão atual
-- resposta é persistida imediatamente após envio
+- backend e frontend sobem localmente via Docker Compose
+- autenticação funciona de forma segura via cookies HttpOnly (Access e Refresh)
+- RBAC bloqueia acessos indevidos e valida perfis (`STUDENT`, `TEACHER`, `ADMIN`)
+- 14 testes automatizados cobrindo fundação e autenticação estão passando com sucesso
 
 ## 3. Ordem operacional recomendada
 
@@ -138,7 +120,7 @@ Checklist do bloco:
 - [x] Prettier do frontend está configurado
 - [x] **BLOCO COMPLETADO** (AuthContext, login/register pages, ProtectedRoute)
 
-### Bloco 4 — Modelo central do domínio
+### Bloco 4 — Modelo central do domínio (POSTERGADO ⏳ — Movido para Milestone 3)
 
 Issues:
 
@@ -147,19 +129,7 @@ Issues:
 - `ISSUE-016`
 - `ISSUE-017`
 
-Objetivo:
-
-Criar a base do domínio de questões, provas, vínculos e tentativas.
-
-Saída esperada:
-
-- tabelas centrais do domínio criadas
-- schemas de `Question` e `Exam` definidos
-- relação `ExamQuestion` funcionando
-
-Risco principal:
-
-- schema divergir do `DATABASE.MD` e do princípio de reutilização de questões
+*Nota: Este bloco foi adiado devido ao reposicionamento de prioridade para a Milestone 2 (Módulo OMR).*
 
 Checklist do bloco:
 
@@ -374,15 +344,14 @@ Definir cedo:
 
 ## 8. Entregável final esperado
 
-Ao final da milestone 1, o repositório deve estar pronto para demonstrar o seguinte cenário:
+Ao final da milestone 1, o repositório está pronto com:
 
-1. professor faz login
-2. professor cria questões
-3. professor cria e publica uma prova
-4. aluno faz login
-5. aluno inicia tentativa
-6. sistema entrega uma questão por vez
-7. aluno responde
-8. respostas são persistidas com segurança
+1. Fundação de banco de dados e dockerização (PostgreSQL, FastAPI, Next.js, Alembic).
+2. Fluxo de registro de usuário com hash de senha bcrypt (ADR-001).
+3. Fluxo de autenticação completo (registro, login, refresh e logout) utilizando cookies seguros HttpOnly no navegador.
+4. Cobertura de testes automatizados unitários e de integração para autenticação e RBAC.
+5. Autorização protegida no backend por rotas decoradas (`@require_role`).
+
+O próximo entregável prioritário é a **Milestone 2: COLA-ZERO OMR**.
 
 Esse é o primeiro recorte funcional real do COLA-ZERO.

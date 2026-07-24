@@ -458,24 +458,24 @@ Desde a primeira versão, implementar:
 
 ### 11.1 Autenticação
 
-- JWT Access Token: HttpOnly, Secure, SameSite=Lax, expiração curta (15-30 min).
-- JWT Refresh Token: HttpOnly, Secure, SameSite=Strict, expiração longa (7-30 dias).
-- Não utilizar localStorage ou sessionStorage para armazenar JWTs.
-- Argon2 preferencialmente
-- bcrypt como alternativa aceitável
-- nunca armazenar senha em texto puro
+- JWT Access Token: Armazenado pelo backend em cookie seguro HttpOnly (`Secure`, `SameSite=Lax`), expiração curta (15-30 min).
+- JWT Refresh Token: Armazenado pelo backend em cookie seguro HttpOnly (`Secure`, `SameSite=Strict`), expiração longa (7-30 dias).
+- Armazenamento no Cliente: Estritamente proibido utilizar `localStorage` ou `sessionStorage` para armazenar tokens JWT.
+- Hash de senha: Atualmente utiliza bcrypt com salt (ADR-001); Argon2 permanece como recomendação futura de hardening pós-MVP.
+- Nunca armazenar senha em texto puro.
 
 ### 11.2 Autorização
 
-- RBAC obrigatório
-- todo endpoint deve validar permissões
+- RBAC obrigatório.
+- Todo endpoint deve validar permissões baseando-se nos perfis `STUDENT`, `TEACHER` e `ADMIN`.
 
 ### 11.3 Auditoria
 
-Registrar ações sensíveis como:
+Registrar ações sensíveis. **Importante:** O log de auditoria para sucesso e falha de login é obrigatório e está pendente de implementação para prontidão de produção (Production Readiness). A autenticação não é considerada pronta para produção até que o logging de auditoria exista.
 
-- login
-- troca de senha
+Ações auditáveis planejadas:
+- login (pendente: validação de credenciais funcional, logging de auditoria pendente)
+- troca de senha 
 - criação de prova
 - alteração de nota
 - publicação de prova
@@ -500,74 +500,78 @@ Prioridade de cobertura:
 
 ## 13. Ordem de implementação (Milestone Order)
 
+*Nota de Prioridade e Arquitetura:*
+- A **avaliação online (Online Assessment)** continua sendo a arquitetura de plataforma primária do COLA-ZERO.
+- A priorização do módulo **COLA-ZERO OMR** como a Milestone 2 é uma **decisão de prioridade de produto**, e não uma dependência arquitetural. O OMR é um subsistema independente e desacoplado do motor online.
+
 ### Fase 1 — Autenticação e RBAC (Backend)
-- estrutura inicial do backend FastAPI, conexão PostgreSQL, Docker e Docker Compose, lint e Prettier
-- healthcheck com TDD
-- modelo `User`
-- hash de senha Argon2 e geração de JWT (cookies HttpOnly)
-- dependências e middlewares de RBAC (`student`, `teacher`, `admin`)
+- Estrutura inicial do backend FastAPI, conexão PostgreSQL, Docker e Docker Compose, lint e Prettier.
+- Healthcheck com TDD.
+- Modelo `User`.
+- Hash de senha com bcrypt (ADR-001) e geração de JWT (cookies HttpOnly).
+- Dependências e middlewares de RBAC (`STUDENT`, `TEACHER`, `ADMIN`).
+- *Nota:* Logging de auditoria de login (sucesso/falha) está pendente e é mandatório para produção.
 
-### Fase 2 — Modelagem Completa de Domínio e Migrações (Backend)
-- criação de tabelas e migrations via Alembic:
-  - `questions`, `classes`, `class_students`, `exams`, `exam_questions`, `attempts`, `answers`, `security_events`, `audit_logs`
-- estabilização do modelo de dados do domínio antes do frontend
+### Fase 2 — Módulo OMR (MVP) — Banco de Dados e Layouts em Código
+- Criação das tabelas de OMR (`omr_templates` e `omr_scans`) com UUID.
+- Criação da tabela unificada de notas (`grades`) com UUID, associando notas consolidando de qualquer fonte (OMR ou ONLINE).
+- Definição do relacionamento opcional com `exams` (Modo Standalone e Integrado).
+- Implementação de layouts versionados mantidos no código (`app/core/omr_layouts.py`). O banco apenas salvará a string referencial no campo `layout_version`.
+- Migrações do banco via Alembic.
 
-### Fase 3 — Login e Gerenciamento de Sessão no Frontend
-- estrutura inicial do frontend Next.js
-- tela de login integrada
-- persistência de sessão utilizando cookies seguros HttpOnly
-- proteção de rotas por middleware no frontend
+### Fase 3 — Módulo OMR (MVP) — Geração de PDF e OpenCV Engine
+- Geração de PDF com **ReportLab** contendo 4 âncoras e o `student_code` de 5 dígitos preenchido automaticamente pelo gerador.
+- OpenCV + NumPy para alinhamento perspectivo de imagem (deskew & warp).
+- Algoritmo de OMR para leitura do código do aluno (5 colunas x 10 linhas) e marcação das alternativas por densidade relativa.
 
-### Fase 4 — Banco de Questões (Question Bank)
-- CRUD de questões pelo professor no backend
-- filtros de questões por disciplina, dificuldade e tags
-- interface de busca e criação de questões no frontend
+### Fase 4 — Módulo OMR (MVP) — Upload API, Correção Automática e Revisão UI
+- Endpoint de upload aceitando estritamente **uma única imagem por requisição (JPG, JPEG, PNG)**.
+- Lógica de processamento assíncrona em background e cálculo automático da nota.
+- Gravação da nota final confirmada pelo professor na tabela unificada `grades`.
+- Tela de upload no frontend.
+- Interface de revisão visual com overlay colorido em cima das bolhas detectadas e suporte a ajustes manuais.
 
-### Fase 5 — Exam Engine (Motor de Provas)
-- criação, composição e regras de publicação de provas (Exams)
-- associação de questões via `ExamQuestion` (ordem e peso)
-- interface de seleção de questões e publicação no frontend
+### Fase 5 — Modelagem Completa de Domínio Acadêmico Core e Migrações
+- Criação de tabelas e migrations via Alembic:
+  - `classes`, `class_students`, `questions` (com suporte a parent_id, version e is_active para imutabilidade de versões publicadas), `exams`, `exam_questions`, `attempts`, `answers`, `security_events`, `audit_logs`
+- Estabilização do modelo de dados (Core Academic Domain Freeze).
 
-### Fase 6 — Attempt Engine (Motor de Tentativas)
-- lifecycle da tentativa (`Attempt`), incluindo ordem de tentativas e autosave de respostas (`Answer`)
-- entrega de uma questão por vez e envio sequencial
-- finalização e correção automática de questões objetivas
+### Fase 6 — Banco de Questões (Question Bank) e Provas (Exam Engine)
+- CRUD de questões pelo professor no backend e frontend.
+- Filtros de questões por disciplina, dificuldade e tags.
+- Criação, composição e publicação de provas (Exams) compostas por `ExamQuestion`.
 
-### Fase 7 — Eventos de Segurança (Security Events) e Auditoria
-- captura de eventos de tela no frontend
-- persistência na tabela `security_events`
-- logs de auditoria para ações administrativas e pedagógicas no backend
-- relatório de integridade para professores
+### Fase 7 — Motor de Tentativas Online (Attempt Engine)
+- Lifecycle da tentativa (`Attempt`), incluindo ordem de tentativas e autosave de respostas (`Answer`).
+- Entrega de uma questão por vez e envio sequencial.
+- Finalização, cálculo do score e gravação na tabela unificada `grades`.
 
-### Fase 8 — Recursos de LGPD
-- aviso e consentimento transparente de monitoramento
-- endpoints operacionais: `GET /me/data-export`, `POST /me/request-anonymization`, `GET /privacy-policy`, `POST /consents/monitoring`
+### Fase 8 — Eventos de Segurança (Security Events) e Auditoria de Sistema
+- Captura de eventos de tela no frontend e persistência em `security_events`.
+- Ingestão de logs de auditoria para ações administrativas e pedagógicas no backend.
 
-### Fase 9 — Qualidade, Hardening e Testes
-- testes integrados de ponta a ponta dos fluxos críticos
-- rate limiting e hardening de segurança
+### Fase 9 — Recursos de LGPD
+- Aviso e consentimento transparente de monitoramento.
+- Endpoints operacionais: `GET /me/data-export`, `POST /me/request-anonymization`, `GET /privacy-policy`, `POST /consents/monitoring`.
+
+### Fase 10 — Qualidade, Hardening e Testes E2E
+- Testes integrados de ponta a ponta dos fluxos críticos online e offline.
+- Rate limiting, logs de auditoria de login e hardening de segurança.
 
 ## 14. Critérios de MVP concluído
 
 O MVP é considerado pronto quando:
-- usuários autenticam com segurança via cookies HttpOnly
-- professores gerenciam o Question Bank
-- professores criam e publicam provas válidas
-- alunos realizam tentativas sequenciais respeitando a regra de uma questão por vez
-- respostas são persistidas e corrigidas
-- eventos do navegador são salvos em `security_events`
-- relatórios básicos e logs de auditoria são gerados
-- requisitos essenciais e endpoints operacionais de LGPD estão disponíveis
+- Usuários autenticam com segurança usando cookies HttpOnly (Lax/Strict) e logs de auditoria de login estão ativos.
+- Módulo OMR independente de correção offline de imagens de gabaritos funciona (standalone e integrado).
+- Professores gerenciam o Question Bank e criam/publicam provas válidas.
+- Alunos realizam tentativas online sequenciais (uma questão por vez) com autosave.
+- Eventos de segurança (security_events) e auditoria de ações sensíveis são persistidos.
+- Requisitos essenciais e endpoints operacionais de LGPD estão disponíveis.
 
 ## 15. Fora do escopo do MVP
 
 Itens possíveis para versões futuras:
-
-- geração assistida por IA de questões
-- análise estatística de itens
-- calibração de dificuldade
-- learning analytics
-- multi-tenancy institucional avançado
-- integração com Safe Exam Browser
-
-Esses itens não devem influenciar a arquitetura mínima necessária do MVP.
+- Geração assistida por IA de questões.
+- Análise estatística de itens e calibração de dificuldade.
+- Processamento em lote de PDFs multipágina (OMR).
+- Integração com Safe Exam Browser.

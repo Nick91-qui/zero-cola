@@ -77,13 +77,16 @@ Banco relacional PostgreSQL com foco em rastreabilidade e histórico.
 Entidades centrais:
 
 - users
-- questions
+- questions (com suporte a versionamento e imutabilidade)
 - exams
 - exam_questions
 - attempts
 - answers
 - security_events
 - audit_logs
+- omr_templates
+- omr_scans
+- grades (entidade de notas unificada)
 
 Regras:
 
@@ -96,15 +99,19 @@ Regras:
 
 # 3. Modelo de domínio
 
-## 3.1 Banco de questões
+## 3.1 Banco de questões e versionamento
 
 Uma questão pode ser reutilizada em várias provas.
 
 Relacionamento principal:
-
 `Exam -> ExamQuestion -> Question`
 
 A prova não deve conter cópias independentes do conteúdo da questão.
+
+**Regras de Imutabilidade e Versionamento**:
+- Questões publicadas no sistema são **estritamente imutáveis**.
+- Qualquer edição em uma questão publicada gera um novo registro no banco de dados (um novo UUID/row), com `parent_id` apontando para o registro original e com o contador `version` incrementado. A versão anterior tem o campo `is_active` definido como `FALSE`.
+- As tentativas online (`attempts`) e os modelos OMR (`omr_templates`) sempre travam e referenciam o ID da versão específica da questão no momento de sua criação ou publicação do exame. Isso garante que alterações posteriores na questão não alterem o conteúdo histórico das avaliações já aplicadas.
 
 ---
 
@@ -117,9 +124,26 @@ A tentativa controla:
 - tempo total
 - submissão incremental de respostas
 - finalização
-- cálculo de score
+- cálculo de score (que é então persistido na entidade unificada `Grade`)
 
 A tentativa é a unidade operacional da execução da prova.
+
+---
+
+## 3.3 Entidade Unificada de Nota (Grade)
+
+Todas as avaliações no COLA-ZERO resultam em notas consolidadas registradas na entidade única compartilhada `Grade` (tabela `grades`), independentemente da origem da correção (online ou gabaritos OMR físicos).
+
+**Estrutura de dados**:
+- `student_id`: Estudante avaliado.
+- `source_type`: Origem da avaliação (ex: `ONLINE` para tentativas do Exam Engine ou `OMR` para correções do OMR Engine).
+- `source_id`: Vínculo lógico (polimórfico) para `attempts.id` ou `omr_scans.id`.
+- `score`: Nota final computada.
+- `teacher_id`: Professor responsável pelo lançamento ou confirmação da nota.
+- `created_at` / `updated_at`: Timestamps de auditoria.
+
+**Extensibilidade**:
+Novos módulos avaliativos futuros (ex: avaliações discursivas manuais, projetos práticos) devem reutilizar essa mesma entidade unificada para gravação de histórico acadêmico.
 
 ---
 
@@ -209,10 +233,10 @@ Prioridades de TDD:
 ## 8.1 Camada de autenticação (IMPLEMENTADO ✅)
 
 **Implementação Atual:**
-- Access Token: JWT com 15 minutos de expiração
-- Refresh Token: JWT com 7 dias de expiração
-- Password hashing: bcrypt com salt
-- Token storage (Frontend): sessionStorage (seguro, sem localStorage)
+- Access Token: JWT com 15 minutos de expiração (armazenado em cookie seguro HttpOnly, SameSite=Lax)
+- Refresh Token: JWT com 7 dias de expiração (armazenado em cookie seguro HttpOnly, SameSite=Strict)
+- Password hashing: bcrypt com salt (consulte ADR-001)
+- Token storage (Frontend): Cookies seguros HttpOnly (não armazenar em localStorage ou sessionStorage)
 - Token validation: decorator `@get_current_user`
 - RBAC: decorator `@require_role(*roles)`
 
@@ -236,11 +260,12 @@ Prioridades de TDD:
 
 ---
 
-## 8.3 Auditoria (PLANEJADO ⏳)
+## 8.3 Auditoria (PENDENTE ⏳)
 
-Ações sensíveis devem gerar registros auditáveis (implementar em Bloco 3+):
+Ações sensíveis devem gerar registros auditáveis. O log de auditoria para ações de login (sucesso e falha) é obrigatório e está pendente de implementação. O fluxo de autenticação não será considerado pronto para produção até que o logging de auditoria exista.
 
-- login ✅ (parcial: temos validação, falta logging)
+Ações auditáveis planejadas:
+- login ⏳ (pendente: autenticação funcional, mas logging de auditoria de login é obrigatório para produção)
 - troca de senha ⏳
 - criação de prova ⏳
 - publicação de prova ⏳
@@ -304,25 +329,61 @@ Dados fora de escopo de coleta:
 
 ---
 
-# 11. Critério arquitetural de MVP — Status Atual (2026-07-01)
+# 11. Estabilização do Domínio Acadêmico Core (Core Academic Domain Freeze)
 
-**Arquitetura Milestone 1 — 50% implementada**
+O domínio acadêmico core da plataforma COLA-ZERO está considerado estável e congelado (*frozen*). Qualquer alteração arquitetural ou redesenho dos seguintes componentes exige obrigatoriamente a criação e aprovação de um novo **Architectural Decision Record (ADR)**:
+- **Ano Acadêmico (AcademicYear)**
+- **Turmas (Classes)**
+- **Códigos de Estudante (Student Codes)**
+- **Controle de Acesso Baseado em Regras (RBAC)**
+- **Arquitetura do Banco de Questões (Question Bank)**
+- **Arquitetura do Motor de Tentativas (Attempt Engine)**
+
+---
+
+# 12. Critério arquitetural de MVP — Status Atual (2026-07-20)
+
+**Arquitetura Milestone 1 — Fundação & Autenticação Concluídas (50%)**
+
+**Priorização e Independência do OMR**:
+- O **Online Assessment** (avaliação digital no navegador) permanece como o core da arquitetura de plataforma do COLA-ZERO.
+- A decisão de implementar o módulo **COLA-ZERO OMR** como o próximo passo de desenvolvimento (Milestone 2) é uma decisão de **PRIORIDADE DE PRODUTO**, e não uma dependência arquitetural.
+- O OMR foi projetado como um subsistema independente e desacoplado que pode ser removido ou alterado sem quebrar o core de tentativas online.
+
+**Declaração de Congelamento da Arquitetura (Architecture Freeze)**:
+A arquitetura do COLA-ZERO para o escopo do MVP está declarada como **congelada (frozen)**. Nenhuma nova funcionalidade ou alteração estrutural no modelo de dados, contratos de API ou fluxos poderá ser efetuada a partir deste momento, exceto para correção de bugs de implementação ou se formalizada por um novo Architectural Decision Record (ADR).
 
 | Requisito | Status | Notas |
 |-----------|--------|-------|
-| Autenticação segura | ✅ | JWT, bcrypt, RBAC completo |
-| Banco de questões reutilizável | ⏳ | Planejado para Bloco 3 |
-| Criação e publicação de provas | ⏳ | Planejado para Bloco 4 |
-| Execução por tentativa | ⏳ | Planejado para Bloco 5 |
-| Uma questão por vez | ⏳ | Será garantido no motor de entrega |
-| Correção e score | ⏳ | Planejado para Bloco 6 |
-| Monitoramento com transparência | ⏳ | Planejado para Bloco 7 |
+| Autenticação segura | ⏳ | JWT e RBAC implementados, mas pendente de logs de auditoria de login para prontidão de produção |
+| Módulo OMR Independente | ⏳ | Próximo Milestone (Prioridade de Produto, 100% isolado) |
+| Banco de questões reutilizável | ⏳ | Planejado pós-OMR |
+| Criação e publicação de provas | ⏳ | Planejado pós-OMR |
+| Execução por tentativa | ⏳ | Planejado pós-OMR |
+| Uma questão por vez | ⏳ | Será garantido no motor de entrega digital |
+| Entidade Unificada de Nota | ⏳ | Planejado implementar junto ao OMR |
+| Monitoramento com transparência | ⏳ | Planejado pós-OMR |
 | Requisitos essenciais de LGPD | ⏳ | Planejado para iteração final |
 
 **Próximos passos arquiteturais:**
-1. Bloco 3: Implementar tabelas Question, Exam, ExamQuestion
-2. Bloco 4: Implementar CRUD e publicação de provas
-3. Bloco 5: Implementar motor de tentativas e entrega de questão
-4. Bloco 6: Implementar correção automática/manual
-5. Bloco 7: Implementar security_events e relatórios
-6. Final: Implementar LGPD endpoints completos
+1. **Milestone OMR:** Implementar tabelas OMR, layouts em código, geração de PDF (ReportLab) com 5 dígitos de student_code, engine OpenCV e APIs de correção avulsa/integrada, além da entidade unificada `Grade`.
+2. **Milestone Question Bank & Exams:** Implementar tabelas Question (com versionamento imutável), Exam, ExamQuestion e CRUD de gestão.
+3. **Milestone Attempt Engine:** Implementar motor de tentativas online (uma questão por vez e autosave).
+4. **Milestone Monitoramento & Auditoria:** Implementar logs de auditoria de negócio e tabela `security_events`.
+5. **Milestone LGPD:** Implementar consentimento explícito e endpoints de exportação/anonimização.
+
+---
+
+# 13. Architectural Decision Records (ADRs)
+
+## ADR-001: Algoritmo de Hashing de Senhas (bcrypt)
+
+### Contexto
+O padrão de segurança de longo prazo definido para a plataforma COLA-ZERO é o **Argon2**, devido à sua robustez superior contra ataques de força bruta otimizados por hardware (GPU/ASIC) e canais laterais. No entanto, por razões de simplicidade no setup inicial e compatibilidade de dependências no ambiente Docker atual do MVP, a implementação atual foi construída utilizando **bcrypt** (com salt e fator de trabalho padrão).
+
+### Decisão
+Manter o uso do **bcrypt** na implementação atual da Milestone 1. Não há necessidade de alterações imediatas de código no backend. O uso do **Argon2** permanece registrado como a recomendação técnica de longo prazo e a migração de algoritmo de hash de senha está planejada para uma versão futura de hardening pré-produção.
+
+### Status
+- **Implementação Atual (Current):** bcrypt com salt.
+- **Recomendação Futura (Future):** Argon2 (migração planejada pós-MVP).

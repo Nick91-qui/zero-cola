@@ -570,74 +570,129 @@ Status inicial de todos os itens:
 - Critérios de aceite:
   - ingestão de eventos suportados coberta por testes
 
+## 13.1 Épico L — Módulo OMR
+
+### CZ-L01 — Modelar e criar tabelas de OMR e Notas no banco
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-B02
+- Entregas:
+  - Tabelas `omr_templates`, `omr_scans` e a tabela unificada `grades`
+- Critérios de aceite:
+  - Schema criado e migrado com sucesso via Alembic
+  - `exam_id` é chave estrangeira opcional (nullable) para habilitar modo standalone em `omr_templates`
+  - Tabela `grades` criada para armazenar notas unificadas (OMR e ONLINE)
+
+### CZ-L02 — Estruturar layouts versionados em código
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: nenhuma
+- Entregas:
+  - Arquivo `backend/app/core/omr_layouts.py` para mapear coordenadas
+- Critérios de aceite:
+  - Posições geométricas mantidas em código e referenciadas via layout_version string
+
+### CZ-L03 — Implementar gerador de gabarito em PDF
+- Prioridade: `P0`
+- Status: `todo`
+- Dependências: CZ-L02
+- Entregas:
+  - PDF gerado com ReportLab contendo 4 âncoras e student_code de 5 dígitos preenchido
+- Critérios de aceite:
+  - Geração de PDF funciona e gera círculos pretos sombreados da matrícula de forma automática
+
+### CZ-L04 — Implementar OpenCV Perspective Correction
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-L02
+- Entregas:
+  - Algoritmo de correção de perspectiva baseado em âncoras
+- Critérios de aceite:
+  - OpenCV consegue alinhar folhas de respostas JPG/PNG a uma grade padrão
+
+### CZ-L05 — Implementar OMR Bubble & Student Code Detection
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-L04
+- Entregas:
+  - Detetor de densidade relativa de marcação nas bolhas do student_code (5 dígitos) e das questões
+- Critérios de aceite:
+  - Sistema lê matrícula e respostas com calibração adaptativa e trata casos de dupla marcação
+
+### CZ-L06 — Criar API de upload de scan e processamento em background
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-L05, CZ-L01
+- Entregas:
+  - Endpoint `POST /api/v1/omr/scans/upload` aceitando apenas um arquivo de imagem (JPG/PNG)
+  - Processamento assíncrono em background e correção automática
+  - Cálculo de notas e gravação na tabela unificada `grades` após confirmação do professor
+- Critérios de aceite:
+  - Upload processado em segundo plano, resultados salvos no banco, e nota gravada na tabela unificada `grades` após confirmação/revisão.
+
+### CZ-L07 — Criar interface frontend de upload e revisão visual
+- Prioridade: `P1`
+- Status: `todo`
+- Dependências: CZ-L06
+- Entregas:
+  - Tela de upload de imagens e interface de revisão
+- Critérios de aceite:
+  - Professor consegue visualizar overlays coloridos em cima das bolhas detectadas e corrigir marcações manualmente
+
+---
+
 ## 14. Ordem prática recomendada de execução
 
-1. CZ-A01
-2. CZ-B01
-3. CZ-B02
-4. CZ-B03
-5. CZ-B04
-6. CZ-C01
-7. CZ-C02
-8. CZ-C03
-9. CZ-C04
-10. CZ-A02
-11. CZ-D01
-12. CZ-D02
-13. CZ-E01
-14. CZ-E02
-15. CZ-E03
-16. CZ-F01
-17. CZ-F02
-18. CZ-F03
-19. CZ-G01
-20. CZ-G02
-21. CZ-G03
-22. CZ-G05
-23. CZ-H01
-24. CZ-H02
-25. CZ-I01
-26. CZ-I02
-27. CZ-I04
-28. CZ-J01
-29. CZ-K01
-30. CZ-K02
-31. CZ-K03
-32. CZ-K04
-33. CZ-K05
-34. CZ-K06
+1. **Milestone 1 — Fundação & Autenticação (CONCLUÍDO)**
+   - CZ-A01, CZ-B01, CZ-B02, CZ-B03 (Fundação & Users)
+   - CZ-C01, CZ-C02, CZ-C03, CZ-C04 (Auth & RBAC Backend)
+   - CZ-A02, CZ-D01, CZ-D02, CZ-D03, CZ-D04 (Auth Frontend)
+   - CZ-A03, CZ-A04, CZ-A05 (Docker/Env/Logs)
+   - CZ-K01, CZ-K02 (Testes de Auth & RBAC)
 
-## 15. Recorte mínimo para primeira milestone
+2. **Milestone 2 — COLA-ZERO OMR (MVP) (ALTA PRIORIDADE)**
+   - CZ-L01 (Modelagem & Tabelas OMR)
+   - CZ-L02 (Registro de Layouts em Código)
+   - CZ-L03 (Gerador de PDF OMR)
+   - CZ-L04 (OpenCV Perspective Alignment)
+   - CZ-L05 (OMR Bubble & Student Code Detection)
+   - CZ-L06 (API Upload & Background Grading)
+   - CZ-L07 (Interface de Upload & Revisão Visual)
 
-Primeira milestone sugerida:
+3. **Milestone 3 — Core Domain & Provas Online (POSTERGADO)**
+   - CZ-B04 (Tabelas de Questões, Provas, Tentativas, Respostas)
+   - CZ-B05 (Índices de Domínio)
+   - CZ-E01, CZ-E02, CZ-E03, CZ-E04 (Question Bank Backend/Frontend)
+   - CZ-F01, CZ-F02, CZ-F03, CZ-F04 (Exam Engine)
+   - CZ-G01, CZ-G02, CZ-G03, CZ-G04, CZ-G05, CZ-G06 (Attempt Engine)
+   - CZ-H01, CZ-H02, CZ-H03, CZ-H04 (Correção automática/manual online)
+   - CZ-I01, CZ-I02, CZ-I03, CZ-I04 (Monitoramento de tela online)
+   - CZ-J01, CZ-J02, CZ-J03, CZ-J04, CZ-J05 (Recursos de LGPD)
+   - CZ-K03, CZ-K04, CZ-K05, CZ-K06 (Testes de Prova/Correção/Monitoramento)
 
-- fundação técnica do backend e frontend
-- PostgreSQL e migrações
-- autenticação JWT
-- RBAC básico
-- CRUD inicial de questões
-- criação de prova
-- início de tentativa
-- próxima questão
-- submissão de resposta
+---
 
-Resultado esperado da milestone:
+## 15. Recorte da Primeira Milestone (CONCLUÍDO)
 
-- um professor cria questões e uma prova
-- um aluno autentica, inicia tentativa e responde sequencialmente
-- o sistema persiste respostas com segurança
+Milestone 1 entregou:
+- Fundação técnica dockerizada de backend e frontend.
+- Persistência básica e migrations de banco.
+- Autenticação e sessão com tokens JWT salvos em cookies seguros HttpOnly.
+- Middleware e decorator de autorização (RBAC).
 
-## 16. Recorte mínimo para segunda milestone
+---
 
-Segunda milestone sugerida:
+## 16. Recorte da Segunda Milestone (PRÓXIMA)
 
-- correção automática
-- score consolidado
-- monitoramento suportado
-- relatório básico para professor
-- exportação de dados do usuário
-- testes principais do fluxo crítico
+Milestone 2 focará inteiramente no módulo **COLA-ZERO OMR**:
+- Definições de layouts OMR geométricos versionados em código.
+- Geração de PDF (ReportLab) com folha de respostas e matrícula de 5 dígitos (`student_code`) pré-preenchida.
+- OpenCV Engine para deskew e detecção de marcações de bolhas em imagens JPG/PNG individuais.
+- API e UI de upload e revisão/correção manual de notas para o professor.
 
-Resultado esperado da milestone:
+---
 
-- o fluxo principal do MVP fica funcional com rastreabilidade e requisitos essenciais de LGPD
+## 17. Recorte da Terceira Milestone (POSTERGADA)
+
+Milestone 3 completará o motor online:
+- Question Bank, Exam Engine, Attempt Engine dinâmico (uma questão por vez), monitoramento de integridade online e governança base de privacidade (LGPD).

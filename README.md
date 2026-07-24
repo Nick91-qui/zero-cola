@@ -81,14 +81,11 @@ O frontend nunca deve receber a prova inteira de uma vez.
 
 ---
 
-# 5. Segurança
-
-## 5.1 Autenticação
-
-- JWT access token
-- JWT refresh token
-- hash de senha com Argon2 preferencialmente
-- bcrypt como alternativa aceitável
+- JWT Access Token: Armazenado pelo backend em cookie seguro HttpOnly (Secure, SameSite=Lax), tempo de vida curto.
+- JWT Refresh Token: Armazenado pelo backend em cookie seguro HttpOnly (Secure, SameSite=Strict), tempo de vida longo.
+- Armazenamento no Cliente: Estritamente proibido armazenar tokens JWT em localStorage ou sessionStorage.
+- Hash de senha: Atualmente utiliza bcrypt com salt (definido via ADR-001); Argon2 como recomendação futura de hardening.
+- Auditoria de Login: Logs de auditoria para sucesso/falha de login são obrigatórios antes de ir para produção.
 
 ---
 
@@ -179,33 +176,34 @@ cola-zero/
 
 # 9. Estado do MVP
 
-## Status Atual (2026-07-01)
+## Status Atual (2026-07-03)
 
-**Milestone 1: Fundação - 50% completo**
+**Milestone 1: Fundação & Autenticação - COMPLETA (100% dos testes passando)**
 
 - ✅ Bloco 1 (Fundação Backend): COMPLETO
   - FastAPI, PostgreSQL, Alembic, Docker Compose
   - 7 testes de fundação passando
   
 - ✅ Bloco 2 (Autenticação Backend + Frontend): COMPLETO
-  - Backend: 5 endpoints auth, JWT tokens, bcrypt hashing, RBAC
-  - Frontend: AuthContext, login/register pages, ProtectedRoute
-  - 14 testes passando (7 auth-specific)
+  - Backend: 5 endpoints auth, JWT via cookies HttpOnly, bcrypt hashing, RBAC
+  - Frontend: AuthContext integrado a cookies HttpOnly, login/register pages, ProtectedRoute
+  - 14/14 testes passando
   
-- ⏳ Bloco 3-6 (Question Bank, Exams, Attempts): EM PLANEJAMENTO
+- ⏳ Milestone OMR (Gabaritos Impressos & Correção Automática): EM PLANEJAMENTO (Próximo passo prioritário)
 
 **Detalhes em**: [STATUS_ATUAL.md](./STATUS_ATUAL.md)
 
 ## O MVP será considerado concluído quando:
 
-- usuários autenticam com segurança ✅ (em progresso)
-- professores criam questões ⏳
-- professores criam e publicam provas ⏳
-- alunos realizam tentativas ⏳
-- respostas são persistidas e corrigidas ⏳
-- eventos de monitoramento são registrados ⏳
-- relatórios básicos são gerados ⏳
-- requisitos essenciais de LGPD são atendidos ⏳
+- usuários autenticam com segurança ✅ (fluxo pronto, pendente logs de auditoria de login)
+- módulo OMR independente implementado ⏳ (próximo passo prioritário)
+- professores gerenciam o Question Bank ⏳
+- professores criam e publicam provas válidas ⏳
+- alunos realizam tentativas online sequenciais (uma questão por vez) ⏳
+- respostas online são persistidas imediatamente ⏳
+- eventos de monitoramento online (security_events) são salvos ⏳
+- relatórios básicos e logs de auditoria são gerados ⏳
+- requisitos essenciais e endpoints operacionais de LGPD estão disponíveis ⏳
 
 ---
 

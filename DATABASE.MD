@@ -88,6 +88,9 @@ Representa o banco de questões reutilizável.
 
 ```sql
 id UUID PRIMARY KEY
+parent_id UUID REFERENCES questions(id) ON DELETE SET NULL -- Aponta para a versão inicial (agrupador)
+version INT NOT NULL DEFAULT 1 -- Contador de versão (1, 2, 3...)
+is_active BOOLEAN NOT NULL DEFAULT TRUE -- Indica se é a versão atual ativa para novas provas
 statement TEXT NOT NULL
 type TEXT NOT NULL
 options JSONB
@@ -97,9 +100,9 @@ subject TEXT
 difficulty TEXT
 tags TEXT[]
 image_url TEXT
-created_by UUID NOT NULL
-created_at TIMESTAMP NOT NULL
-updated_at TIMESTAMP NOT NULL
+created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT -- Impede exclusão do criador
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
+updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
 Observações:
@@ -107,6 +110,7 @@ Observações:
 - `created_by` referencia `users.id`
 - `options` pode armazenar alternativas de questões objetivas
 - `correct_answer` deve permitir estrutura compatível com diferentes tipos de questão
+- **Versionamento e Imutabilidade**: Questões publicadas são **imutáveis**. Qualquer edição gera um novo registro com o mesmo `parent_id`, uma `version` incremental e a versão anterior marcada como `is_active = FALSE`. As provas (`exams`) e os escaneamentos OMR (`omr_scans`) sempre referenciam o UUID da versão específica (`questions.id`), garantindo rastreabilidade acadêmica histórica mesmo se a questão for alterada no futuro.
 
 ---
 
@@ -117,9 +121,9 @@ Representa turmas ou agrupamentos de alunos.
 ```sql
 id UUID PRIMARY KEY
 name TEXT NOT NULL
-teacher_id UUID NOT NULL
-created_at TIMESTAMP NOT NULL
-updated_at TIMESTAMP NOT NULL
+teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT -- Impede exclusão do professor ativo
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
+updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
 Observações:
@@ -133,9 +137,9 @@ Observações:
 Relaciona alunos às turmas.
 
 ```sql
-class_id UUID NOT NULL
-student_id UUID NOT NULL
-created_at TIMESTAMP NOT NULL
+class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE -- Remove vínculo se a turma for excluída
+student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE -- Remove vínculo se o aluno for excluído
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
 PRIMARY KEY (class_id, student_id)
 ```
 
@@ -153,14 +157,14 @@ Representa a configuração de uma prova.
 ```sql
 id UUID PRIMARY KEY
 title TEXT NOT NULL
-class_id UUID NOT NULL
-status TEXT NOT NULL
+class_id UUID NOT NULL REFERENCES classes(id) ON DELETE RESTRICT -- Impede exclusão da turma com prova
+status TEXT NOT NULL (Enum: draft, published, archived)
 total_time_seconds INT
 max_attempts INT NOT NULL DEFAULT 1
 randomization_enabled BOOLEAN NOT NULL DEFAULT FALSE
-created_by UUID NOT NULL
-created_at TIMESTAMP NOT NULL
-updated_at TIMESTAMP NOT NULL
+created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT -- Impede exclusão do criador da prova
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
+updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
 Valores esperados para `status`:
@@ -182,11 +186,11 @@ Relaciona provas a questões sem duplicar o conteúdo da questão.
 
 ```sql
 id UUID PRIMARY KEY
-exam_id UUID NOT NULL
-question_id UUID NOT NULL
+exam_id UUID NOT NULL REFERENCES exams(id) ON DELETE CASCADE -- Cascade se a prova for excluída
+question_id UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT -- Impede exclusão da questão vinculada
 display_order INT NOT NULL
 weight NUMERIC(10,2) NOT NULL
-created_at TIMESTAMP NOT NULL
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
 Observações:
@@ -203,15 +207,15 @@ Representa a tentativa de um aluno em uma prova.
 
 ```sql
 id UUID PRIMARY KEY
-exam_id UUID NOT NULL
-student_id UUID NOT NULL
+exam_id UUID NOT NULL REFERENCES exams(id) ON DELETE RESTRICT -- Histórico: impede exclusão de prova realizada
+student_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT -- Histórico: impede exclusão de aluno com histórico
 attempt_number INT NOT NULL
-status TEXT NOT NULL
+status TEXT NOT NULL (Enum: not_started, in_progress, submitted, graded)
 started_at TIMESTAMP
 ended_at TIMESTAMP
 score NUMERIC(10,2)
-created_at TIMESTAMP NOT NULL
-updated_at TIMESTAMP NOT NULL
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
+updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
 Valores esperados para `status`:
@@ -236,12 +240,12 @@ Representa respostas submetidas dentro de uma tentativa.
 
 ```sql
 id UUID PRIMARY KEY
-attempt_id UUID NOT NULL
-question_id UUID NOT NULL
+attempt_id UUID NOT NULL REFERENCES attempts(id) ON DELETE CASCADE -- Respostas caem se a tentativa cair (tentativa tem RESTRICT)
+question_id UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT -- Histórico: impede exclusão de questão respondida
 answer_payload JSONB NOT NULL
 is_correct BOOLEAN
-answered_at TIMESTAMP NOT NULL
-created_at TIMESTAMP NOT NULL
+answered_at TIMESTAMP NOT NULL DEFAULT NOW()
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
 Observações:
@@ -259,10 +263,10 @@ Representa eventos de segurança associados à tentativa.
 
 ```sql
 id UUID PRIMARY KEY
-attempt_id UUID NOT NULL
-event_type TEXT NOT NULL
+attempt_id UUID NOT NULL REFERENCES attempts(id) ON DELETE CASCADE -- Eventos caem se a tentativa cair
+event_type TEXT NOT NULL (Enum: visibilitychange, blur, focus, fullscreen_enter, fullscreen_exit)
 metadata JSONB
-created_at TIMESTAMP NOT NULL
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
 Eventos suportados no MVP:
@@ -286,10 +290,10 @@ Representa auditoria de ações sensíveis do sistema.
 
 ```sql
 id UUID PRIMARY KEY
-user_id UUID
+user_id UUID REFERENCES users(id) ON DELETE SET NULL -- Mantém registro mesmo se o usuário for excluído (LGPD)
 event_type TEXT NOT NULL
 metadata JSONB
-created_at TIMESTAMP NOT NULL
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
 Exemplos de eventos auditáveis:
@@ -307,30 +311,103 @@ Observações:
 
 ---
 
+## 3.11 omr_templates
+
+Representa o gabarito físico/standalone configurado no sistema.
+
+```sql
+id UUID PRIMARY KEY
+exam_id UUID REFERENCES exams(id) ON DELETE SET NULL -- Opcional (NULL em modo standalone)
+layout_version VARCHAR(50) NOT NULL -- Identifica o layout geométrico em código
+total_questions INT NOT NULL
+options_per_question INT NOT NULL DEFAULT 5
+correct_answers JSONB -- Chaves corretas em formato de mapa (obrigatório se exam_id for NULL)
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
+updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+```
+
+---
+
+## 3.12 omr_scans
+
+Representa as folhas de respostas digitalizadas e corrigidas pelo OMR.
+
+```sql
+id UUID PRIMARY KEY
+omr_template_id UUID NOT NULL REFERENCES omr_templates(id) ON DELETE CASCADE
+student_code VARCHAR(5) -- Código numérico de 5 dígitos lido no OMR do aluno
+student_id UUID REFERENCES users(id) ON DELETE SET NULL -- Resolvido via student_code
+status TEXT NOT NULL (Enum: processing, success, review_needed, failed)
+image_url TEXT NOT NULL -- Caminho para a foto individual salva (JPG/PNG)
+detected_answers JSONB -- Respostas lidas OMR
+raw_confidence JSONB -- Níveis de cor de preenchimento obtidos
+score NUMERIC(5,2) -- Pontuação gerada
+error_message TEXT -- Registra falhas na engine OpenCV
+processed_at TIMESTAMP
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
+updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+```
+
+---
+
+## 3.13 grades
+
+Representa as notas finais consolidadas obtidas pelos alunos, independentemente da origem da avaliação (provas online ou gabaritos OMR físicos). É a entidade unificada de notas compartilhada por todas as fontes de avaliação do sistema.
+
+```sql
+id UUID PRIMARY KEY
+student_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT -- Impede remoção de aluno com notas registradas
+source_type VARCHAR(50) NOT NULL -- Enum/valores: 'ONLINE', 'OMR'
+source_id UUID NOT NULL -- Vínculo lógico para attempts.id ou omr_scans.id
+score NUMERIC(5,2) NOT NULL -- Nota consolidada final
+teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT -- Professor que aplicou/revisou/confirmou a nota
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
+updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+```
+
+Observações:
+- `source_id` é uma chave estrangeira lógica (polimórfica). Não possui restrição física de FK (Foreign Key constraint) no Postgres, mas aponta logicamente para `attempts.id` (quando `source_type` = 'ONLINE') ou `omr_scans.id` (quando `source_type` = 'OMR').
+- Como as tentativas de exames (`attempts`) e leituras de gabarito (`omr_scans`) são registros históricos de alta integridade, a tabela `grades` garante a rastreabilidade acadêmica unificada.
+
+---
+
 # 4. Relacionamentos principais
 
 ```text
 User
- ├── Question.created_by
- ├── Exam.created_by
- ├── Class.teacher_id
- ├── Attempt.student_id
- └── AuditLog.user_id
+ ├── Question.created_by (RESTRICT)
+ ├── Exam.created_by (RESTRICT)
+ ├── Class.teacher_id (RESTRICT)
+ ├── Attempt.student_id (RESTRICT)
+ ├── AuditLog.user_id (SET NULL)
+ ├── OMRScan.student_id (SET NULL, via student_code resolution)
+ ├── Grade.student_id (RESTRICT)
+ └── Grade.teacher_id (RESTRICT)
 
 Class
- ├── Exam.class_id
- └── ClassStudent.class_id
+ ├── Exam.class_id (RESTRICT)
+ └── ClassStudent.class_id (CASCADE)
 
 Question
- └── ExamQuestion.question_id
+ ├── ExamQuestion.question_id (RESTRICT)
+ ├── Answer.question_id (RESTRICT)
+ └── Question.parent_id (SET NULL)
 
 Exam
- ├── ExamQuestion.exam_id
- └── Attempt.exam_id
+ ├── ExamQuestion.exam_id (CASCADE)
+ ├── Attempt.exam_id (RESTRICT)
+ └── OMRTemplate.exam_id (SET NULL)
 
 Attempt
- ├── Answer.attempt_id
- └── SecurityEvent.attempt_id
+ ├── Answer.attempt_id (CASCADE)
+ ├── SecurityEvent.attempt_id (CASCADE)
+ └── Grade.source_id (Logical link, source_type = 'ONLINE')
+
+OMRTemplate
+ └── OMRScan.omr_template_id (CASCADE)
+
+OMRScan
+ └── Grade.source_id (Logical link, source_type = 'OMR')
 ```
 
 ---
@@ -368,6 +445,7 @@ Sugestões iniciais de índice:
 ```sql
 CREATE UNIQUE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_questions_created_by ON questions(created_by);
+CREATE INDEX idx_questions_parent_id ON questions(parent_id);
 CREATE INDEX idx_questions_subject ON questions(subject);
 CREATE INDEX idx_questions_difficulty ON questions(difficulty);
 CREATE INDEX idx_exams_class_id ON exams(class_id);
@@ -379,6 +457,8 @@ CREATE INDEX idx_answers_attempt_id ON answers(attempt_id);
 CREATE INDEX idx_security_events_attempt_id ON security_events(attempt_id);
 CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX idx_audit_logs_event_type ON audit_logs(event_type);
+CREATE INDEX idx_grades_student_id ON grades(student_id);
+CREATE INDEX idx_grades_source ON grades(source_type, source_id);
 ```
 
 ---

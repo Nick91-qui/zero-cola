@@ -811,73 +811,156 @@ Convenções:
   - [ ] criar rota
   - [ ] implementar persistência
 
+### ISSUE-053 — Modelar e criar tabelas de OMR e Notas no banco
+- ID técnico: `CZ-L01`
+- Prioridade: `P0`
+- Tipo: `backend`
+- Status: `todo`
+- Dependências: `ISSUE-003`
+- Descrição:
+  - criar tabelas `omr_templates` e `omr_scans` para o módulo de correção automática
+  - criar tabela unificada `grades` para consolidação central de notas do sistema
+- Escopo:
+  - modelos SQLAlchemy
+  - campos descritos no DATABASE.md (`layout_version`, `correct_answers` em JSONB, e a tabela unificada `grades` com UUID e tipo polimórfico)
+  - relação opcional com `exams` para suportar modo standalone e integrado
+  - migrations via Alembic
+- Critérios de aceite:
+  - migrations executadas e tabelas de OMR e grades prontas no Postgres
+- Checklist:
+  - [ ] criar model `OMRTemplate`
+  - [ ] criar model `OMRScan`
+  - [ ] criar model `Grade`
+  - [ ] gerar migration Alembic
+  - [ ] validar relacionamentos no banco
+
+### ISSUE-054 — Estruturar layouts versionados em código
+- ID técnico: `CZ-L02`
+- Prioridade: `P0`
+- Tipo: `backend`
+- Status: `todo`
+- Dependências: nenhuma
+- Descrição:
+  - implementar arquivo `backend/app/core/omr_layouts.py` para mapear as coordenadas das bolhas dos gabaritos em código
+- Escopo:
+  - dicionário estático mapeando versões de layouts (ex: `v1_std_20q`) para coordenadas teóricas de âncoras, do grid numérico de matrícula de 5 colunas e das questões
+- Critérios de aceite:
+  - coordenadas geométricas podem ser resolvidas de forma unificada a partir da versão do layout no código
+- Checklist:
+  - [ ] criar arquivo `omr_layouts.py`
+  - [ ] registrar primeiro layout de teste de 20 questões
+
+### ISSUE-055 — Implementar gerador de gabarito em PDF (ReportLab)
+- ID técnico: `CZ-L03`
+- Prioridade: `P0`
+- Tipo: `backend`
+- Status: `todo`
+- Dependências: `ISSUE-054`
+- Descrição:
+  - criar serviço para gerar o PDF da folha de respostas com matrícula de 5 dígitos pré-preenchida no OMR
+- Escopo:
+  - PDF gerado com ReportLab
+  - desenho de 4 âncoras pretas nos cantos para calibração
+  - sombreamento automático das bolhas de matrícula de acordo com o `student_code` do aluno
+- Critérios de aceite:
+  - download de PDF gera arquivo com bolhas de identificação já marcadas em preto de forma automática
+- Checklist:
+  - [ ] instalar biblioteca reportlab no backend
+  - [ ] implementar gerador de folha PDF personalizada
+  - [ ] criar endpoint GET de download do PDF
+
+### ISSUE-056 — Implementar OpenCV Perspective Correction
+- ID técnico: `CZ-L04`
+- Prioridade: `P1`
+- Tipo: `backend`
+- Status: `todo`
+- Dependências: `ISSUE-054`
+- Descrição:
+  - retificar fotos de gabaritos digitalizados para alinhamento perspectivo baseado em âncoras
+- Escopo:
+  - detectar contornos das 4 âncoras geométricas usando `cv2.findContours`
+  - alinhar a folha à grade teórica correspondente usando `cv2.warpPerspective`
+- Critérios de aceite:
+  - fotos de celular rotacionadas ou com inclinação são alinhadas a uma grade padrão
+- Checklist:
+  - [ ] instalar opencv-python-headless e numpy
+  - [ ] implementar detecção de contornos de âncoras
+  - [ ] implementar retificação perspectiva
+
+### ISSUE-057 — Implementar OMR Bubble & Student Code Detection
+- ID técnico: `CZ-L05`
+- Prioridade: `P1`
+- Tipo: `backend`
+- Status: `todo`
+- Dependências: `ISSUE-056`
+- Descrição:
+  - decodificar código do aluno e respostas assinaladas nas bolhas usando densidade de pixels
+- Escopo:
+  - calibração adaptativa de luz baseando-se em branco e preto das âncoras
+  - extração de matriz de matrícula (5 colunas $\times$ 10 linhas) e conversão para string de 5 dígitos
+  - extração das respostas assinaladas e tratamento de marcação dupla ou incompleta (gerando status `review_needed`)
+- Critérios de aceite:
+  - motor OpenCV retorna matrícula e respostas corretas a partir de fotos individuais JPG/PNG
+- Checklist:
+  - [ ] implementar lógica de calibração adaptativa de luz
+  - [ ] implementar extração e validação do student_code
+  - [ ] implementar extração das respostas das questões
+
+### ISSUE-058 — Criar API de upload de scan e processamento assíncrono
+- ID técnico: `CZ-L06`
+- Prioridade: `P1`
+- Tipo: `backend`
+- Status: `todo`
+- Dependências: `ISSUE-053`, `ISSUE-057`
+- Descrição:
+  - criar endpoint FastAPI para upload de scan individual (JPG/PNG) e correção automática assíncrona
+  - integrar gravação da nota consolidada final na tabela unificada `grades`
+- Escopo:
+  - rota `POST /api/v1/omr/scans/upload` aceitando exclusivamente arquivos de imagens soltas
+  - enfileiramento em background (`BackgroundTasks`) do processamento OMR
+  - lógica de cálculo de score dinâmico (Modo Integrado cruzando com Exam, Modo Avulso usando gabarito do template)
+- Critérios de aceite:
+  - upload processa a imagem em background e persiste resultados em `omr_scans`
+  - gravação definitiva da nota na tabela `grades` realizada com sucesso após processamento/confirmação
+- Checklist:
+  - [ ] criar endpoint de upload com validações de arquivo
+  - [ ] integrar motor OMR em tarefa de background
+  - [ ] implementar persistência de notas consolidadas na tabela `grades`
+  - [ ] implementar rotas de listagem e detalhe de scans
+
+### ISSUE-059 — Criar interface frontend de upload e revisão visual
+- ID técnico: `CZ-L07`
+- Prioridade: `P1`
+- Tipo: `frontend`
+- Status: `todo`
+- Dependências: `ISSUE-058`
+- Descrição:
+  - criar interface no Next.js para upload de gabaritos e tela de revisão interativa para o professor
+- Escopo:
+  - upload de imagem única drag and drop
+  - canvas interativo no frontend para exibir círculos coloridos overlay em cima das bolhas lidas
+  - botões de correção manual (clique na bolha) e confirmação final de nota
+- Critérios de aceite:
+  - professor visualiza graficamente a folha lida, altera bolhas se necessário e confirma a nota
+- Checklist:
+  - [ ] criar página de upload de scan no frontend
+  - [ ] criar componente de canvas interativo para overlay de bolhas
+  - [ ] integrar rotas PATCH de correção manual e confirmação no frontend
+
+
 ## 5. Ordem sugerida de abertura
 
-1. ISSUE-001
-2. ISSUE-002
-3. ISSUE-003
-4. ISSUE-004
-5. ISSUE-005
-6. ISSUE-006
-7. ISSUE-007
-8. ISSUE-008
-9. ISSUE-009
-10. ISSUE-010
-11. ISSUE-011
-12. ISSUE-012
-13. ISSUE-013
-14. ISSUE-014
-15. ISSUE-015
-16. ISSUE-016
-17. ISSUE-017
-18. ISSUE-018
-19. ISSUE-019
-20. ISSUE-020
-21. ISSUE-021
-22. ISSUE-022
-23. ISSUE-023
-24. ISSUE-024
-25. ISSUE-025
-26. ISSUE-026
-27. ISSUE-027
-28. ISSUE-028
-29. ISSUE-029
-30. ISSUE-030
-31. ISSUE-031
-32. ISSUE-032
-33. ISSUE-033
-34. ISSUE-034
-35. ISSUE-035
-36. ISSUE-036
-37. ISSUE-037
-38. ISSUE-038
-39. ISSUE-039
-40. ISSUE-040
-41. ISSUE-041
-42. ISSUE-042
-43. ISSUE-043
-44. ISSUE-044
-45. ISSUE-045
-46. ISSUE-046
-47. ISSUE-047
-48. ISSUE-048
-49. ISSUE-049
-50. ISSUE-050
-51. ISSUE-051
-52. ISSUE-052
+1. **Milestone 1 — Concluído** (ISSUE-001 a ISSUE-011, ISSUE-029, ISSUE-030, ISSUE-035, ISSUE-036, ISSUE-037)
+2. **Milestone 2 — OMR (MVP)** (ISSUE-053 a ISSUE-059)
+3. **Milestone 3 — Core Domain & Online Provas** (ISSUE-012 a ISSUE-028, ISSUE-031 a ISSUE-034, ISSUE-038 a ISSUE-052)
 
-## 6. Resultado esperado após milestone 2
+## 6. Resultado esperado após milestone 2 (OMR MVP)
 
-Ao concluir as issues das milestones 1 e 2, o sistema deve permitir:
+Ao concluir as issues da Milestone 2, o sistema deve permitir:
 
-- autenticação segura
-- RBAC básico
-- criação e gestão de questões
-- criação e publicação de provas
-- tentativa sequencial com uma questão por vez
-- submissão imediata de respostas
-- correção automática básica
-- score consolidado
-- monitoramento suportado com transparência
-- exportação essencial de dados do usuário
-- cobertura inicial dos fluxos críticos
+- Autenticação e RBAC (gerenciados por cookies HttpOnly) funcionais no backend e frontend.
+- Geração de folhas de respostas em PDF personalizadas com a matrícula de 5 dígitos do aluno pré-preenchida no OMR.
+- Upload de imagens JPG/PNG individuais contendo a folha de respostas digitalizada.
+- Alinhamento de perspectiva automático de scans e decodificação do código de matrícula e alternativas.
+- Processamento e correção automática assíncrona baseados em gabaritos integrados (Exames) ou standalone.
+- Painel para o professor revisar as marcações detectadas visualmente sobre o scan original e efetuar correções manuais.
