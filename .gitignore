@@ -54,3 +54,7 @@ logs/
 
 # Local tooling
 .abacusai/
+
+# Runtime uploads (OMR scans, etc.)
+backend/uploads/scans/*
+!backend/uploads/scans/.gitkeep
