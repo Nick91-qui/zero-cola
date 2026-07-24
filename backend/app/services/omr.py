@@ -205,7 +205,10 @@ class OMRService:
         return updated_scan
 
     def confirm_scan(self, scan_id: UUID, teacher_id: UUID) -> Grade:
-        """Confirms OMR correction and publishes the grade to the unified grades table."""
+        """Confirms OMR correction, creates Attempt & AttemptAnswers for the Exam, and publishes the grade."""
+        from app.models.exam import Exam
+        from app.repositories.attempt import AttemptRepository
+
         scan = self.scan_repo.get_by_id(scan_id)
         if not scan:
             raise ValueError(f"OMR Scan with ID {scan_id} not found.")
@@ -222,12 +225,90 @@ class OMRService:
         # 1. Update scan status to SUCCESS
         self.scan_repo.update(scan.id, status=OMRScanStatus.SUCCESS, error_message=None)
 
-        # 2. Record to unified grades table
+        # 2. Find or create associated Exam for the OMRTemplate
+        template = self.get_template(scan.omr_template_id)
+        exam = None
+        if template and template.exam_id:
+            exam = self.db.query(Exam).filter(Exam.id == template.exam_id).first()
+
+        if not exam:
+            exam = Exam(
+                title=template.title or f"Avaliação OMR {template.layout_version}",
+                teacher_id=teacher_id,
+                omr_template_id=template.id,
+                total_questions=template.total_questions,
+                max_score=Decimal("10.00"),
+                is_active=True,
+            )
+            self.db.add(exam)
+            self.db.commit()
+            self.db.refresh(exam)
+            if template:
+                template.exam_id = exam.id
+                self.db.commit()
+
+        # 3. Calculate score breakdown and prepare AttemptAnswers
+        correct_cnt = 0
+        answers_data = []
+        tot_q = template.total_questions if template else 20
+        for i in range(1, tot_q + 1):
+            q_str_i = str(i)
+            q_key_i = f"q{i}"
+            selected_opt = None
+            if scan.detected_answers:
+                selected_opt = scan.detected_answers.get(q_str_i) or scan.detected_answers.get(q_key_i)
+
+            correct_opt = None
+            if template and template.correct_answers:
+                correct_opt = template.correct_answers.get(q_str_i) or template.correct_answers.get(q_key_i)
+
+            is_corr = bool(selected_opt and correct_opt and selected_opt == correct_opt)
+            if is_corr:
+                correct_cnt += 1
+
+            answers_data.append({
+                "question_number": i,
+                "selected_option": selected_opt,
+                "correct_option": correct_opt,
+                "is_correct": is_corr,
+            })
+
+        incorr_cnt = tot_q - correct_cnt
+        accuracy_pct = Decimal((correct_cnt / tot_q) * 100) if tot_q > 0 else Decimal("0.00")
+        raw_score = Decimal(correct_cnt)
+        final_score = (Decimal(correct_cnt) / Decimal(tot_q)) * exam.max_score if tot_q > 0 else Decimal("0.00")
+
+        # 4. Create or update Attempt
+        attempt_repo = AttemptRepository(self.db)
+        existing_attempt = attempt_repo.get_by_omr_scan_id(scan.id)
+        if not existing_attempt:
+            attempt = attempt_repo.create_attempt(
+                exam_id=exam.id,
+                student_id=scan.student_id,
+                student_code=scan.student_code,
+                omr_scan_id=scan.id,
+                total_questions=tot_q,
+                correct_answers=correct_cnt,
+                incorrect_answers=incorr_cnt,
+                accuracy_percentage=accuracy_pct.quantize(Decimal("0.01")),
+                raw_score=raw_score.quantize(Decimal("0.01")),
+                final_score=final_score.quantize(Decimal("0.01")),
+                status="graded",
+            )
+            for a_item in answers_data:
+                a_item["attempt_id"] = attempt.id
+            attempt_repo.create_answers_bulk(answers_data)
+
+        # 5. Update scan.score to final_score
+        self.scan_repo.update(scan.id, score=final_score.quantize(Decimal("0.01")))
+
+        # 6. Record to unified grades table
         grade = self.grade_repo.create_or_update(
             student_id=scan.student_id,
             source_type=GradeSourceType.OMR,
             source_id=scan.id,
-            score=scan.score,
+            score=final_score.quantize(Decimal("0.01")),
             teacher_id=teacher_id,
         )
         return grade
+

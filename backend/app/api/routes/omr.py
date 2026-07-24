@@ -175,3 +175,23 @@ async def confirm_scan(
         return grade
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def delete_template(
+    template_id: UUID,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Soft-deletes an OMR template (sets is_active=False). Preserves historical scans and grades."""
+    from app.services.exam import ExamService
+    service = ExamService(db)
+    success = service.soft_delete_template(template_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"OMR Template {template_id} not found.",
+        )
+    return None
+

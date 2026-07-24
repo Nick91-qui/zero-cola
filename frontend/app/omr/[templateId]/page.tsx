@@ -52,7 +52,7 @@ export default function OmrTemplateDetailPage() {
     setBusy(true);
     try {
       if (!/^\d{5}$/.test(studentCode)) {
-        throw new Error('Informe um student_code com 5 dígitos');
+        throw new Error('Informe um código de aluno com 5 dígitos');
       }
       const blob = await downloadTemplatePdf(templateId, studentCode);
       downloadBlob(blob, `gabarito-${studentCode}.pdf`);
@@ -98,39 +98,51 @@ export default function OmrTemplateDetailPage() {
     <ProtectedRoute requiredRoles={['teacher', 'admin']}>
       <div className="min-h-screen bg-slate-50">
         <main className="mx-auto max-w-3xl px-4 py-10">
-          <Link href="/omr" className="text-sm text-emerald-700 hover:underline">
-            ← Gabaritos
+          <Link href="/omr" className="text-sm font-medium text-emerald-700 hover:underline">
+            ← Voltar para Gabaritos
           </Link>
 
           {!template ? (
-            <p className="mt-6 text-slate-500">{error || 'Carregando...'}</p>
+            <p className="mt-6 text-sm text-slate-500">{error || 'Carregando gabarito...'}</p>
           ) : (
             <>
-              <h1 className="mt-4 text-3xl font-semibold text-slate-900">
-                {template.layout_version}
-              </h1>
-              <p className="mt-2 text-slate-600">
-                {template.total_questions} questões · ID {template.id}
-              </p>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-slate-900">
+                    {template.title || `Gabarito OMR ${template.layout_version}`}
+                  </h1>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {template.total_questions} questões · Layout: {template.layout_version}
+                  </p>
+                </div>
+                {template.exam_id && (
+                  <Link
+                    href={`/exams/${template.exam_id}`}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-200"
+                  >
+                    Ver Avaliação & Relatórios →
+                  </Link>
+                )}
+              </div>
 
               {error && (
-                <div className="mt-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+                <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                   {error}
                 </div>
               )}
 
-              <section className="mt-8 rounded border border-slate-200 bg-white p-5">
-                <h2 className="text-lg font-medium text-slate-900">1. Gerar folha</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  PDF para impressão ou PNG de calibração (mesmo espaço do motor OMR).
+              <section className="mt-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-slate-900">1. Gerar folha de resposta</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Gere o PDF pronto para impressão com QR code e código do aluno.
                 </p>
                 <label className="mt-4 block text-sm font-medium text-slate-700">
-                  Código do aluno (5 dígitos)
+                  Código do Aluno (5 dígitos)
                   <input
                     value={studentCode}
                     onChange={(e) => setStudentCode(e.target.value)}
                     maxLength={5}
-                    className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+                    className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none"
                     placeholder="10234"
                   />
                 </label>
@@ -139,39 +151,39 @@ export default function OmrTemplateDetailPage() {
                     type="button"
                     disabled={busy}
                     onClick={handleDownloadPdf}
-                    className="rounded bg-emerald-700 px-4 py-2 text-white hover:bg-emerald-600 disabled:bg-emerald-400"
+                    className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 disabled:bg-emerald-400"
                   >
-                    Baixar PDF
+                    Baixar PDF da Folha
                   </button>
                   <button
                     type="button"
                     disabled={busy}
                     onClick={handleDownloadPreview}
-                    className="rounded border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                    className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
                   >
-                    Baixar preview PNG
+                    Baixar Preview PNG
                   </button>
                 </div>
               </section>
 
-              <section className="mt-6 rounded border border-slate-200 bg-white p-5">
-                <h2 className="text-lg font-medium text-slate-900">2. Corrigir por imagem</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Envie JPG/JPEG/PNG de uma folha preenchida (uma imagem por vez).
+              <section className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-slate-900">2. Enviar imagem e corrigir (OMR)</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Faça o upload do cartão-resposta (JPG ou PNG) preenchido pelo aluno.
                 </p>
                 <form onSubmit={handleUpload} className="mt-4 space-y-4">
                   <input
                     type="file"
                     accept=".jpg,.jpeg,.png,image/jpeg,image/png"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="block w-full text-sm text-slate-600"
+                    className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-md file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200"
                   />
                   <button
                     type="submit"
                     disabled={busy || !file}
-                    className="rounded bg-slate-900 px-4 py-2 text-white hover:bg-slate-700 disabled:bg-slate-400"
+                    className="rounded-md bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:bg-slate-400"
                   >
-                    {busy ? 'Processando...' : 'Enviar e corrigir'}
+                    {busy ? 'Processando imagem...' : 'Enviar e Corrigir'}
                   </button>
                 </form>
               </section>

@@ -4,11 +4,13 @@ export type OMRScanStatus = 'processing' | 'success' | 'review_needed' | 'failed
 
 export interface OMRTemplate {
   id: string;
+  title: string | null;
   exam_id: string | null;
   layout_version: string;
   total_questions: number;
   options_per_question: number;
   correct_answers: Record<string, string> | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +43,7 @@ export interface Grade {
 }
 
 export interface CreateTemplateInput {
+  title?: string;
   layout_version: string;
   total_questions: number;
   options_per_question?: number;
@@ -60,6 +63,12 @@ export function createTemplate(input: CreateTemplateInput) {
   return apiFetch<OMRTemplate>('/omr/templates', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export function deleteTemplate(templateId: string) {
+  return apiFetch<void>(`/omr/templates/${templateId}`, {
+    method: 'DELETE',
   });
 }
 
