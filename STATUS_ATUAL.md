@@ -7,13 +7,15 @@
 - Bloco 2 (Autenticação Backend + Frontend): **100% completo**
 
 **Milestone 2: COLA-ZERO OMR (MVP)**
-- Backend (models, migration, layouts, PDF, engine, API): **completo**
-- Frontend (criar gabarito, PDF/preview, upload e revisão): **completo**
-- `student_code` no cadastro/perfil: **completo**
-- Calibração layout↔detecção (PNG sintético): **completo**
-- Calibração com foto real impressa: **pendente (campo)**
+- Backend (models, migration, layouts, PDF, engine, API): **100% completo**
+- Frontend (criar gabarito, PDF/preview, upload e revisão): **100% completo**
+- `student_code` no cadastro/perfil: **100% completo**
 
-**Percentual geral**: Milestone 1 concluída; Milestone 2 OMR utilizável em modo avulso
+**Milestone 3: Question Bank / Exams / Assessment Engine**
+- Backend (Avaliações, Questões, Habilidades BNCC, Tentativas e Respostas): **100% completo**
+- Integração OMR ↔ Exam: **100% completo** (confirmação de OMR gera Exam, Attempt e AttemptAnswers automaticamente)
+- Relatórios & Exportação (Estatísticas por questão, Relatórios PDF e Planilhas Excel XLSX): **100% completo**
+- Cobertura de Testes Automatizados (41 testes pytest + vitest): **100% verde**
 
 ---
 
@@ -36,46 +38,36 @@
 - bcrypt + RBAC
 - `student_code` (5 dígitos) obrigatório para alunos no registro; editável via `PATCH /auth/me`
 
-**Frontend auth**
-- Login/register, AuthContext, ProtectedRoute, dashboard
-
 ---
 
-## Milestone 2 — OMR (COMPLETO para modo avulso)
+## Milestone 2 & 3 — OMR & Assessment Core (COMPLETO)
 
 ### Backend
-- Tabelas `omr_templates`, `omr_scans`, `grades` + migration `8c7e7c2e4e00`
+- Tabelas `omr_templates`, `omr_scans`, `grades`, `exams`, `questions`, `skills`, `question_skills`, `attempts`, `attempt_answers`
 - Layouts `v1_std_20q` / `v1_std_50q`
-- PDF (ReportLab) + preview PNG (mesmo espaço do motor)
-- Engine OpenCV + score + confirm → `grades`
+- PDF (ReportLab) + preview PNG
+- OMR Engine OpenCV + score + confirm → gera `grades`, `attempts` e `attempt_answers`
 - Endpoints:
-  - `POST/GET /omr/templates`, `GET /omr/templates/{id}`
-  - `GET .../pdf`, `GET .../preview.png`
+  - `POST/GET /omr/templates`, `GET /omr/templates/{id}`, `DELETE /omr/templates/{id}`
   - `POST /omr/scans/upload`, `GET/PATCH /omr/scans/{id}`, `POST .../confirm`
+  - `POST/GET/PATCH/DELETE /exams`, `GET /exams/{id}/statistics`
+  - `GET /exams/{id}/export/pdf`, `GET /exams/{id}/export/xlsx`
+  - `POST/GET /skills`
 
 ### Frontend (`/omr`)
 - Lista e criação de gabarito (chave A–E)
 - Detalhe: baixar PDF / preview PNG, upload JPG/PNG
 - Revisão: editar código/respostas, confirmar nota
-- Link no dashboard para teacher/admin
-
-### Como usar agora
-1. Subir stack (`make up`) e rodar `make migrate`
-2. Registrar **teacher** e **student** (student com código 5 dígitos)
-3. Login teacher → Dashboard → **Abrir módulo OMR**
-4. Criar gabarito → baixar PDF → preencher/fotografar → upload → revisar → confirmar
-
-Para testar sem impressora: baixe o **preview PNG**, marque bolhas no editor de imagem, e faça upload.
+- Dashboard para teacher/admin e student
 
 ---
 
 ## Próximos Passos
 
-1. Validar com folhas **impressas** e fotos reais (ajuste fino de âncoras se necessário)
-2. Listagem de scans por template na UI
-3. Milestone 3 — Question Bank / Exams / Attempts (modo OMR integrado a Exam)
+1. Desenvolver interfaces Next.js no Frontend para Gestão de Avaliações (`/exams`) e Visualização de Desempenho Pedagógico / Habilidades BNCC.
+2. Validar com folhas **impressas** e fotos reais em ambiente físico.
 
 ---
 
 **Última atualização**: 2026-07-24  
-**Status**: OMR avulso ponta a ponta disponível (API + UI)
+**Status**: Backend M1 + M2 + M3 Completo | 41 Testes Automatizados Verificados | Pronto para Frontend M3
