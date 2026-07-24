@@ -16,60 +16,87 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow">
+      <div className="min-h-screen bg-slate-50">
+        <nav className="bg-white border-b border-slate-200 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-2xl font-bold">COLA-ZERO</h1>
+            <h1 className="text-xl font-bold text-slate-900">COLA-ZERO</h1>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                Welcome, {user?.email} ({user?.role})
+              <span className="text-sm text-slate-600">
+                {user?.email} ({user?.role})
               </span>
               <button
                 onClick={handleLogout}
                 disabled={isLoading}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-md transition"
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-400 text-xs text-white font-medium rounded-md transition"
               >
-                Logout
+                Sair
               </button>
             </div>
           </div>
         </nav>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Dashboard</h2>
-            <div className="space-y-4">
-              <p>
-                <strong>Email:</strong> {user?.email}
-              </p>
-              <p>
-                <strong>Role:</strong> {user?.role}
-              </p>
-              <p>
-                <strong>Status:</strong> {user?.is_active ? 'Active' : 'Inactive'}
-              </p>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 mb-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Painel de Controle</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-slate-700 mt-4">
+              <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200">
+                <span className="block text-xs font-semibold text-slate-500 uppercase">Usuário</span>
+                <span className="font-semibold text-slate-900">{user?.email}</span>
+              </div>
+              <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200">
+                <span className="block text-xs font-semibold text-slate-500 uppercase">Função</span>
+                <span className="font-semibold text-slate-900 capitalize">{user?.role}</span>
+              </div>
               {user?.student_code && (
-                <p>
-                  <strong>Student code:</strong> {user.student_code}
-                </p>
+                <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200">
+                  <span className="block text-xs font-semibold text-slate-500 uppercase">Matrícula (5 dígitos)</span>
+                  <span className="font-semibold text-slate-900">{user.student_code}</span>
+                </div>
               )}
             </div>
+          </div>
 
-            {(user?.role === 'teacher' || user?.role === 'admin') && (
-              <div className="mt-8 border-t border-gray-100 pt-6">
-                <h3 className="text-lg font-semibold mb-2">OMR</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Criar gabaritos impressos e corrigir folhas por imagem.
+          {(user?.role === 'teacher' || user?.role === 'admin') && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card OMR */}
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Gabaritos OMR</h3>
+                  <span className="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    Correção de Cartões
+                  </span>
+                </div>
+                <p className="text-sm text-slate-600 mb-6">
+                  Crie gabaritos com título amigável, gere folhas PDF para impressão e realize a correção automatizada por foto ou scanner.
                 </p>
                 <Link
                   href="/omr"
-                  className="inline-block rounded bg-emerald-700 px-4 py-2 text-white hover:bg-emerald-600"
+                  className="inline-flex items-center justify-center w-full rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600 transition"
                 >
-                  Abrir módulo OMR
+                  Abrir Módulo OMR →
                 </Link>
               </div>
-            )}
-          </div>
+
+              {/* Card Avaliações & Relatórios */}
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Avaliações & Relatórios</h3>
+                  <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    Análise Pedagógica
+                  </span>
+                </div>
+                <p className="text-sm text-slate-600 mb-6">
+                  Acompanhe médias por turma, estatísticas por questão (% acertos), vinculação com matriz de habilidades BNCC e baixe relatórios PDF / Excel.
+                </p>
+                <Link
+                  href="/exams"
+                  className="inline-flex items-center justify-center w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition"
+                >
+                  Gerenciar Avaliações & Exportar →
+                </Link>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </ProtectedRoute>
