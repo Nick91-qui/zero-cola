@@ -30,6 +30,35 @@ async def create_template(
     return service.create_template(template_in)
 
 
+@router.get("/templates", response_model=list[OMRTemplateResponse])
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def list_templates(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Lists OMR templates."""
+    service = OMRService(db)
+    return service.list_templates()
+
+
+@router.get("/templates/{template_id}", response_model=OMRTemplateResponse)
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def get_template(
+    template_id: UUID,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Gets a single OMR template."""
+    service = OMRService(db)
+    template = service.get_template(template_id)
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"OMR Template with ID {template_id} not found.",
+        )
+    return template
+
+
 @router.get("/templates/{template_id}/pdf")
 @require_role(UserRole.TEACHER, UserRole.ADMIN)
 async def get_template_pdf(
@@ -44,6 +73,26 @@ async def get_template_pdf(
         pdf_bytes = service.get_template_pdf(template_id, student_code)
         headers = {"Content-Disposition": f'attachment; filename="omr_template_{template_id}.pdf"'}
         return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/templates/{template_id}/preview.png")
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def get_template_preview_png(
+    template_id: UUID,
+    student_code: str = None,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """PNG preview in the same coordinate space used by the OMR engine (calibration aid)."""
+    service = OMRService(db)
+    try:
+        png_bytes = service.get_template_preview_png(template_id, student_code)
+        headers = {
+            "Content-Disposition": f'inline; filename="omr_preview_{template_id}.png"'
+        }
+        return Response(content=png_bytes, media_type="image/png", headers=headers)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

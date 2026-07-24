@@ -1,49 +1,15 @@
 from decimal import Decimal
 
-import cv2
-import numpy as np
-
-from app.core.omr_layouts import DrawingElementType, get_layout_provider
 from app.models.enums import GradeSourceType, OMRScanStatus, UserRole
 from app.models.user import User
 from app.schemas.omr import OMRScanUpdate, OMRTemplateCreate
 from app.services.omr import OMRService
+from app.services.omr_sheet_image import render_sheet_png
 
 
 def create_synthetic_sheet_bytes(student_code: str, answers: dict) -> bytes:
     """Generates synthetic page bytes for v1_std_20q with specified code and answers."""
-    page_w, page_h = 1000, 1414
-    margin = 50
-    canvas_w = page_w + 2 * margin
-    canvas_h = page_h + 2 * margin
-    img = np.ones((canvas_h, canvas_w, 3), dtype=np.uint8) * 255
-
-    provider = get_layout_provider("v1_std_20q")
-    elements = provider.render(student_code)
-
-    for elem in elements:
-        x = int(elem.coordinates[0] + margin)
-        y = int(elem.coordinates[1] + margin)
-
-        if elem.type == DrawingElementType.ANCHOR:
-            cv2.circle(img, (x, y), 15, (0, 0, 0), -1)
-
-        elif elem.type == DrawingElementType.BUBBLE:
-            is_filled = elem.is_filled
-            if elem.question_num is not None:
-                q_num = elem.question_num
-                opt_lbl = elem.option_label
-                if str(q_num) in answers and answers[str(q_num)] == opt_lbl:
-                    is_filled = True
-
-            cv2.circle(img, (x, y), 8, (0, 0, 0), 1)
-            if is_filled:
-                cv2.circle(img, (x, y), 8, (0, 0, 0), -1)
-            else:
-                cv2.circle(img, (x, y), 7, (255, 255, 255), -1)
-
-    success, buffer = cv2.imencode(".png", img)
-    return buffer.tobytes()
+    return render_sheet_png("v1_std_20q", student_code=student_code, answers=answers)
 
 
 def test_omr_service_template_lifecycle(test_db_session):

@@ -129,6 +129,30 @@ def test_omr_api_workflow(override_get_db, test_db_session, auth_headers, studen
     assert grade["source_id"] == scan_id
 
 
+def test_omr_list_and_preview(override_get_db, test_db_session, auth_headers):
+    template_data = {
+        "layout_version": "v1_std_20q",
+        "total_questions": 20,
+        "options_per_question": 5,
+        "correct_answers": {"1": "A"},
+    }
+    created = client.post("/api/v1/omr/templates", json=template_data, headers=auth_headers)
+    assert created.status_code == 201
+    template_id = created.json()["id"]
+
+    listed = client.get("/api/v1/omr/templates", headers=auth_headers)
+    assert listed.status_code == 200
+    assert any(item["id"] == template_id for item in listed.json())
+
+    preview = client.get(
+        f"/api/v1/omr/templates/{template_id}/preview.png?student_code=77777",
+        headers=auth_headers,
+    )
+    assert preview.status_code == 200
+    assert preview.headers["content-type"] == "image/png"
+    assert preview.content[:8] == b"\x89PNG\r\n\x1a\n"
+
+
 def test_omr_api_unauthorized(override_get_db):
     # Calling endpoints without auth headers should return 401
     response = client.post("/api/v1/omr/templates", json={})

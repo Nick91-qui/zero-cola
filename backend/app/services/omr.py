@@ -16,6 +16,7 @@ from app.repositories.user import UserRepository
 from app.schemas.omr import OMRScanUpdate, OMRTemplateCreate
 from app.services.omr_engine import OMREngine
 from app.services.omr_pdf import generate_omr_pdf
+from app.services.omr_sheet_image import render_sheet_png
 
 
 class OMRService:
@@ -30,6 +31,9 @@ class OMRService:
     def create_template(self, template_in: OMRTemplateCreate) -> OMRTemplate:
         return self.template_repo.create(template_in)
 
+    def list_templates(self) -> list[OMRTemplate]:
+        return self.template_repo.get_all()
+
     def get_template(self, template_id: UUID) -> Optional[OMRTemplate]:
         return self.template_repo.get_by_id(template_id)
 
@@ -38,6 +42,22 @@ class OMRService:
         if not template:
             raise ValueError(f"OMR Template with ID {template_id} not found.")
         return generate_omr_pdf(template.layout_version, student_code)
+
+    def get_template_preview_png(
+        self,
+        template_id: UUID,
+        student_code: Optional[str] = None,
+        answers: Optional[Dict[str, str]] = None,
+    ) -> bytes:
+        """Renders a PNG preview in the same coordinate space used by the OMR engine."""
+        template = self.get_template(template_id)
+        if not template:
+            raise ValueError(f"OMR Template with ID {template_id} not found.")
+        return render_sheet_png(
+            template.layout_version,
+            student_code=student_code,
+            answers=answers or {},
+        )
 
     def _save_uploaded_file(self, file_bytes: bytes, filename: str) -> str:
         """Saves the uploaded file to disk and returns the relative image url."""
