@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlalchemy import Boolean, Enum, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,3 +17,9 @@ class User(BaseModel):
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    student_code: Mapped[Optional[str]] = mapped_column(
+        String(5),
+        unique=True,
+        index=True,
+        nullable=True,
+    )
