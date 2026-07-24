@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -15,8 +15,11 @@ from app.models.enums import OMRScanStatus
 class OMRTemplate(BaseModel):
     __tablename__ = "omr_templates"
 
-    # exam_id is a logical reference until the exams table exists.
-    exam_id: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    exam_id: Mapped[Optional[UUID]] = mapped_column(
+        ForeignKey("exams.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     layout_version: Mapped[str] = mapped_column(String(50), nullable=False)
     total_questions: Mapped[int] = mapped_column(Integer, nullable=False)
     options_per_question: Mapped[int] = mapped_column(
@@ -26,6 +29,9 @@ class OMRTemplate(BaseModel):
         nullable=False,
     )
     correct_answers: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
 
 
 class OMRScan(BaseModel):
