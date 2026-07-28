@@ -14,7 +14,7 @@ from sqlalchemy import (
     Table,
     UniqueConstraint,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.models import BaseModel
@@ -62,7 +62,11 @@ class AnswerKey(BaseModel):
         nullable=True,
     )
 
-    exam = relationship("Exam", foreign_keys=[exam_id], backref="answer_key")
+    exam = relationship(
+        "Exam",
+        foreign_keys=[exam_id],
+        backref=backref("answer_key", uselist=False),
+    )
     items = relationship(
         "AnswerKeyItem",
         back_populates="answer_key",

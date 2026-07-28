@@ -1,4 +1,6 @@
 from decimal import Decimal
+
+from app.models.answer_key import AnswerKey, AnswerKeyItem
 from app.models.enums import UserRole
 from app.models.omr import OMRTemplate
 from app.models.user import User
@@ -32,6 +34,8 @@ def test_create_exam_with_auto_template(test_db_session):
     assert exam.omr_template_id is not None
     assert exam.total_questions == 20
     assert len(exam.questions) == 3
+    assert exam.answer_key is not None
+    assert len(exam.answer_key.items) == 3
 
 
 def test_soft_delete_exam_and_template(test_db_session):
@@ -61,3 +65,40 @@ def test_soft_delete_exam_and_template(test_db_session):
     tmpl = test_db_session.query(OMRTemplate).filter(OMRTemplate.id == tmpl_id).first()
     assert tmpl is not None
     assert tmpl.is_active is False
+
+
+def test_exam_statistics_use_answer_key_items(test_db_session):
+    teacher = User(
+        email="teacher_stats@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(teacher)
+    test_db_session.commit()
+
+    service = ExamService(test_db_session)
+    exam = service.create_exam(
+        ExamCreate(
+            title="Estatísticas por AnswerKey",
+            total_questions=20,
+            correct_answers={"1": "A", "2": "B"},
+        ),
+        teacher_id=teacher.id,
+    )
+
+    answer_key_item = (
+        test_db_session.query(AnswerKeyItem)
+        .join(AnswerKey)
+        .filter(AnswerKey.exam_id == exam.id, AnswerKeyItem.item_number == 1)
+        .first()
+    )
+    assert answer_key_item is not None
+    answer_key_item.correct_answer = "D"
+    test_db_session.commit()
+
+    stats = service.get_exam_statistics(exam.id)
+
+    assert len(stats["question_statistics"]) == 20
+    assert stats["question_statistics"][0]["correct_option"] == "D"
+    legacy_question = next(q for q in exam.questions if q.question_number == 1)
+    assert legacy_question.correct_option == "A"

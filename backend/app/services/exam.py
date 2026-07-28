@@ -6,10 +6,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.attempt import Attempt, AttemptAnswer
-from app.models.enums import GradeSourceType, OMRScanStatus, UserRole
 from app.models.exam import Exam
-from app.models.omr import OMRScan, OMRTemplate
-from app.models.question import Question
 from app.models.user import User
 from app.repositories.attempt import AttemptRepository
 from app.repositories.exam import ExamRepository
@@ -18,6 +15,7 @@ from app.repositories.omr import OMRScanRepository, OMRTemplateRepository
 from app.repositories.skill import SkillRepository
 from app.schemas.exam import ExamCreate, ExamUpdate
 from app.schemas.omr import OMRTemplateCreate
+from app.services.answer_key import AnswerKeyService
 from app.services.export import ExportService
 
 
@@ -30,6 +28,7 @@ class ExamService:
         self.scan_repo = OMRScanRepository(db)
         self.grade_repo = GradeRepository(db)
         self.skill_repo = SkillRepository(db)
+        self.answer_key_service = AnswerKeyService(db)
 
     def create_exam(self, exam_in: ExamCreate, teacher_id: UUID) -> Exam:
         # 1. If omr_template_id not provided, create an OMRTemplate automatically
@@ -58,7 +57,14 @@ class ExamService:
                 tmpl.title = exam.title
                 self.db.commit()
 
-        # 3. Create questions records
+        # 3. Materialize AnswerKey rows from the legacy answer mapping.
+        if exam_in.correct_answers:
+            self.answer_key_service.create_from_mapping(
+                exam_id=exam.id,
+                correct_answers=exam_in.correct_answers,
+            )
+
+        # 4. Keep the legacy question rows in sync for compatibility until Step 5.
         if exam_in.correct_answers:
             self.exam_repo.create_questions_bulk(
                 exam_id=exam.id,
@@ -142,27 +148,26 @@ class ExamService:
 
         attempts = self.attempt_repo.get_by_exam_id(exam_id)
         total_attempts = len(attempts)
-
-        # Get questions
-        questions = self.db.query(Question).filter(Question.exam_id == exam_id).order_by(Question.question_number.asc()).all()
-        template = self.template_repo.get_by_id(exam.omr_template_id) if exam.omr_template_id else None
+        answer_key_items = self.answer_key_service.get_item_map_for_exam(exam_id)
 
         question_stats = []
         for i in range(1, exam.total_questions + 1):
-            q_model = next((q for q in questions if q.question_number == i), None)
-            correct_opt = (
-                q_model.correct_option
-                if q_model and q_model.correct_option
-                else (template.correct_answers.get(f"q{i}") or template.correct_answers.get(str(i)) if template and template.correct_answers else None)
-            )
+            answer_key_item = answer_key_items.get(i)
+            correct_opt = answer_key_item.correct_answer if answer_key_item else None
 
-            # Query answers for question_number i
-            answers_for_q = (
-                self.db.query(AttemptAnswer)
-                .join(Attempt)
-                .filter(Attempt.exam_id == exam_id, AttemptAnswer.question_number == i)
-                .all()
-            )
+            # Query answers for the canonical AnswerKeyItem when one exists.
+            if answer_key_item:
+                answers_for_q = (
+                    self.db.query(AttemptAnswer)
+                    .join(Attempt)
+                    .filter(
+                        Attempt.exam_id == exam_id,
+                        AttemptAnswer.answer_key_item_id == answer_key_item.id,
+                    )
+                    .all()
+                )
+            else:
+                answers_for_q = []
 
             total_resp = len(answers_for_q)
             correct_cnt = sum(1 for a in answers_for_q if a.is_correct)
@@ -179,13 +184,13 @@ class ExamService:
                     "grade_level": s.grade_level,
                     "curriculum": s.curriculum,
                 }
-                for s in (q_model.skills if q_model else [])
+                for s in (answer_key_item.skills if answer_key_item else [])
             ]
 
             question_stats.append(
                 {
                     "question_number": i,
-                    "statement": q_model.statement if q_model else None,
+                    "statement": answer_key_item.statement if answer_key_item else None,
                     "correct_option": correct_opt,
                     "skills": q_skills,
                     "total_responses": total_resp,
@@ -225,11 +230,19 @@ class ExamService:
 
         attempts_list = []
         for att in attempts_db:
-            st_user = self.db.query(User).filter(User.id == att.student_id).first() if att.student_id else None
+            st_user = (
+                self.db.query(User).filter(User.id == att.student_id).first()
+                if att.student_id
+                else None
+            )
             attempts_list.append(
                 {
                     "student_code": att.student_code,
-                    "student_name": st_user.email if st_user else f"Aluno ({att.student_code or 'Desconhecido'})",
+                    "student_name": (
+                        st_user.email
+                        if st_user
+                        else f"Aluno ({att.student_code or 'Desconhecido'})"
+                    ),
                     "correct_answers": att.correct_answers,
                     "accuracy_percentage": float(att.accuracy_percentage),
                     "final_score": float(att.final_score),
@@ -259,11 +272,19 @@ class ExamService:
 
         attempts_list = []
         for att in attempts_db:
-            st_user = self.db.query(User).filter(User.id == att.student_id).first() if att.student_id else None
+            st_user = (
+                self.db.query(User).filter(User.id == att.student_id).first()
+                if att.student_id
+                else None
+            )
             attempts_list.append(
                 {
                     "student_code": att.student_code,
-                    "student_name": st_user.email if st_user else f"Aluno ({att.student_code or 'Desconhecido'})",
+                    "student_name": (
+                        st_user.email
+                        if st_user
+                        else f"Aluno ({att.student_code or 'Desconhecido'})"
+                    ),
                     "correct_answers": att.correct_answers,
                     "incorrect_answers": att.incorrect_answers,
                     "accuracy_percentage": float(att.accuracy_percentage),

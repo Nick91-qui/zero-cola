@@ -27,7 +27,7 @@ async def create_template(
 ):
     """Creates a new OMR answer sheet template."""
     service = OMRService(db)
-    return service.create_template(template_in)
+    return service.create_template(template_in, teacher_id=current_user.id)
 
 
 @router.get("/templates", response_model=list[OMRTemplateResponse])
@@ -184,7 +184,7 @@ async def delete_template(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Soft-deletes an OMR template (sets is_active=False). Preserves historical scans and grades."""
+    """Soft-deletes an OMR template and preserves historical scans and grades."""
     from app.services.exam import ExamService
     service = ExamService(db)
     success = service.soft_delete_template(template_id)
@@ -194,4 +194,3 @@ async def delete_template(
             detail=f"OMR Template {template_id} not found.",
         )
     return None
-

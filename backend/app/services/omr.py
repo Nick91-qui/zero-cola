@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, Optional
 from uuid import UUID, uuid4
@@ -7,13 +7,17 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
 from app.models.enums import GradeSourceType, OMRScanStatus, UserRole
+from app.models.exam import Exam
 from app.models.grade import Grade
 from app.models.omr import OMRScan, OMRTemplate
 from app.models.user import User
 from app.repositories.grade import GradeRepository
 from app.repositories.omr import OMRScanRepository, OMRTemplateRepository
 from app.repositories.user import UserRepository
+from app.schemas.exam import ExamCreate
 from app.schemas.omr import OMRScanUpdate, OMRTemplateCreate
+from app.services.answer_key import AnswerKeyService
+from app.services.exam import ExamService
 from app.services.omr_engine import OMREngine
 from app.services.omr_pdf import generate_omr_pdf
 from app.services.omr_sheet_image import render_sheet_png
@@ -27,8 +31,35 @@ class OMRService:
         self.scan_repo = OMRScanRepository(db)
         self.grade_repo = GradeRepository(db)
         self.user_repo = UserRepository(db)
+        self.answer_key_service = AnswerKeyService(db)
 
-    def create_template(self, template_in: OMRTemplateCreate) -> OMRTemplate:
+    def create_template(
+        self,
+        template_in: OMRTemplateCreate,
+        teacher_id: UUID | None = None,
+    ) -> OMRTemplate:
+        if template_in.correct_answers:
+            if teacher_id is None:
+                raise ValueError(
+                    "teacher_id is required when creating a template with answer keys."
+                )
+
+            exam_service = ExamService(self.db)
+            exam = exam_service.create_exam(
+                ExamCreate(
+                    title=f"Avaliação OMR {template_in.layout_version}",
+                    description=None,
+                    class_id=None,
+                    omr_template_id=None,
+                    total_questions=template_in.total_questions,
+                    max_score=Decimal("10.00"),
+                    correct_answers=template_in.correct_answers,
+                    layout_version=template_in.layout_version,
+                ),
+                teacher_id=teacher_id,
+            )
+            return self.template_repo.get_by_id(exam.omr_template_id)
+
         return self.template_repo.create(template_in)
 
     def list_templates(self) -> list[OMRTemplate]:
@@ -151,15 +182,24 @@ class OMRService:
         return scan
 
     def _calculate_score(self, template: OMRTemplate, detected_answers: Dict[str, str]) -> Decimal:
-        """Calculates the score based on template's correct answers."""
-        if not template.correct_answers or not detected_answers:
+        """Calculates the score based on AnswerKeyItems."""
+        if not detected_answers:
+            return Decimal("0.00")
+
+        answer_key_items = self._require_answer_key_items(template)
+        if not answer_key_items:
             return Decimal("0.00")
 
         correct_count = 0
         total_questions = template.total_questions
 
-        for q_str, correct_ans in template.correct_answers.items():
-            if detected_answers.get(q_str) == correct_ans:
+        for item in answer_key_items:
+            q_str = str(item.item_number)
+            q_key = f"q{item.item_number}"
+            if (
+                detected_answers.get(q_str) == item.correct_answer
+                or detected_answers.get(q_key) == item.correct_answer
+            ):
                 correct_count += 1
 
         # Scaled to a max score of 10.0
@@ -205,8 +245,7 @@ class OMRService:
         return updated_scan
 
     def confirm_scan(self, scan_id: UUID, teacher_id: UUID) -> Grade:
-        """Confirms OMR correction, creates Attempt & AttemptAnswers for the Exam, and publishes the grade."""
-        from app.models.exam import Exam
+        """Confirms OMR correction, creates Attempt rows, and publishes the grade."""
         from app.repositories.attempt import AttemptRepository
 
         scan = self.scan_repo.get_by_id(scan_id)
@@ -225,58 +264,62 @@ class OMRService:
         # 1. Update scan status to SUCCESS
         self.scan_repo.update(scan.id, status=OMRScanStatus.SUCCESS, error_message=None)
 
-        # 2. Find or create associated Exam for the OMRTemplate
+        # 2. Resolve the linked Exam and canonical AnswerKey.
         template = self.get_template(scan.omr_template_id)
-        exam = None
-        if template and template.exam_id:
-            exam = self.db.query(Exam).filter(Exam.id == template.exam_id).first()
+        if not template or not template.exam_id:
+            raise ValueError("Cannot confirm OMR scan because it is not linked to an Exam.")
 
+        exam = self.db.query(Exam).filter(Exam.id == template.exam_id).first()
         if not exam:
-            exam = Exam(
-                title=template.title or f"Avaliação OMR {template.layout_version}",
-                teacher_id=teacher_id,
-                omr_template_id=template.id,
-                total_questions=template.total_questions,
-                max_score=Decimal("10.00"),
-                is_active=True,
-            )
-            self.db.add(exam)
-            self.db.commit()
-            self.db.refresh(exam)
-            if template:
-                template.exam_id = exam.id
-                self.db.commit()
+            raise ValueError("Cannot confirm OMR scan because the linked Exam was not found.")
 
-        # 3. Calculate score breakdown and prepare AttemptAnswers
+        answer_key_items = self._require_answer_key_items(template)
+        answer_key_item_map = {item.item_number: item for item in answer_key_items}
+
+        # 3. Calculate score breakdown and prepare AttemptAnswers.
         correct_cnt = 0
         answers_data = []
         tot_q = template.total_questions if template else 20
         for i in range(1, tot_q + 1):
+            answer_key_item = answer_key_item_map.get(i)
+            if not answer_key_item:
+                continue
+
             q_str_i = str(i)
             q_key_i = f"q{i}"
             selected_opt = None
             if scan.detected_answers:
-                selected_opt = scan.detected_answers.get(q_str_i) or scan.detected_answers.get(q_key_i)
+                selected_opt = (
+                    scan.detected_answers.get(q_str_i)
+                    or scan.detected_answers.get(q_key_i)
+                )
 
-            correct_opt = None
-            if template and template.correct_answers:
-                correct_opt = template.correct_answers.get(q_str_i) or template.correct_answers.get(q_key_i)
-
+            correct_opt = answer_key_item.correct_answer
             is_corr = bool(selected_opt and correct_opt and selected_opt == correct_opt)
             if is_corr:
                 correct_cnt += 1
 
-            answers_data.append({
-                "question_number": i,
-                "selected_option": selected_opt,
-                "correct_option": correct_opt,
-                "is_correct": is_corr,
-            })
+            answers_data.append(
+                {
+                    "attempt_id": None,
+                    "question_number": i,
+                    "answer_key_item_id": answer_key_item.id,
+                    "question_id": answer_key_item.question_id,
+                    "selected_option": selected_opt,
+                    "correct_option": correct_opt,
+                    "is_correct": is_corr,
+                    "answered_at": datetime.now(timezone.utc),
+                }
+            )
 
         incorr_cnt = tot_q - correct_cnt
         accuracy_pct = Decimal((correct_cnt / tot_q) * 100) if tot_q > 0 else Decimal("0.00")
         raw_score = Decimal(correct_cnt)
-        final_score = (Decimal(correct_cnt) / Decimal(tot_q)) * exam.max_score if tot_q > 0 else Decimal("0.00")
+        final_score = (
+            (Decimal(correct_cnt) / Decimal(tot_q)) * exam.max_score
+            if tot_q > 0
+            else Decimal("0.00")
+        )
 
         # 4. Create or update Attempt
         attempt_repo = AttemptRepository(self.db)
@@ -284,6 +327,7 @@ class OMRService:
         if not existing_attempt:
             attempt = attempt_repo.create_attempt(
                 exam_id=exam.id,
+                answer_key_id=exam.answer_key.id,
                 student_id=scan.student_id,
                 student_code=scan.student_code,
                 omr_scan_id=scan.id,
@@ -293,6 +337,7 @@ class OMRService:
                 accuracy_percentage=accuracy_pct.quantize(Decimal("0.01")),
                 raw_score=raw_score.quantize(Decimal("0.01")),
                 final_score=final_score.quantize(Decimal("0.01")),
+                source="OMR",
                 status="graded",
             )
             for a_item in answers_data:
@@ -312,3 +357,7 @@ class OMRService:
         )
         return grade
 
+    def _require_answer_key_items(self, template: OMRTemplate):
+        if not template.exam_id:
+            raise ValueError("Cannot grade OMR template without a linked Exam.")
+        return self.answer_key_service.get_items_for_exam(template.exam_id)

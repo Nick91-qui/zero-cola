@@ -15,6 +15,7 @@ class AttemptRepository:
     def create_attempt(
         self,
         exam_id: UUID,
+        answer_key_id: Optional[UUID],
         student_id: Optional[UUID],
         student_code: Optional[str],
         omr_scan_id: Optional[UUID],
@@ -24,13 +25,16 @@ class AttemptRepository:
         accuracy_percentage: Decimal,
         raw_score: Decimal,
         final_score: Decimal,
+        source: str = "OMR",
         status: str = "graded",
     ) -> Attempt:
         attempt = Attempt(
             exam_id=exam_id,
+            answer_key_id=answer_key_id,
             student_id=student_id,
             student_code=student_code,
             omr_scan_id=omr_scan_id,
+            source=source,
             status=status,
             total_questions=total_questions,
             correct_answers=correct_answers,
@@ -51,10 +55,12 @@ class AttemptRepository:
             ans = AttemptAnswer(
                 attempt_id=item["attempt_id"],
                 question_number=item["question_number"],
+                answer_key_item_id=item.get("answer_key_item_id"),
                 question_id=item.get("question_id"),
                 selected_option=item.get("selected_option"),
                 correct_option=item.get("correct_option"),
                 is_correct=item.get("is_correct", False),
+                answered_at=item.get("answered_at"),
             )
             self.db.add(ans)
             answers.append(ans)
