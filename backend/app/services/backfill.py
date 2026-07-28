@@ -356,7 +356,14 @@ def backfill_attempt_references(bind) -> dict:
         sa.text(
             """
             UPDATE attempt_answers
-            SET answered_at = created_at
+            SET answered_at = COALESCE(
+                (
+                    SELECT a.completed_at
+                    FROM attempts a
+                    WHERE a.id = attempt_answers.attempt_id
+                ),
+                created_at
+            )
             WHERE answered_at IS NULL
             """
         )

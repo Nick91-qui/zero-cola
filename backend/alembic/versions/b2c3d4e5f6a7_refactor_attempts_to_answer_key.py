@@ -67,8 +67,45 @@ def upgrade() -> None:
 
     backfill_attempt_references(op.get_bind())
 
+    op.create_foreign_key(
+        "fk_attempts_answer_key_id_answer_keys",
+        "attempts",
+        "answer_keys",
+        ["answer_key_id"],
+        ["id"],
+        ondelete="RESTRICT",
+    )
+    op.create_foreign_key(
+        "fk_attempt_answers_answer_key_item_id_answer_key_items",
+        "attempt_answers",
+        "answer_key_items",
+        ["answer_key_item_id"],
+        ["id"],
+        ondelete="RESTRICT",
+    )
+    op.create_check_constraint(
+        "ck_attempts_source_valid",
+        "attempts",
+        "source IN ('OMR', 'ONLINE')",
+    )
+
 
 def downgrade() -> None:
+    op.drop_constraint(
+        "ck_attempts_source_valid",
+        "attempts",
+        type_="check",
+    )
+    op.drop_constraint(
+        "fk_attempt_answers_answer_key_item_id_answer_key_items",
+        "attempt_answers",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "fk_attempts_answer_key_id_answer_keys",
+        "attempts",
+        type_="foreignkey",
+    )
     op.alter_column(
         "attempts",
         "status",

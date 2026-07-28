@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.models import BaseModel
@@ -11,6 +11,12 @@ from app.db.models import BaseModel
 
 class Attempt(BaseModel):
     __tablename__ = "attempts"
+    __table_args__ = (
+        CheckConstraint(
+            "source IN ('OMR', 'ONLINE')",
+            name="ck_attempts_source_valid",
+        ),
+    )
 
     exam_id: Mapped[UUID] = mapped_column(
         ForeignKey("exams.id", ondelete="CASCADE"),
