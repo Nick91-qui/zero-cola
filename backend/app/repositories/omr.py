@@ -16,7 +16,6 @@ class OMRTemplateRepository:
             layout_version=template_in.layout_version,
             total_questions=template_in.total_questions,
             options_per_question=template_in.options_per_question,
-            correct_answers=template_in.correct_answers,
         )
         self.db.add(db_template)
         self.db.commit()

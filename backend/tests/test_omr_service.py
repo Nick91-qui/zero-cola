@@ -42,7 +42,7 @@ def test_omr_service_template_lifecycle(test_db_session):
     fetched = service.get_template(template.id)
     assert fetched is not None
     assert fetched.total_questions == 20
-    assert fetched.correct_answers == {"1": "A", "2": "B"}
+    assert not hasattr(fetched, "correct_answers")
     assert fetched.exam_id == template.exam_id
 
     exam = test_db_session.query(Exam).filter(Exam.id == template.exam_id).first()
@@ -103,7 +103,6 @@ def test_omr_service_process_and_grade(test_db_session, tmp_path):
     assert scan.score == Decimal("1.50")
     assert scan.detected_answers["1"] == "A"
     assert scan.detected_answers["4"] == "A"
-    assert template.correct_answers["3"] == "C"
 
 
 def test_omr_service_update_and_confirm(test_db_session, tmp_path):

@@ -78,8 +78,7 @@ class AnswerKey(BaseModel):
 class AnswerKeyItem(BaseModel):
     """One graded slot within an AnswerKey.
 
-    Replaces the answer-key role of the legacy exam-bound `questions` table
-    and `omr_templates.correct_answers` JSONB.
+    Replaces the answer-key role of the legacy exam-bound `questions` table.
     """
 
     __tablename__ = "answer_key_items"

@@ -1,4 +1,5 @@
 from decimal import Decimal
+from pathlib import Path
 from uuid import uuid4
 
 from app.models.enums import GradeSourceType, OMRScanStatus, UserRole
@@ -12,7 +13,6 @@ def test_omr_template_creation(test_db_session):
         layout_version="v1_std_20q",
         total_questions=20,
         options_per_question=5,
-        correct_answers={"1": "A", "2": "B"},
     )
     test_db_session.add(template)
     test_db_session.commit()
@@ -21,7 +21,23 @@ def test_omr_template_creation(test_db_session):
     assert template.layout_version == "v1_std_20q"
     assert template.total_questions == 20
     assert template.options_per_question == 5
-    assert template.correct_answers == {"1": "A", "2": "B"}
+    assert "correct_answers" not in OMRTemplate.__table__.c
+    assert not hasattr(template, "correct_answers")
+
+
+def test_step4_migration_drops_omr_template_correct_answers() -> None:
+    migration_path = (
+        Path(__file__).resolve().parents[1]
+        / "alembic"
+        / "versions"
+        / "c3d4e5f6a7b8_drop_omr_template_correct_answers.py"
+    )
+    source = migration_path.read_text()
+
+    assert "revision: str = \"c3d4e5f6a7b8\"" in source
+    assert "down_revision: Union[str, None] = \"b2c3d4e5f6a7\"" in source
+    assert "op.drop_column(\"omr_templates\", \"correct_answers\")" in source
+    assert 'sa.Column("correct_answers", sa.JSON(), nullable=True)' in source
 
 
 def test_omr_scan_creation_and_relations(test_db_session):

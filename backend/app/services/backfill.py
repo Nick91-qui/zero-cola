@@ -9,7 +9,9 @@ test suite.
 The production migration uses raw SQL for performance and to avoid ORM
 session issues inside Alembic. This module exists solely for testing.
 """
+import json
 from datetime import datetime, timezone
+from uuid import UUID
 
 import sqlalchemy as sa
 from sqlalchemy import select
@@ -18,7 +20,6 @@ from sqlalchemy.orm import Session
 from app.models.answer_key import AnswerKey, AnswerKeyItem
 from app.models.enums import UserRole
 from app.models.exam import Exam
-from app.models.omr import OMRTemplate
 from app.models.question import Question
 from app.models.user import User
 
@@ -54,14 +55,7 @@ def backfill_answer_keys(session: Session) -> dict:
         )
 
     # --- Scenario A: Orphan OMR templates (correct_answers exists, exam_id is NULL) ---
-    all_orphan_candidates = (
-        session.query(OMRTemplate)
-        .filter(OMRTemplate.exam_id.is_(None))
-        .all()
-    )
-    # Filter in Python: correct_answers must be a non-empty dict
-    # (JSON NULL handling differs between SQLite and PostgreSQL)
-    orphan_templates = [t for t in all_orphan_candidates if t.correct_answers]
+    orphan_templates = _load_legacy_omr_templates(session, exam_id_is_null=True)
 
     if orphan_templates and default_teacher is None:
         raise RuntimeError(
@@ -70,13 +64,13 @@ def backfill_answer_keys(session: Session) -> dict:
         )
 
     for tmpl in orphan_templates:
-        tmpl_title = tmpl.title or f"Avaliação OMR {tmpl.layout_version}"
+        tmpl_title = tmpl["title"] or f"Avaliação OMR {tmpl['layout_version']}"
 
         new_exam = Exam(
             title=tmpl_title,
             teacher_id=default_teacher.id,
-            omr_template_id=tmpl.id,
-            total_questions=tmpl.total_questions,
+            omr_template_id=_uuid_object(tmpl["id"]),
+            total_questions=tmpl["total_questions"],
             max_score=10.00,
             is_active=True,
         )
@@ -84,7 +78,10 @@ def backfill_answer_keys(session: Session) -> dict:
         session.flush()
 
         # Link template to exam
-        tmpl.exam_id = new_exam.id
+        session.execute(
+            sa.text("UPDATE omr_templates SET exam_id = :exam_id WHERE id = :id"),
+            {"exam_id": _uuid_param(new_exam.id), "id": _uuid_param(tmpl["id"])},
+        )
         session.flush()
 
         ak = AnswerKey(
@@ -94,34 +91,28 @@ def backfill_answer_keys(session: Session) -> dict:
         session.add(ak)
         session.flush()
 
-        _create_items_from_dict(session, ak.id, tmpl.correct_answers)
+        _create_items_from_dict(session, ak.id, _coerce_correct_answers(tmpl["correct_answers"]))
         stats["orphan_templates_materialized"] += 1
         stats["answer_keys_created"] += 1
 
     # --- Scenario B: Exams with OMR template that has correct_answers ---
     existing_answer_key_exam_ids = session.query(AnswerKey.exam_id).all()
-    existing_ak_set = {row[0] for row in existing_answer_key_exam_ids}
+    existing_ak_set = {_uuid_object(row[0]) for row in existing_answer_key_exam_ids}
 
-    # Fetch templates with exam_id set, filter correct_answers in Python
-    all_linked_templates = (
-        session.query(OMRTemplate)
-        .filter(OMRTemplate.exam_id.isnot(None))
-        .all()
-    )
-    templates_with_answers = [t for t in all_linked_templates if t.correct_answers]
+    templates_with_answers = _load_legacy_omr_templates(session, exam_id_is_not_null=True)
 
     for tmpl in templates_with_answers:
-        if tmpl.exam_id in existing_ak_set:
+        if tmpl["exam_id"] in existing_ak_set:
             continue
 
-        ak = AnswerKey(exam_id=tmpl.exam_id, is_published=False)
+        ak = AnswerKey(exam_id=_uuid_object(tmpl["exam_id"]), is_published=False)
         session.add(ak)
         session.flush()
 
-        _create_items_from_dict(session, ak.id, tmpl.correct_answers)
+        _create_items_from_dict(session, ak.id, _coerce_correct_answers(tmpl["correct_answers"]))
         stats["exams_with_omr_backfilled"] += 1
         stats["answer_keys_created"] += 1
-        existing_ak_set.add(tmpl.exam_id)
+        existing_ak_set.add(_uuid_object(tmpl["exam_id"]))
 
     # --- Scenario C: Exams with legacy questions but no AnswerKey ---
     question_exam_ids = select(Question.exam_id).distinct()
@@ -138,9 +129,14 @@ def backfill_answer_keys(session: Session) -> dict:
         # Get correct_answers from template if available
         template_correct = None
         if exam.omr_template_id is not None:
-            tmpl = session.get(OMRTemplate, exam.omr_template_id)
-            if tmpl and tmpl.correct_answers:
-                template_correct = tmpl.correct_answers
+            tmpl = session.execute(
+                sa.text(
+                    "SELECT correct_answers FROM omr_templates WHERE id = :tmpl_id"
+                ),
+                {"tmpl_id": _uuid_param(exam.omr_template_id)},
+            ).scalar_one_or_none()
+            if tmpl:
+                template_correct = _coerce_correct_answers(tmpl)
 
         # Get legacy questions
         questions = (
@@ -238,6 +234,74 @@ def _create_items_from_dict(
             question_id=None,
         )
         session.add(item)
+
+
+def _load_legacy_omr_templates(
+    session: Session,
+    *,
+    exam_id_is_null: bool = False,
+    exam_id_is_not_null: bool = False,
+):
+    clauses = []
+    if exam_id_is_null:
+        clauses.append("exam_id IS NULL")
+    if exam_id_is_not_null:
+        clauses.append("exam_id IS NOT NULL")
+
+    where_sql = " AND ".join(clauses)
+    if where_sql:
+        where_sql = f"WHERE {where_sql}"
+
+    rows = session.execute(
+        sa.text(
+            f"""
+            SELECT id, title, layout_version, total_questions, exam_id, correct_answers
+            FROM omr_templates
+            {where_sql}
+            ORDER BY created_at
+            """
+        )
+    ).mappings().all()
+
+    return [
+        {
+            "id": _uuid_object(row["id"]),
+            "title": row["title"],
+            "layout_version": row["layout_version"],
+            "total_questions": row["total_questions"],
+            "exam_id": _uuid_object(row["exam_id"]),
+            "correct_answers": _coerce_correct_answers(row["correct_answers"]),
+        }
+        for row in rows
+        if _coerce_correct_answers(row["correct_answers"])
+    ]
+
+
+def _coerce_correct_answers(raw_value):
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, dict):
+        return raw_value
+    if isinstance(raw_value, str):
+        try:
+            return json.loads(raw_value)
+        except json.JSONDecodeError:
+            return None
+    return raw_value
+
+
+def _uuid_param(value):
+    if value is None:
+        return None
+    if hasattr(value, "hex"):
+        return value.hex
+    return str(value).replace("-", "")
+
+
+def _uuid_object(value):
+    if value is None or isinstance(value, UUID):
+        return value
+    return UUID(str(value))
 
 
 def backfill_attempt_references(bind) -> dict:

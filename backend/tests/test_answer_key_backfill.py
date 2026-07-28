@@ -11,12 +11,14 @@ do NOT verify the actual Alembic migration SQL on PostgreSQL. The migration
 and the backfill module share the same algorithm; a dedicated PostgreSQL
 migration integration test is recommended but out of scope for this step.
 """
+import json
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import text
 
-from app.models.answer_key import AnswerKey, AnswerKeyItem, answer_key_item_skills
-from app.models.attempt import Attempt, AttemptAnswer
+from app.models.answer_key import AnswerKey, AnswerKeyItem
+from app.models.attempt import Attempt
 from app.models.enums import UserRole
 from app.models.exam import Exam
 from app.models.exam_question import ExamQuestion
@@ -25,7 +27,6 @@ from app.models.question import Question
 from app.models.skill import Skill
 from app.models.user import User
 from app.services.backfill import backfill_answer_keys
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -53,6 +54,70 @@ def _create_student(session, code="12345") -> User:
     session.add(student)
     session.commit()
     return student
+
+
+def _ensure_legacy_correct_answers_column(session) -> None:
+    inspector = session.get_bind().dialect
+    if inspector.name == "sqlite":
+        existing_columns = {
+            row[1] for row in session.execute(text("PRAGMA table_info(omr_templates)")).all()
+        }
+        if "correct_answers" not in existing_columns:
+            session.execute(text("ALTER TABLE omr_templates ADD COLUMN correct_answers JSON"))
+            session.commit()
+        return
+
+    column_exists = session.execute(
+        text(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'omr_templates'
+              AND column_name = 'correct_answers'
+            """
+        )
+    ).first()
+    if not column_exists:
+        session.execute(text("ALTER TABLE omr_templates ADD COLUMN correct_answers JSON"))
+        session.commit()
+
+
+def _seed_legacy_template(
+    session,
+    *,
+    layout_version: str = "v1_std_20q",
+    total_questions: int = 20,
+    exam_id=None,
+    title: str | None = None,
+    correct_answers: dict | None = None,
+    is_active: bool = True,
+):
+    _ensure_legacy_correct_answers_column(session)
+    template = OMRTemplate(
+        layout_version=layout_version,
+        total_questions=total_questions,
+        exam_id=exam_id,
+        title=title,
+        is_active=is_active,
+    )
+    session.add(template)
+    session.commit()
+    if correct_answers is not None:
+        session.execute(
+            text("UPDATE omr_templates SET correct_answers = :correct_answers WHERE id = :id"),
+            {"correct_answers": json.dumps(correct_answers), "id": _uuid_param(template.id)},
+        )
+        session.commit()
+    session.refresh(template)
+    return template
+
+
+def _uuid_param(value):
+    if value is None:
+        return None
+    if hasattr(value, "hex"):
+        return value.hex
+    return str(value).replace("-", "")
 
 
 # ---------------------------------------------------------------------------
@@ -154,14 +219,13 @@ class TestBackfillOrphanTemplates:
     def test_orphan_template_gets_materialized_exam(self, test_db_session):
         teacher = _create_teacher(test_db_session)
 
-        tmpl = OMRTemplate(
+        tmpl = _seed_legacy_template(
+            test_db_session,
             layout_version="v1_std_20q",
             total_questions=20,
             correct_answers={"1": "A", "2": "B", "3": "C"},
             is_active=True,
         )
-        test_db_session.add(tmpl)
-        test_db_session.commit()
 
         stats = backfill_answer_keys(test_db_session)
 
@@ -182,14 +246,13 @@ class TestBackfillOrphanTemplates:
     def test_orphan_template_answer_key_has_items(self, test_db_session):
         _create_teacher(test_db_session)
 
-        tmpl = OMRTemplate(
+        tmpl = _seed_legacy_template(
+            test_db_session,
             layout_version="v1_std_20q",
             total_questions=20,
             correct_answers={"1": "A", "2": "B", "3": "C"},
             is_active=True,
         )
-        test_db_session.add(tmpl)
-        test_db_session.commit()
 
         backfill_answer_keys(test_db_session)
 
@@ -210,14 +273,13 @@ class TestBackfillOrphanTemplates:
 
     def test_orphan_template_without_teacher_raises(self, test_db_session):
         """If no teacher/admin exists, orphan template materialization aborts."""
-        tmpl = OMRTemplate(
+        _seed_legacy_template(
+            test_db_session,
             layout_version="v1_std_20q",
             total_questions=20,
             correct_answers={"1": "A"},
             is_active=True,
         )
-        test_db_session.add(tmpl)
-        test_db_session.commit()
 
         with pytest.raises(RuntimeError, match="no active TEACHER or ADMIN"):
             backfill_answer_keys(test_db_session)
@@ -244,15 +306,14 @@ class TestBackfillExamWithOMR:
         test_db_session.add(exam)
         test_db_session.commit()
 
-        tmpl = OMRTemplate(
+        _seed_legacy_template(
+            test_db_session,
             exam_id=exam.id,
             layout_version="v1_std_20q",
             total_questions=20,
             correct_answers={"1": "A", "2": "C", "3": "B"},
             is_active=True,
         )
-        test_db_session.add(tmpl)
-        test_db_session.commit()
 
         stats = backfill_answer_keys(test_db_session)
 
@@ -267,7 +328,7 @@ class TestBackfillExamWithOMR:
         assert len(ak.items) == 3
 
     def test_exam_with_omr_uses_template_correct_answers(self, test_db_session):
-        """Correct answers come from omr_templates.correct_answers (preferred source)."""
+        """Correct answers come from the raw legacy omr_templates column."""
         teacher = _create_teacher(test_db_session)
 
         exam = Exam(
@@ -281,15 +342,14 @@ class TestBackfillExamWithOMR:
         test_db_session.commit()
 
         # OMR template says Q1=A, Q2=C, Q3=B
-        tmpl = OMRTemplate(
+        _seed_legacy_template(
+            test_db_session,
             exam_id=exam.id,
             layout_version="v1_std_20q",
             total_questions=3,
             correct_answers={"1": "A", "2": "C", "3": "B"},
             is_active=True,
         )
-        test_db_session.add(tmpl)
-        test_db_session.commit()
 
         # Also create legacy questions with DIFFERENT correct_option (to test precedence)
         for q_num, correct in [(1, "B"), (2, "A"), (3, "D")]:
@@ -323,7 +383,7 @@ class TestBackfillExamWithOMR:
 
 
 class TestBackfillExamWithQuestionsOnly:
-    """Scenario C: Exam with legacy questions but no OMR template (or template without correct_answers)."""
+    """Scenario C: Exam with legacy questions but no OMR template or blank legacy data."""
 
     def test_exam_with_questions_no_template_gets_answer_key(self, test_db_session):
         teacher = _create_teacher(test_db_session)
@@ -381,15 +441,14 @@ class TestBackfillExamWithQuestionsOnly:
         test_db_session.add(exam)
         test_db_session.commit()
 
-        tmpl = OMRTemplate(
+        _seed_legacy_template(
+            test_db_session,
             exam_id=exam.id,
             layout_version="v1_std_20q",
             total_questions=2,
             correct_answers=None,
             is_active=True,
         )
-        test_db_session.add(tmpl)
-        test_db_session.commit()
 
         q1 = Question(
             exam_id=exam.id, question_number=1, correct_option="A", weight=Decimal("1.00")
@@ -453,15 +512,14 @@ class TestBackfillPublishedFlag:
         test_db_session.commit()
 
         # Create OMR template with correct_answers so the exam gets an answer key
-        tmpl = OMRTemplate(
+        _seed_legacy_template(
+            test_db_session,
             exam_id=exam.id,
             layout_version="v1_std_20q",
             total_questions=2,
             correct_answers={"1": "A", "2": "B"},
             is_active=True,
         )
-        test_db_session.add(tmpl)
-        test_db_session.commit()
 
         backfill_answer_keys(test_db_session)
 
@@ -496,15 +554,14 @@ class TestBackfillIdempotency:
         test_db_session.add(exam)
         test_db_session.commit()
 
-        tmpl = OMRTemplate(
+        _seed_legacy_template(
+            test_db_session,
             exam_id=exam.id,
             layout_version="v1_std_20q",
             total_questions=3,
             correct_answers={"1": "A", "2": "B", "3": "C"},
             is_active=True,
         )
-        test_db_session.add(tmpl)
-        test_db_session.commit()
 
         # First run
         backfill_answer_keys(test_db_session)
@@ -538,14 +595,14 @@ class TestBackfillCompleteness:
         test_db_session.add(exam1)
         test_db_session.commit()
 
-        tmpl1 = OMRTemplate(
+        _seed_legacy_template(
+            test_db_session,
             exam_id=exam1.id,
             layout_version="v1_std_20q",
             total_questions=2,
             correct_answers={"1": "A", "2": "B"},
             is_active=True,
         )
-        test_db_session.add(tmpl1)
 
         # Exam 2: with questions only
         exam2 = Exam(
@@ -569,14 +626,13 @@ class TestBackfillCompleteness:
             )
 
         # Orphan template (no exam)
-        tmpl_orphan = OMRTemplate(
+        tmpl_orphan = _seed_legacy_template(
+            test_db_session,
             layout_version="v1_std_20q",
             total_questions=1,
             correct_answers={"1": "D"},
             is_active=True,
         )
-        test_db_session.add(tmpl_orphan)
-        test_db_session.commit()
 
         backfill_answer_keys(test_db_session)
 
@@ -615,17 +671,15 @@ class TestBackfillCompleteness:
 class TestExistingOMRFlowUnchanged:
     """Verify that the existing OMR flow still works after the new tables are added.
 
-    This is a regression test — the new tables exist but no code reads from them yet.
-    The legacy paths (omr_templates.correct_answers, questions.correct_option) should
-    still function exactly as before.
+    This is a regression test for the compatibility path that still accepts
+    legacy answer-key input while the canonical storage remains AnswerKey.
     """
 
     def test_omr_template_creation_still_works(self, test_db_session):
-        """OMRTemplate with correct_answers can still be created (legacy field preserved)."""
+        """OMRTemplate can still be created without the legacy mapped column."""
         tmpl = OMRTemplate(
             layout_version="v1_std_20q",
             total_questions=20,
-            correct_answers={"1": "A", "2": "B"},
             is_active=True,
         )
         test_db_session.add(tmpl)
@@ -633,7 +687,7 @@ class TestExistingOMRFlowUnchanged:
 
         test_db_session.refresh(tmpl)
         assert tmpl.id is not None
-        assert tmpl.correct_answers == {"1": "A", "2": "B"}
+        assert not hasattr(tmpl, "correct_answers")
 
     def test_exam_creation_with_questions_still_works(self, test_db_session):
         """Legacy exam-bound Question creation still works."""

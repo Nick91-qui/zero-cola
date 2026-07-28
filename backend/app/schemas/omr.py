@@ -15,11 +15,10 @@ class OMRTemplateBase(BaseModel):
     layout_version: str
     total_questions: int
     options_per_question: int = 5
-    correct_answers: Optional[Dict[str, str]] = None
 
 
 class OMRTemplateCreate(OMRTemplateBase):
-    pass
+    correct_answers: Optional[Dict[str, str]] = None
 
 
 class OMRTemplateResponse(OMRTemplateBase):
