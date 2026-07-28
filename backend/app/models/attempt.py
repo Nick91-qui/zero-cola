@@ -16,6 +16,10 @@ class Attempt(BaseModel):
         ForeignKey("exams.id", ondelete="CASCADE"),
         nullable=False,
     )
+    answer_key_id: Mapped[Optional[UUID]] = mapped_column(
+        ForeignKey("answer_keys.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     student_id: Mapped[Optional[UUID]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -25,17 +29,41 @@ class Attempt(BaseModel):
         ForeignKey("omr_scans.id", ondelete="SET NULL"),
         nullable=True,
     )
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="graded")
+    attempt_number: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+    )
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="not_started",
+        server_default="not_started",
+    )
+    source: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False,
+        default="OMR",
+        server_default="OMR",
+    )
     total_questions: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     correct_answers: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     incorrect_answers: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    accuracy_percentage: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("0.00"))
-    raw_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("0.00"))
-    final_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("0.00"))
+    accuracy_percentage: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0.00")
+    )
+    raw_score: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0.00")
+    )
+    final_score: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0.00")
+    )
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     exam = relationship("Exam", back_populates="attempts")
+    answer_key = relationship("AnswerKey", foreign_keys=[answer_key_id])
     student = relationship("User", foreign_keys=[student_id])
     omr_scan = relationship("OMRScan", foreign_keys=[omr_scan_id])
     answers = relationship("AttemptAnswer", back_populates="attempt", cascade="all, delete-orphan")
@@ -49,6 +77,10 @@ class AttemptAnswer(BaseModel):
         nullable=False,
     )
     question_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    answer_key_item_id: Mapped[Optional[UUID]] = mapped_column(
+        ForeignKey("answer_key_items.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     question_id: Mapped[Optional[UUID]] = mapped_column(
         ForeignKey("questions.id", ondelete="SET NULL"),
         nullable=True,
@@ -56,6 +88,8 @@ class AttemptAnswer(BaseModel):
     selected_option: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     correct_option: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    answered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     attempt = relationship("Attempt", back_populates="answers")
+    answer_key_item = relationship("AnswerKeyItem", foreign_keys=[answer_key_item_id])
     question = relationship("Question", foreign_keys=[question_id])

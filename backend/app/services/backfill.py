@@ -1,4 +1,4 @@
-"""Backfill logic for AnswerKey foundation (Step 1).
+"""Backfill logic for AnswerKey foundation (Steps 1-2).
 
 This module contains the same backfill logic as the Alembic migration
 `a1b2c3d4e5f6_introduce_answer_keys.py`, extracted as a testable Python
@@ -11,6 +11,7 @@ session issues inside Alembic. This module exists solely for testing.
 """
 from datetime import datetime, timezone
 
+import sqlalchemy as sa
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -237,3 +238,163 @@ def _create_items_from_dict(
             question_id=None,
         )
         session.add(item)
+
+
+def backfill_attempt_references(bind) -> dict:
+    """Backfill Attempt foreign keys and denormalized metadata from legacy rows.
+
+    The function mirrors the Step 2 Alembic migration logic and is written
+    against a generic SQLAlchemy bind so it can run in tests against SQLite
+    and in the production migration against PostgreSQL.
+    """
+    stats = {
+        "attempts_with_answer_key_backfilled": 0,
+        "attempt_number_backfilled": 0,
+        "source_backfilled": 0,
+        "attempt_answers_with_item_backfilled": 0,
+        "answered_at_backfilled": 0,
+    }
+
+    unresolved_attempts = int(
+        bind.execute(
+            sa.text(
+                """
+                SELECT COUNT(*)
+                FROM attempts a
+                LEFT JOIN answer_keys ak ON ak.exam_id = a.exam_id
+                WHERE ak.id IS NULL
+                """
+            )
+        ).scalar()
+        or 0
+    )
+    if unresolved_attempts:
+        raise RuntimeError(
+            "Cannot backfill attempts.answer_key_id: "
+            f"{unresolved_attempts} attempt(s) have no matching AnswerKey."
+        )
+
+    unresolved_answers = int(
+        bind.execute(
+            sa.text(
+                """
+                SELECT COUNT(*)
+                FROM attempt_answers aa
+                JOIN attempts a ON a.id = aa.attempt_id
+                LEFT JOIN answer_keys ak ON ak.exam_id = a.exam_id
+                LEFT JOIN answer_key_items aki
+                    ON aki.answer_key_id = ak.id
+                   AND aki.item_number = aa.question_number
+                WHERE aki.id IS NULL
+                """
+            )
+        ).scalar()
+        or 0
+    )
+    if unresolved_answers:
+        raise RuntimeError(
+            "Cannot backfill attempt_answers.answer_key_item_id: "
+            f"{unresolved_answers} row(s) have no matching AnswerKeyItem."
+        )
+
+    result = bind.execute(
+        sa.text(
+            """
+            UPDATE attempts
+            SET answer_key_id = (
+                SELECT ak.id
+                FROM answer_keys ak
+                WHERE ak.exam_id = attempts.exam_id
+            )
+            WHERE answer_key_id IS NULL
+            """
+        )
+    )
+    stats["attempts_with_answer_key_backfilled"] = result.rowcount or 0
+
+    result = bind.execute(
+        sa.text(
+            """
+            UPDATE attempts
+            SET attempt_number = 1
+            WHERE attempt_number IS NULL
+            """
+        )
+    )
+    stats["attempt_number_backfilled"] = result.rowcount or 0
+
+    result = bind.execute(
+        sa.text(
+            """
+            UPDATE attempts
+            SET source = 'OMR'
+            WHERE source IS NULL
+            """
+        )
+    )
+    stats["source_backfilled"] = result.rowcount or 0
+
+    result = bind.execute(
+        sa.text(
+            """
+            UPDATE attempt_answers
+            SET answer_key_item_id = (
+                SELECT aki.id
+                FROM answer_key_items aki
+                JOIN answer_keys ak ON ak.id = aki.answer_key_id
+                JOIN attempts a ON a.exam_id = ak.exam_id
+                WHERE a.id = attempt_answers.attempt_id
+                  AND aki.item_number = attempt_answers.question_number
+            )
+            WHERE answer_key_item_id IS NULL
+            """
+        )
+    )
+    stats["attempt_answers_with_item_backfilled"] = result.rowcount or 0
+
+    result = bind.execute(
+        sa.text(
+            """
+            UPDATE attempt_answers
+            SET answered_at = created_at
+            WHERE answered_at IS NULL
+            """
+        )
+    )
+    stats["answered_at_backfilled"] = result.rowcount or 0
+
+    remaining_attempts = int(
+        bind.execute(
+            sa.text(
+                """
+                SELECT COUNT(*)
+                FROM attempts
+                WHERE answer_key_id IS NULL
+                """
+            )
+        ).scalar()
+        or 0
+    )
+    if remaining_attempts:
+        raise RuntimeError(
+            "attempts.answer_key_id backfill left NULL values behind."
+        )
+
+    remaining_answers = int(
+        bind.execute(
+            sa.text(
+                """
+                SELECT COUNT(*)
+                FROM attempt_answers
+                WHERE answer_key_item_id IS NULL
+                """
+            )
+        ).scalar()
+        or 0
+    )
+    if remaining_answers:
+        raise RuntimeError(
+            "attempt_answers.answer_key_item_id backfill left NULL values behind."
+        )
+
+    return stats
