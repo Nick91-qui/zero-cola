@@ -18,6 +18,10 @@ class OMRTemplate(BaseModel):
         ForeignKey("exams.id", ondelete="SET NULL"),
         nullable=True,
     )
+    created_by: Mapped[Optional[UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     layout_version: Mapped[str] = mapped_column(String(50), nullable=False)
     total_questions: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -34,8 +38,7 @@ class OMRTemplate(BaseModel):
         nullable=False,
     )
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-
-
+    created_by_user = relationship("User", foreign_keys=[created_by], backref="omr_templates")
 
 class OMRScan(BaseModel):
     __tablename__ = "omr_scans"

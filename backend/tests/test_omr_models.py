@@ -21,6 +21,7 @@ def test_omr_template_creation(test_db_session):
     assert template.layout_version == "v1_std_20q"
     assert template.total_questions == 20
     assert template.options_per_question == 5
+    assert "created_by" in OMRTemplate.__table__.c
     assert "correct_answers" not in OMRTemplate.__table__.c
     assert not hasattr(template, "correct_answers")
 

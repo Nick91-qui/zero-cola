@@ -31,7 +31,12 @@ class ExamService:
         self.skill_repo = SkillRepository(db)
         self.answer_key_service = AnswerKeyService(db)
 
-    def create_exam(self, exam_in: ExamCreate, teacher_id: UUID) -> Exam:
+    def create_exam(
+        self,
+        exam_in: ExamCreate,
+        teacher_id: UUID,
+        owner_id: Optional[UUID] = None,
+    ) -> Exam:
         if exam_in.questions and exam_in.correct_answers:
             raise ValueError(
                 "Provide either Workflow A questions or Workflow B correct_answers, not both."
@@ -42,6 +47,10 @@ class ExamService:
 
         # 1. If omr_template_id not provided, create an OMRTemplate automatically
         omr_template_id = exam_in.omr_template_id
+        if omr_template_id and owner_id is not None:
+            tmpl = self.template_repo.get_by_id(omr_template_id, owner_id=owner_id)
+            if tmpl is None:
+                raise ValueError(f"OMR Template {omr_template_id} not found.")
         if not omr_template_id and exam_in.correct_answers:
             layout_ver = exam_in.layout_version or (
                 "v1_std_50q" if exam_in.total_questions > 20 else "v1_std_20q"
@@ -52,7 +61,7 @@ class ExamService:
                 options_per_question=5,
                 correct_answers=exam_in.correct_answers,
             )
-            tmpl = self.template_repo.create(template_in)
+            tmpl = self.template_repo.create(template_in, created_by=teacher_id)
             omr_template_id = tmpl.id
 
         exam_in.omr_template_id = omr_template_id
@@ -60,7 +69,7 @@ class ExamService:
 
         # 2. Link OMRTemplate back to exam
         if omr_template_id:
-            tmpl = self.template_repo.get_by_id(omr_template_id)
+            tmpl = self.template_repo.get_by_id(omr_template_id, owner_id=owner_id)
             if tmpl:
                 tmpl.exam_id = exam.id
                 tmpl.title = exam.title
@@ -84,8 +93,8 @@ class ExamService:
         self.db.refresh(exam)
         return exam
 
-    def publish_exam(self, exam_id: UUID) -> Exam:
-        exam = self._require_exam(exam_id)
+    def publish_exam(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> Exam:
+        exam = self._require_exam(exam_id, teacher_id=teacher_id)
         if exam.status != ExamStatus.DRAFT.value:
             raise ValueError(f"Exam {exam_id} must be draft to publish.")
 
@@ -101,8 +110,8 @@ class ExamService:
         self.db.refresh(exam)
         return exam
 
-    def return_exam_to_draft(self, exam_id: UUID) -> Exam:
-        exam = self._require_exam(exam_id)
+    def return_exam_to_draft(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> Exam:
+        exam = self._require_exam(exam_id, teacher_id=teacher_id)
         if exam.status == ExamStatus.ARCHIVED.value:
             raise ValueError(f"Exam {exam_id} is archived and cannot return to draft.")
 
@@ -119,8 +128,8 @@ class ExamService:
         self.db.refresh(exam)
         return exam
 
-    def archive_exam(self, exam_id: UUID) -> Exam:
-        exam = self._require_exam(exam_id)
+    def archive_exam(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> Exam:
+        exam = self._require_exam(exam_id, teacher_id=teacher_id)
         if exam.status == ExamStatus.ARCHIVED.value:
             return exam
 
@@ -136,29 +145,43 @@ class ExamService:
         self.db.refresh(exam)
         return exam
 
-    def _require_exam(self, exam_id: UUID) -> Exam:
+    def _require_exam(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> Exam:
         exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
         if not exam:
             raise ValueError(f"Exam {exam_id} not found.")
+        if teacher_id is not None and exam.teacher_id != teacher_id:
+            raise ValueError(f"Exam {exam_id} not found.")
         return exam
 
-    def get_exam(self, exam_id: UUID) -> Optional[Exam]:
-        return self.exam_repo.get_by_id(exam_id)
+    def get_exam(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> Optional[Exam]:
+        exam = self.exam_repo.get_by_id(exam_id)
+        if not exam:
+            return None
+        if teacher_id is not None and exam.teacher_id != teacher_id:
+            return None
+        return exam
 
     def list_exams(
         self, teacher_id: Optional[UUID] = None, class_id: Optional[str] = None
     ) -> List[Exam]:
         return self.exam_repo.get_all(teacher_id=teacher_id, class_id=class_id)
 
-    def update_exam(self, exam_id: UUID, update_in: ExamUpdate) -> Optional[Exam]:
+    def update_exam(
+        self,
+        exam_id: UUID,
+        update_in: ExamUpdate,
+        teacher_id: Optional[UUID] = None,
+    ) -> Optional[Exam]:
         exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
         if not exam:
+            return None
+        if teacher_id is not None and exam.teacher_id != teacher_id:
             return None
         if exam.status == ExamStatus.ARCHIVED.value:
             raise ValueError(f"Exam {exam_id} is archived and cannot be edited.")
         return self.exam_repo.update(exam_id, update_in)
 
-    def soft_delete_exam(self, exam_id: UUID) -> bool:
+    def soft_delete_exam(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> bool:
         """
         Soft deletes an exam (sets is_active=False, deleted_at=now()).
         Preserves historical Attempt, AttemptAnswer and Grade records!
@@ -166,15 +189,17 @@ class ExamService:
         exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
         if not exam:
             return False
-        self.archive_exam(exam.id)
+        if teacher_id is not None and exam.teacher_id != teacher_id:
+            return False
+        self.archive_exam(exam.id, teacher_id=teacher_id)
         return True
 
-    def soft_delete_template(self, template_id: UUID) -> bool:
+    def soft_delete_template(self, template_id: UUID, teacher_id: Optional[UUID] = None) -> bool:
         """
         Soft deletes an OMR template (sets is_active=False, deleted_at=now()).
         Preserves OMR scans and historical grades.
         """
-        tmpl = self.template_repo.get_by_id(template_id)
+        tmpl = self.template_repo.get_by_id(template_id, owner_id=teacher_id)
         if not tmpl:
             return False
         tmpl.is_active = False
@@ -209,8 +234,12 @@ class ExamService:
             "final_score": final_score.quantize(Decimal("0.01")),
         }
 
-    def get_exam_statistics(self, exam_id: UUID) -> Dict[str, Any]:
-        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+    def get_exam_statistics(
+        self,
+        exam_id: UUID,
+        teacher_id: Optional[UUID] = None,
+    ) -> Dict[str, Any]:
+        exam = self._require_exam(exam_id, teacher_id=teacher_id)
         if not exam:
             raise ValueError(f"Exam {exam_id} not found.")
 
@@ -285,15 +314,15 @@ class ExamService:
             "question_statistics": question_stats,
         }
 
-    def export_exam_pdf(self, exam_id: UUID) -> bytes:
-        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+    def export_exam_pdf(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> bytes:
+        exam = self._require_exam(exam_id, teacher_id=teacher_id)
         if not exam:
             raise ValueError(f"Exam {exam_id} not found.")
 
         teacher = self.db.query(User).filter(User.id == exam.teacher_id).first()
         teacher_name = teacher.email if teacher else "Professor"
 
-        stats = self.get_exam_statistics(exam_id)
+        stats = self.get_exam_statistics(exam_id, teacher_id=teacher_id)
         attempts_db = self.attempt_repo.get_by_exam_id(exam_id)
 
         attempts_list = []
@@ -327,15 +356,15 @@ class ExamService:
             question_stats=stats["question_statistics"],
         )
 
-    def export_exam_xlsx(self, exam_id: UUID) -> bytes:
-        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+    def export_exam_xlsx(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> bytes:
+        exam = self._require_exam(exam_id, teacher_id=teacher_id)
         if not exam:
             raise ValueError(f"Exam {exam_id} not found.")
 
         teacher = self.db.query(User).filter(User.id == exam.teacher_id).first()
         teacher_name = teacher.email if teacher else "Professor"
 
-        stats = self.get_exam_statistics(exam_id)
+        stats = self.get_exam_statistics(exam_id, teacher_id=teacher_id)
         attempts_db = self.attempt_repo.get_by_exam_id(exam_id)
 
         attempts_list = []

@@ -38,17 +38,50 @@ def test_omr_service_template_lifecycle(test_db_session):
     assert template.id is not None
     assert template.layout_version == "v1_std_20q"
     assert template.exam_id is not None
+    assert template.created_by == teacher.id
 
     fetched = service.get_template(template.id)
     assert fetched is not None
     assert fetched.total_questions == 20
     assert not hasattr(fetched, "correct_answers")
     assert fetched.exam_id == template.exam_id
+    assert fetched.created_by == teacher.id
 
     exam = test_db_session.query(Exam).filter(Exam.id == template.exam_id).first()
     assert exam is not None
     assert exam.answer_key is not None
     assert len(exam.answer_key.items) == 2
+
+
+def test_omr_service_filters_templates_by_owner(test_db_session):
+    teacher_a = User(
+        email="teacher_owner_a@cola-zero.edu",
+        password_hash="pass_hash",
+        role=UserRole.TEACHER,
+    )
+    teacher_b = User(
+        email="teacher_owner_b@cola-zero.edu",
+        password_hash="pass_hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add_all([teacher_a, teacher_b])
+    test_db_session.commit()
+
+    service = OMRService(test_db_session)
+
+    template = service.create_template(
+        OMRTemplateCreate(
+            layout_version="v1_std_20q",
+            total_questions=20,
+            options_per_question=5,
+        ),
+        teacher_id=teacher_a.id,
+    )
+
+    assert service.get_template(template.id, owner_id=teacher_a.id) is not None
+    assert service.get_template(template.id, owner_id=teacher_b.id) is None
+    assert [tmpl.id for tmpl in service.list_templates(owner_id=teacher_a.id)] == [template.id]
+    assert service.list_templates(owner_id=teacher_b.id) == []
 
 
 def test_omr_service_process_and_grade(test_db_session, tmp_path):

@@ -38,7 +38,8 @@ async def list_templates(
 ):
     """Lists OMR templates."""
     service = OMRService(db)
-    return service.list_templates()
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+    return service.list_templates(owner_id=owner_id)
 
 
 @router.get("/templates/{template_id}", response_model=OMRTemplateResponse)
@@ -50,7 +51,8 @@ async def get_template(
 ):
     """Gets a single OMR template."""
     service = OMRService(db)
-    template = service.get_template(template_id)
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+    template = service.get_template(template_id, owner_id=owner_id)
     if not template:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -70,7 +72,8 @@ async def get_template_pdf(
     """Generates the PDF for a specific OMR template, with optional pre-filled student code."""
     service = OMRService(db)
     try:
-        pdf_bytes = service.get_template_pdf(template_id, student_code)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        pdf_bytes = service.get_template_pdf(template_id, student_code, owner_id=owner_id)
         headers = {"Content-Disposition": f'attachment; filename="omr_template_{template_id}.pdf"'}
         return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
     except ValueError as e:
@@ -88,7 +91,12 @@ async def get_template_preview_png(
     """PNG preview in the same coordinate space used by the OMR engine (calibration aid)."""
     service = OMRService(db)
     try:
-        png_bytes = service.get_template_preview_png(template_id, student_code)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        png_bytes = service.get_template_preview_png(
+            template_id,
+            student_code,
+            owner_id=owner_id,
+        )
         headers = {
             "Content-Disposition": f'inline; filename="omr_preview_{template_id}.png"'
         }
@@ -121,7 +129,13 @@ async def upload_scan(
     file_bytes = await file.read()
 
     try:
-        scan = service.process_scan_upload(omr_template_id, file_bytes, filename)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        scan = service.process_scan_upload(
+            omr_template_id,
+            file_bytes,
+            filename,
+            owner_id=owner_id,
+        )
         return scan
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -136,7 +150,8 @@ async def get_scan(
 ):
     """Retrieves the details and results of an OMR scan."""
     service = OMRService(db)
-    scan = service.scan_repo.get_by_id(scan_id)
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+    scan = service.get_scan(scan_id, owner_id=owner_id)
     if not scan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"OMR Scan with ID {scan_id} not found."
@@ -155,7 +170,8 @@ async def update_scan_manual(
     """Allows manual adjustment of student code and answers by the teacher."""
     service = OMRService(db)
     try:
-        updated = service.update_scan_manual(scan_id, update_in)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        updated = service.update_scan_manual(scan_id, update_in, owner_id=owner_id)
         return updated
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -171,10 +187,17 @@ async def confirm_scan(
     """Confirms OMR correction and publishes the grade to the unified grades table."""
     service = OMRService(db)
     try:
-        grade = service.confirm_scan(scan_id, current_user.id)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        grade = service.confirm_scan(scan_id, current_user.id, owner_id=owner_id)
         return grade
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        detail = str(e)
+        status_code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in detail.lower()
+            else status.HTTP_400_BAD_REQUEST
+        )
+        raise HTTPException(status_code=status_code, detail=detail)
 
 
 @router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -185,9 +208,9 @@ async def delete_template(
     db: Session = Depends(get_db),
 ):
     """Soft-deletes an OMR template and preserves historical scans and grades."""
-    from app.services.exam import ExamService
-    service = ExamService(db)
-    success = service.soft_delete_template(template_id)
+    service = OMRService(db)
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+    success = service.delete_template(template_id, owner_id=owner_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

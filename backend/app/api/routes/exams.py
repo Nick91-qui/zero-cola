@@ -27,7 +27,8 @@ async def create_exam(
     db: Session = Depends(get_db),
 ):
     service = ExamService(db)
-    return service.create_exam(exam_in, teacher_id=current_user.id)
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+    return service.create_exam(exam_in, teacher_id=current_user.id, owner_id=owner_id)
 
 
 @router.get("", response_model=List[ExamResponse])
@@ -50,7 +51,8 @@ async def get_exam(
     db: Session = Depends(get_db),
 ):
     service = ExamService(db)
-    exam = service.get_exam(exam_id)
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+    exam = service.get_exam(exam_id, teacher_id=owner_id)
     if not exam:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -69,7 +71,8 @@ async def update_exam(
 ):
     service = ExamService(db)
     try:
-        exam = service.update_exam(exam_id, update_in)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        exam = service.update_exam(exam_id, update_in, teacher_id=owner_id)
     except ValueError as e:
         detail = str(e)
         status_code = (
@@ -95,7 +98,8 @@ async def publish_exam(
 ):
     service = ExamService(db)
     try:
-        return service.publish_exam(exam_id)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        return service.publish_exam(exam_id, teacher_id=owner_id)
     except ValueError as e:
         detail = str(e)
         status_code = (
@@ -115,7 +119,8 @@ async def return_exam_to_draft(
 ):
     service = ExamService(db)
     try:
-        return service.return_exam_to_draft(exam_id)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        return service.return_exam_to_draft(exam_id, teacher_id=owner_id)
     except ValueError as e:
         detail = str(e)
         status_code = (
@@ -135,7 +140,8 @@ async def archive_exam(
 ):
     service = ExamService(db)
     try:
-        return service.archive_exam(exam_id)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        return service.archive_exam(exam_id, teacher_id=owner_id)
     except ValueError as e:
         detail = str(e)
         status_code = (
@@ -155,7 +161,8 @@ async def delete_exam(
 ):
     service = ExamService(db)
     try:
-        service.archive_exam(exam_id)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        service.archive_exam(exam_id, teacher_id=owner_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return None
@@ -170,7 +177,8 @@ async def get_exam_statistics(
 ):
     service = ExamService(db)
     try:
-        return service.get_exam_statistics(exam_id)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        return service.get_exam_statistics(exam_id, teacher_id=owner_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -184,7 +192,8 @@ async def export_exam_pdf(
 ):
     service = ExamService(db)
     try:
-        pdf_bytes = service.export_exam_pdf(exam_id)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        pdf_bytes = service.export_exam_pdf(exam_id, teacher_id=owner_id)
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
@@ -205,7 +214,8 @@ async def export_exam_xlsx(
 ):
     service = ExamService(db)
     try:
-        xlsx_bytes = service.export_exam_xlsx(exam_id)
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        xlsx_bytes = service.export_exam_xlsx(exam_id, teacher_id=owner_id)
         return Response(
             content=xlsx_bytes,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

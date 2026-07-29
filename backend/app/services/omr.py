@@ -57,19 +57,29 @@ class OMRService:
                     layout_version=template_in.layout_version,
                 ),
                 teacher_id=teacher_id,
+                owner_id=teacher_id,
             )
-            return self.template_repo.get_by_id(exam.omr_template_id)
+            return self.template_repo.get_by_id(exam.omr_template_id, owner_id=teacher_id)
 
-        return self.template_repo.create(template_in)
+        return self.template_repo.create(template_in, created_by=teacher_id)
 
-    def list_templates(self) -> list[OMRTemplate]:
-        return self.template_repo.get_all()
+    def list_templates(self, owner_id: UUID | None = None) -> list[OMRTemplate]:
+        return self.template_repo.get_all(owner_id=owner_id)
 
-    def get_template(self, template_id: UUID) -> Optional[OMRTemplate]:
-        return self.template_repo.get_by_id(template_id)
+    def get_template(
+        self,
+        template_id: UUID,
+        owner_id: UUID | None = None,
+    ) -> Optional[OMRTemplate]:
+        return self.template_repo.get_by_id(template_id, owner_id=owner_id)
 
-    def get_template_pdf(self, template_id: UUID, student_code: Optional[str] = None) -> bytes:
-        template = self.get_template(template_id)
+    def get_template_pdf(
+        self,
+        template_id: UUID,
+        student_code: Optional[str] = None,
+        owner_id: UUID | None = None,
+    ) -> bytes:
+        template = self.get_template(template_id, owner_id=owner_id)
         if not template:
             raise ValueError(f"OMR Template with ID {template_id} not found.")
         return generate_omr_pdf(template.layout_version, student_code)
@@ -79,9 +89,10 @@ class OMRService:
         template_id: UUID,
         student_code: Optional[str] = None,
         answers: Optional[Dict[str, str]] = None,
+        owner_id: UUID | None = None,
     ) -> bytes:
         """Renders a PNG preview in the same coordinate space used by the OMR engine."""
-        template = self.get_template(template_id)
+        template = self.get_template(template_id, owner_id=owner_id)
         if not template:
             raise ValueError(f"OMR Template with ID {template_id} not found.")
         return render_sheet_png(
@@ -89,6 +100,17 @@ class OMRService:
             student_code=student_code,
             answers=answers or {},
         )
+
+    def get_scan(self, scan_id: UUID, owner_id: UUID | None = None) -> Optional[OMRScan]:
+        scan = self.scan_repo.get_by_id(scan_id)
+        if not scan:
+            return None
+        if owner_id is None:
+            return scan
+        template = self.get_template(scan.omr_template_id, owner_id=owner_id)
+        if not template:
+            return None
+        return scan
 
     def _save_uploaded_file(self, file_bytes: bytes, filename: str) -> str:
         """Saves the uploaded file to disk and returns the relative image url."""
@@ -107,12 +129,18 @@ class OMRService:
 
         return filepath
 
-    def process_scan_upload(self, template_id: UUID, file_bytes: bytes, filename: str) -> OMRScan:
+    def process_scan_upload(
+        self,
+        template_id: UUID,
+        file_bytes: bytes,
+        filename: str,
+        owner_id: UUID | None = None,
+    ) -> OMRScan:
         """
         Saves the OMR image, creates an OMRScan record, and processes the image
         to detect student code and answers.
         """
-        template = self.get_template(template_id)
+        template = self.get_template(template_id, owner_id=owner_id)
         if not template:
             raise ValueError(f"OMR Template with ID {template_id} not found.")
 
@@ -206,13 +234,18 @@ class OMRService:
         score = (Decimal(correct_count) / Decimal(total_questions)) * Decimal("10.00")
         return score.quantize(Decimal("0.01"))
 
-    def update_scan_manual(self, scan_id: UUID, update_in: OMRScanUpdate) -> OMRScan:
+    def update_scan_manual(
+        self,
+        scan_id: UUID,
+        update_in: OMRScanUpdate,
+        owner_id: UUID | None = None,
+    ) -> OMRScan:
         """Allows manual adjustment of student code and answers by the teacher."""
         scan = self.scan_repo.get_by_id(scan_id)
         if not scan:
             raise ValueError(f"OMR Scan with ID {scan_id} not found.")
 
-        template = self.get_template(scan.omr_template_id)
+        template = self.get_template(scan.omr_template_id, owner_id=owner_id)
         if not template:
             raise ValueError("OMR Template for this scan was not found.")
 
@@ -244,7 +277,12 @@ class OMRService:
         updated_scan = self.scan_repo.update(scan_id, **update_data)
         return updated_scan
 
-    def confirm_scan(self, scan_id: UUID, teacher_id: UUID) -> Grade:
+    def confirm_scan(
+        self,
+        scan_id: UUID,
+        teacher_id: UUID,
+        owner_id: UUID | None = None,
+    ) -> Grade:
         """Confirms OMR correction, creates Attempt rows, and publishes the grade."""
         from app.repositories.attempt import AttemptRepository
 
@@ -265,8 +303,10 @@ class OMRService:
         self.scan_repo.update(scan.id, status=OMRScanStatus.SUCCESS, error_message=None)
 
         # 2. Resolve the linked Exam and canonical AnswerKey.
-        template = self.get_template(scan.omr_template_id)
-        if not template or not template.exam_id:
+        template = self.get_template(scan.omr_template_id, owner_id=owner_id)
+        if not template:
+            raise ValueError(f"OMR Template with ID {scan.omr_template_id} not found.")
+        if not template.exam_id:
             raise ValueError("Cannot confirm OMR scan because it is not linked to an Exam.")
 
         exam = self.db.query(Exam).filter(Exam.id == template.exam_id).first()
@@ -356,6 +396,15 @@ class OMRService:
             teacher_id=teacher_id,
         )
         return grade
+
+    def delete_template(self, template_id: UUID, owner_id: UUID | None = None) -> bool:
+        template = self.template_repo.get_by_id(template_id, owner_id=owner_id)
+        if not template:
+            return False
+        template.is_active = False
+        template.deleted_at = datetime.now(timezone.utc)
+        self.db.commit()
+        return True
 
     def _require_answer_key_items(self, template: OMRTemplate):
         if not template.exam_id:

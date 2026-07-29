@@ -1,7 +1,9 @@
 from uuid import UUID
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
+from app.models.exam import Exam
 from app.models.omr import OMRScan, OMRTemplate
 from app.schemas.omr import OMRTemplateCreate
 
@@ -10,9 +12,14 @@ class OMRTemplateRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create(self, template_in: OMRTemplateCreate) -> OMRTemplate:
+    def create(
+        self,
+        template_in: OMRTemplateCreate,
+        created_by: UUID | None = None,
+    ) -> OMRTemplate:
         db_template = OMRTemplate(
             exam_id=template_in.exam_id,
+            created_by=created_by,
             layout_version=template_in.layout_version,
             total_questions=template_in.total_questions,
             options_per_question=template_in.options_per_question,
@@ -22,13 +29,44 @@ class OMRTemplateRepository:
         self.db.refresh(db_template)
         return db_template
 
-    def get_by_id(self, template_id: str | UUID) -> OMRTemplate | None:
+    def get_by_id(
+        self,
+        template_id: str | UUID,
+        owner_id: UUID | None = None,
+    ) -> OMRTemplate | None:
         if isinstance(template_id, str):
             template_id = UUID(template_id)
-        return self.db.query(OMRTemplate).filter(OMRTemplate.id == template_id).first()
+        query = self.db.query(OMRTemplate).filter(OMRTemplate.id == template_id)
+        if owner_id is not None:
+            query = query.outerjoin(Exam, Exam.id == OMRTemplate.exam_id).filter(
+                or_(
+                    OMRTemplate.created_by == owner_id,
+                    and_(
+                        OMRTemplate.created_by.is_(None),
+                        Exam.teacher_id == owner_id,
+                    ),
+                )
+            )
+        return query.first()
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> list[OMRTemplate]:
-        return self.db.query(OMRTemplate).offset(skip).limit(limit).all()
+    def get_all(
+        self,
+        owner_id: UUID | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[OMRTemplate]:
+        query = self.db.query(OMRTemplate)
+        if owner_id is not None:
+            query = query.outerjoin(Exam, Exam.id == OMRTemplate.exam_id).filter(
+                or_(
+                    OMRTemplate.created_by == owner_id,
+                    and_(
+                        OMRTemplate.created_by.is_(None),
+                        Exam.teacher_id == owner_id,
+                    ),
+                )
+            )
+        return query.offset(skip).limit(limit).all()
 
 
 class OMRScanRepository:
