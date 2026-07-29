@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -9,10 +9,15 @@ from app.schemas.skill import SkillResponse
 
 
 class QuestionBase(BaseModel):
-    question_number: int
-    statement: Optional[str] = None
-    correct_option: Optional[str] = None
-    weight: Decimal = Decimal("1.00")
+    statement: str
+    type: str = "multiple_choice"
+    options: Optional[dict[str, Any]] = None
+    correct_answer: dict[str, Any] | str
+    explanation: Optional[str] = None
+    image_url: Optional[str] = None
+    subject: Optional[str] = None
+    difficulty: Optional[str] = None
+    tags: Optional[list[str]] = None
 
 
 class QuestionCreate(QuestionBase):
@@ -21,8 +26,32 @@ class QuestionCreate(QuestionBase):
 
 class QuestionResponse(QuestionBase):
     id: UUID
-    exam_id: UUID
+    parent_id: Optional[UUID] = None
+    version: int
+    is_active: bool
+    created_by: UUID
     skills: List[SkillResponse] = []
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExamQuestionBase(BaseModel):
+    display_order: int
+    weight: Decimal = Decimal("1.00")
+
+
+class ExamQuestionCreate(ExamQuestionBase):
+    question_id: Optional[UUID] = None
+    question: Optional[QuestionCreate] = None
+
+
+class ExamQuestionResponse(ExamQuestionBase):
+    id: UUID
+    exam_id: UUID
+    question_id: UUID
+    question: QuestionResponse
     created_at: datetime
     updated_at: datetime
 
@@ -41,7 +70,7 @@ class ExamBase(BaseModel):
 class ExamCreate(ExamBase):
     correct_answers: Optional[Dict[str, str]] = None
     layout_version: Optional[str] = "v1_std_20q"
-    questions: Optional[List[QuestionCreate]] = None
+    questions: Optional[List[ExamQuestionCreate]] = None
 
 
 class ExamUpdate(BaseModel):
@@ -65,6 +94,7 @@ class ExamResponse(ExamBase):
 
 class ExamDetailResponse(ExamResponse):
     questions: List[QuestionResponse] = []
+    exam_questions: List[ExamQuestionResponse] = []
 
 
 class QuestionStatistic(BaseModel):

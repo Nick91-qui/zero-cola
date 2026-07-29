@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+
 from app.main import app
 
 client = TestClient(app)
@@ -10,9 +11,24 @@ def test_create_and_get_exam_api(auth_headers):
         "title": "Avaliação de Física - 1º Bimestre",
         "description": "Mecânica Clássica",
         "class_id": "TURMA-101",
-        "total_questions": 20,
+        "total_questions": 2,
         "max_score": 10.0,
-        "correct_answers": {"1": "A", "2": "B", "3": "C", "4": "D", "5": "E"},
+        "questions": [
+            {
+                "display_order": 2,
+                "question": {
+                    "statement": "Questão 2",
+                    "correct_answer": "B",
+                },
+            },
+            {
+                "display_order": 1,
+                "question": {
+                    "statement": "Questão 1",
+                    "correct_answer": "A",
+                },
+            },
+        ],
     }
 
     response = client.post("/api/v1/exams", json=payload, headers=auth_headers)
@@ -21,7 +37,7 @@ def test_create_and_get_exam_api(auth_headers):
     exam_id = exam["id"]
     assert exam["title"] == "Avaliação de Física - 1º Bimestre"
     assert exam["class_id"] == "TURMA-101"
-    assert exam["omr_template_id"] is not None
+    assert exam["omr_template_id"] is None
 
     # 2. List Exams
     list_res = client.get("/api/v1/exams", headers=auth_headers)
@@ -34,14 +50,15 @@ def test_create_and_get_exam_api(auth_headers):
     assert detail_res.status_code == 200
     detail = detail_res.json()
     assert detail["id"] == exam_id
-    assert len(detail["questions"]) == 5
+    assert len(detail["questions"]) == 2
+    assert len(detail["exam_questions"]) == 2
 
     # 4. Get Statistics
     stats_res = client.get(f"/api/v1/exams/{exam_id}/statistics", headers=auth_headers)
     assert stats_res.status_code == 200
     stats = stats_res.json()
     assert stats["exam_id"] == exam_id
-    assert len(stats["question_statistics"]) == 20
+    assert len(stats["question_statistics"]) == 2
 
     # 5. Export PDF
     pdf_res = client.get(f"/api/v1/exams/{exam_id}/export/pdf", headers=auth_headers)

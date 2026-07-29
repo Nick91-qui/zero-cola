@@ -14,13 +14,12 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import sqlalchemy as sa
-from sqlalchemy import select
+from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 
 from app.models.answer_key import AnswerKey, AnswerKeyItem
 from app.models.enums import UserRole
 from app.models.exam import Exam
-from app.models.question import Question
 from app.models.user import User
 
 
@@ -115,12 +114,9 @@ def backfill_answer_keys(session: Session) -> dict:
         existing_ak_set.add(_uuid_object(tmpl["exam_id"]))
 
     # --- Scenario C: Exams with legacy questions but no AnswerKey ---
-    question_exam_ids = select(Question.exam_id).distinct()
-    exams_with_questions = (
-        session.query(Exam)
-        .filter(Exam.id.in_(question_exam_ids))
-        .all()
-    )
+    legacy_questions = _load_legacy_questions(session)
+    question_exam_ids = {row["exam_id"] for row in legacy_questions}
+    exams_with_questions = session.query(Exam).filter(Exam.id.in_(question_exam_ids)).all()
 
     for exam in exams_with_questions:
         if exam.id in existing_ak_set:
@@ -138,13 +134,7 @@ def backfill_answer_keys(session: Session) -> dict:
             if tmpl:
                 template_correct = _coerce_correct_answers(tmpl)
 
-        # Get legacy questions
-        questions = (
-            session.query(Question)
-            .filter(Question.exam_id == exam.id)
-            .order_by(Question.question_number)
-            .all()
-        )
+        questions = [row for row in legacy_questions if row["exam_id"] == exam.id]
 
         if not questions:
             continue
@@ -157,22 +147,22 @@ def backfill_answer_keys(session: Session) -> dict:
             # COALESCE: prefer OMR template, fall back to question
             correct_answer = None
             if template_correct:
-                correct_answer = template_correct.get(str(q.question_number))
+                correct_answer = template_correct.get(str(q["question_number"]))
                 if correct_answer is None:
-                    correct_answer = template_correct.get(f"q{q.question_number}")
+                    correct_answer = template_correct.get(f"q{q['question_number']}")
 
             if correct_answer is None:
-                correct_answer = q.correct_option
+                correct_answer = q["correct_option"]
 
             if correct_answer is None:
                 continue
 
             item = AnswerKeyItem(
                 answer_key_id=ak.id,
-                item_number=q.question_number,
+                item_number=q["question_number"],
                 correct_answer=str(correct_answer),
-                weight=q.weight or 1.00,
-                statement=q.statement,
+                weight=q["weight"] or 1.00,
+                statement=q["statement"],
                 question_id=None,
             )
             session.add(item)
@@ -288,6 +278,48 @@ def _coerce_correct_answers(raw_value):
         except json.JSONDecodeError:
             return None
     return raw_value
+
+
+def _load_legacy_questions(session: Session):
+    bind = session.get_bind()
+    table_name = _legacy_questions_table_name(bind)
+    if table_name is None:
+        return []
+
+    rows = session.execute(
+        sa.text(
+            f"""
+            SELECT id, exam_id, question_number, statement, correct_option, weight
+            FROM {table_name}
+            ORDER BY exam_id, question_number
+            """
+        )
+    ).mappings().all()
+
+    return [
+        {
+            "id": _uuid_object(row["id"]),
+            "exam_id": _uuid_object(row["exam_id"]),
+            "question_number": row["question_number"],
+            "statement": row["statement"],
+            "correct_option": row["correct_option"],
+            "weight": row["weight"],
+        }
+        for row in rows
+    ]
+
+
+def _legacy_questions_table_name(bind) -> str | None:
+    inspector = inspect(bind)
+    legacy_required = {"exam_id", "question_number", "correct_option", "weight"}
+
+    for table_name in ("questions_legacy", "questions"):
+        if table_name not in inspector.get_table_names():
+            continue
+        column_names = {column["name"] for column in inspector.get_columns(table_name)}
+        if legacy_required.issubset(column_names):
+            return table_name
+    return None
 
 
 def _uuid_param(value):

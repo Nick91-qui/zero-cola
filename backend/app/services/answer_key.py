@@ -1,3 +1,4 @@
+import json
 from collections.abc import Mapping
 from decimal import Decimal
 from uuid import UUID
@@ -5,6 +6,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.answer_key import AnswerKey, AnswerKeyItem
+from app.models.exam_question import ExamQuestion
 
 
 class AnswerKeyService:
@@ -73,3 +75,52 @@ class AnswerKeyService:
         self.db.commit()
         self.db.refresh(answer_key)
         return answer_key
+
+    def create_from_exam_questions(
+        self,
+        exam_id: UUID,
+        *,
+        is_published: bool = False,
+    ) -> AnswerKey:
+        existing = self.get_by_exam_id(exam_id)
+        if existing:
+            return existing
+
+        exam_questions = (
+            self.db.query(ExamQuestion)
+            .filter(ExamQuestion.exam_id == exam_id)
+            .order_by(ExamQuestion.display_order.asc())
+            .all()
+        )
+        if not exam_questions:
+            raise ValueError(f"Exam {exam_id} has no exam_questions.")
+
+        answer_key = AnswerKey(exam_id=exam_id, is_published=is_published)
+        self.db.add(answer_key)
+        self.db.flush()
+
+        for exam_question in exam_questions:
+            question = exam_question.question
+            item = AnswerKeyItem(
+                answer_key_id=answer_key.id,
+                item_number=exam_question.display_order,
+                correct_answer=self._normalize_correct_answer(question.correct_answer),
+                weight=exam_question.weight,
+                statement=question.statement,
+                question_id=question.id,
+            )
+            self.db.add(item)
+            self.db.flush()
+            item.skills.extend(question.skills)
+
+        self.db.commit()
+        self.db.refresh(answer_key)
+        return answer_key
+
+    def _normalize_correct_answer(self, value) -> str:
+        if isinstance(value, dict):
+            for key in ("key", "answer", "value"):
+                if key in value and value[key] is not None:
+                    return str(value[key])
+            return json.dumps(value, sort_keys=True)
+        return str(value)

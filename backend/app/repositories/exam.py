@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
-from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from app.models.exam import Exam
+from app.models.exam_question import ExamQuestion
 from app.models.question import Question
-from app.schemas.exam import ExamCreate, ExamUpdate
+from app.models.skill import Skill
+from app.schemas.exam import ExamCreate, ExamQuestionCreate, ExamUpdate, QuestionCreate
 
 
 class ExamRepository:
@@ -59,7 +60,11 @@ class ExamRepository:
         exam = self.get_by_id(exam_id, include_inactive=True)
         if not exam:
             return None
-        data = update_data if isinstance(update_data, dict) else update_data.model_dump(exclude_unset=True)
+        data = (
+            update_data
+            if isinstance(update_data, dict)
+            else update_data.model_dump(exclude_unset=True)
+        )
         for key, value in data.items():
             if hasattr(exam, key) and value is not None:
                 setattr(exam, key, value)
@@ -76,22 +81,57 @@ class ExamRepository:
         self.db.commit()
         return True
 
-    def create_questions_bulk(
+    def create_exam_questions_bulk(
         self,
         exam_id: UUID,
-        correct_answers: dict[str, str],
-        weight: Decimal = Decimal("1.00"),
-    ) -> List[Question]:
-        questions = []
-        for q_num_str, correct_opt in correct_answers.items():
-            q_num = int(q_num_str.replace("q", "").replace("Q", ""))
-            q = Question(
+        questions_in: List[ExamQuestionCreate],
+        created_by: UUID,
+    ) -> List[ExamQuestion]:
+        exam_questions: List[ExamQuestion] = []
+        for item in sorted(questions_in, key=lambda q: q.display_order):
+            question = self._resolve_question(item, created_by)
+            exam_question = ExamQuestion(
                 exam_id=exam_id,
-                question_number=q_num,
-                correct_option=correct_opt,
-                weight=weight,
+                question_id=question.id,
+                display_order=item.display_order,
+                weight=item.weight,
             )
-            self.db.add(q)
-            questions.append(q)
+            self.db.add(exam_question)
+            exam_questions.append(exam_question)
         self.db.commit()
-        return questions
+        return exam_questions
+
+    def _resolve_question(
+        self,
+        item: ExamQuestionCreate,
+        created_by: UUID,
+    ) -> Question:
+        if item.question_id is not None:
+            question = self.db.query(Question).filter(Question.id == item.question_id).first()
+            if question is None:
+                raise ValueError(f"Question {item.question_id} not found.")
+            return question
+
+        if item.question is None:
+            raise ValueError("ExamQuestionCreate requires either question_id or question.")
+
+        question_in: QuestionCreate = item.question
+        question = Question(
+            statement=question_in.statement,
+            type=question_in.type,
+            options=question_in.options,
+            correct_answer=question_in.correct_answer,
+            explanation=question_in.explanation,
+            image_url=question_in.image_url,
+            subject=question_in.subject,
+            difficulty=question_in.difficulty,
+            tags=question_in.tags,
+            created_by=created_by,
+        )
+        if question_in.skill_ids:
+            question.skills = (
+                self.db.query(Skill).filter(Skill.id.in_(question_in.skill_ids)).all()
+            )
+        self.db.add(question)
+        self.db.flush()
+        return question

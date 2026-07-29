@@ -31,6 +31,14 @@ class ExamService:
         self.answer_key_service = AnswerKeyService(db)
 
     def create_exam(self, exam_in: ExamCreate, teacher_id: UUID) -> Exam:
+        if exam_in.questions and exam_in.correct_answers:
+            raise ValueError(
+                "Provide either Workflow A questions or Workflow B correct_answers, not both."
+            )
+
+        if exam_in.questions:
+            exam_in.total_questions = len(exam_in.questions)
+
         # 1. If omr_template_id not provided, create an OMRTemplate automatically
         omr_template_id = exam_in.omr_template_id
         if not omr_template_id and exam_in.correct_answers:
@@ -57,16 +65,18 @@ class ExamService:
                 tmpl.title = exam.title
                 self.db.commit()
 
-        # 3. Materialize AnswerKey rows from the legacy answer mapping.
+        # 3. Materialize Question Bank compositions into AnswerKey rows.
+        if exam_in.questions:
+            self.exam_repo.create_exam_questions_bulk(
+                exam_id=exam.id,
+                questions_in=exam_in.questions,
+                created_by=teacher_id,
+            )
+            self.answer_key_service.create_from_exam_questions(exam.id)
+
+        # 4. Materialize AnswerKey rows from the direct answer mapping.
         if exam_in.correct_answers:
             self.answer_key_service.create_from_mapping(
-                exam_id=exam.id,
-                correct_answers=exam_in.correct_answers,
-            )
-
-        # 4. Keep the legacy question rows in sync for compatibility until Step 5.
-        if exam_in.correct_answers:
-            self.exam_repo.create_questions_bulk(
                 exam_id=exam.id,
                 correct_answers=exam_in.correct_answers,
             )

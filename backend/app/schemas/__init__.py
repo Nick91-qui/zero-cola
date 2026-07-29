@@ -2,6 +2,8 @@ from app.schemas.attempt import AttemptAnswerResponse, AttemptResponse
 from app.schemas.exam import (
     ExamCreate,
     ExamDetailResponse,
+    ExamQuestionCreate,
+    ExamQuestionResponse,
     ExamResponse,
     ExamStatisticsResponse,
     ExamUpdate,
@@ -37,6 +39,8 @@ __all__ = [
     "ExamUpdate",
     "ExamResponse",
     "ExamDetailResponse",
+    "ExamQuestionCreate",
+    "ExamQuestionResponse",
     "QuestionCreate",
     "QuestionResponse",
     "QuestionStatistic",

@@ -1,8 +1,7 @@
 from decimal import Decimal
-from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, Integer, Numeric, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Integer, Numeric, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.models import BaseModel
@@ -18,6 +17,7 @@ class ExamQuestion(BaseModel):
     __tablename__ = "exam_questions"
     __table_args__ = (
         UniqueConstraint("exam_id", "question_id", name="uq_exam_question"),
+        UniqueConstraint("exam_id", "display_order", name="uq_exam_question_order"),
     )
 
     exam_id: Mapped[UUID] = mapped_column(
@@ -31,5 +31,5 @@ class ExamQuestion(BaseModel):
     display_order: Mapped[int] = mapped_column(Integer, nullable=False)
     weight: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
 
-    exam = relationship("Exam", foreign_keys=[exam_id], backref="exam_questions")
-    question = relationship("Question", foreign_keys=[question_id])
+    exam = relationship("Exam", back_populates="exam_questions")
+    question = relationship("Question", back_populates="exam_questions")

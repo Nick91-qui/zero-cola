@@ -13,6 +13,7 @@ migration integration test is recommended but out of scope for this step.
 """
 import json
 from decimal import Decimal
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import text
@@ -23,7 +24,6 @@ from app.models.enums import UserRole
 from app.models.exam import Exam
 from app.models.exam_question import ExamQuestion
 from app.models.omr import OMRTemplate
-from app.models.question import Question
 from app.models.skill import Skill
 from app.models.user import User
 from app.services.backfill import backfill_answer_keys
@@ -80,6 +80,78 @@ def _ensure_legacy_correct_answers_column(session) -> None:
     if not column_exists:
         session.execute(text("ALTER TABLE omr_templates ADD COLUMN correct_answers JSON"))
         session.commit()
+
+
+def _ensure_legacy_questions_table(session) -> None:
+    dialect_name = session.get_bind().dialect.name
+    if dialect_name == "sqlite":
+        session.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS questions_legacy (
+                    id TEXT PRIMARY KEY,
+                    exam_id TEXT NOT NULL,
+                    question_number INTEGER NOT NULL,
+                    statement TEXT,
+                    correct_option TEXT,
+                    weight NUMERIC NOT NULL DEFAULT 1.00
+                )
+                """
+            )
+        )
+        session.commit()
+        return
+
+    session.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS questions_legacy (
+                id UUID PRIMARY KEY,
+                exam_id UUID NOT NULL,
+                question_number INTEGER NOT NULL,
+                statement TEXT,
+                correct_option VARCHAR(10),
+                weight NUMERIC(5, 2) NOT NULL DEFAULT 1.00
+            )
+            """
+        )
+    )
+    session.commit()
+
+
+def _seed_legacy_question(
+    session,
+    *,
+    exam_id,
+    question_number: int,
+    correct_option: str | None,
+    weight: Decimal = Decimal("1.00"),
+    statement: str | None = None,
+) -> str:
+    _ensure_legacy_questions_table(session)
+    question_id = str(uuid4())
+    session.execute(
+        text(
+            """
+            INSERT INTO questions_legacy (
+                id, exam_id, question_number, statement, correct_option, weight
+            )
+            VALUES (
+                :id, :exam_id, :question_number, :statement, :correct_option, :weight
+            )
+            """
+        ),
+        {
+            "id": question_id,
+            "exam_id": str(exam_id),
+            "question_number": question_number,
+            "statement": statement,
+            "correct_option": correct_option,
+            "weight": float(weight),
+        },
+    )
+    session.commit()
+    return question_id
 
 
 def _seed_legacy_template(
@@ -353,14 +425,13 @@ class TestBackfillExamWithOMR:
 
         # Also create legacy questions with DIFFERENT correct_option (to test precedence)
         for q_num, correct in [(1, "B"), (2, "A"), (3, "D")]:
-            q = Question(
+            _seed_legacy_question(
+                test_db_session,
                 exam_id=exam.id,
                 question_number=q_num,
                 correct_option=correct,
                 weight=Decimal("1.00"),
             )
-            test_db_session.add(q)
-        test_db_session.commit()
 
         backfill_answer_keys(test_db_session)
 
@@ -399,15 +470,14 @@ class TestBackfillExamWithQuestionsOnly:
         test_db_session.commit()
 
         for q_num, correct in [(1, "A"), (2, "B"), (3, "C"), (4, "D"), (5, "E")]:
-            q = Question(
+            _seed_legacy_question(
+                test_db_session,
                 exam_id=exam.id,
                 question_number=q_num,
                 correct_option=correct,
                 weight=Decimal("2.00"),
                 statement=f"Questão {q_num}",
             )
-            test_db_session.add(q)
-        test_db_session.commit()
 
         stats = backfill_answer_keys(test_db_session)
 
@@ -450,14 +520,20 @@ class TestBackfillExamWithQuestionsOnly:
             is_active=True,
         )
 
-        q1 = Question(
-            exam_id=exam.id, question_number=1, correct_option="A", weight=Decimal("1.00")
+        _seed_legacy_question(
+            test_db_session,
+            exam_id=exam.id,
+            question_number=1,
+            correct_option="A",
+            weight=Decimal("1.00"),
         )
-        q2 = Question(
-            exam_id=exam.id, question_number=2, correct_option="C", weight=Decimal("1.00")
+        _seed_legacy_question(
+            test_db_session,
+            exam_id=exam.id,
+            question_number=2,
+            correct_option="C",
+            weight=Decimal("1.00"),
         )
-        test_db_session.add_all([q1, q2])
-        test_db_session.commit()
 
         backfill_answer_keys(test_db_session)
 
@@ -616,13 +692,12 @@ class TestBackfillCompleteness:
         test_db_session.commit()
 
         for q_num in [1, 2]:
-            test_db_session.add(
-                Question(
-                    exam_id=exam2.id,
-                    question_number=q_num,
-                    correct_option="C",
-                    weight=Decimal("1.00"),
-                )
+            _seed_legacy_question(
+                test_db_session,
+                exam_id=exam2.id,
+                question_number=q_num,
+                correct_option="C",
+                weight=Decimal("1.00"),
             )
 
         # Orphan template (no exam)
@@ -703,18 +778,29 @@ class TestExistingOMRFlowUnchanged:
         test_db_session.add(exam)
         test_db_session.commit()
 
-        q = Question(
+        question_id = _seed_legacy_question(
+            test_db_session,
             exam_id=exam.id,
             question_number=1,
             correct_option="A",
             weight=Decimal("1.00"),
         )
-        test_db_session.add(q)
-        test_db_session.commit()
 
-        assert q.id is not None
-        assert q.exam_id == exam.id
-        assert q.correct_option == "A"
+        row = test_db_session.execute(
+            text(
+                """
+                SELECT id, exam_id, question_number, correct_option
+                FROM questions_legacy
+                WHERE id = :id
+                """
+            ),
+            {"id": question_id},
+        ).mappings().one()
+
+        assert row["id"] == question_id
+        assert row["exam_id"] == str(exam.id)
+        assert row["question_number"] == 1
+        assert row["correct_option"] == "A"
 
     def test_answer_key_item_skills_relationship_works(self, test_db_session):
         """The answer_key_item_skills association table supports direct skill attachment."""
@@ -770,18 +856,17 @@ class TestExistingOMRFlowUnchanged:
         test_db_session.add(exam)
         test_db_session.commit()
 
-        q = Question(
+        q_id = _seed_legacy_question(
+            test_db_session,
             exam_id=exam.id,
             question_number=1,
             correct_option="A",
             weight=Decimal("1.00"),
         )
-        test_db_session.add(q)
-        test_db_session.commit()
 
         eq = ExamQuestion(
             exam_id=exam.id,
-            question_id=q.id,
+            question_id=UUID(q_id),
             display_order=1,
             weight=Decimal("100.00"),
         )
@@ -790,5 +875,5 @@ class TestExistingOMRFlowUnchanged:
 
         assert eq.id is not None
         assert eq.exam_id == exam.id
-        assert eq.question_id == q.id
+        assert str(eq.question_id) == q_id
         assert eq.display_order == 1
