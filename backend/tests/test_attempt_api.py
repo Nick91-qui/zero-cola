@@ -1,5 +1,3 @@
-import json
-
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -11,6 +9,20 @@ from app.services.auth import AuthService
 from app.services.exam import ExamService
 
 client = TestClient(app)
+
+
+def _collect_keys(payload):
+    if isinstance(payload, dict):
+        keys = set(payload.keys())
+        for value in payload.values():
+            keys.update(_collect_keys(value))
+        return keys
+    if isinstance(payload, list):
+        keys = set()
+        for item in payload:
+            keys.update(_collect_keys(item))
+        return keys
+    return set()
 
 
 def _student_headers(
@@ -89,7 +101,7 @@ def test_online_attempt_api_flow_and_confidentiality(override_get_db, test_db_se
     start_data = start_response.json()
     assert start_data["attempt"]["status"] == "in_progress"
     assert start_data["current_question"]["question_number"] == 1
-    assert "correct_answer" not in json.dumps(start_data)
+    assert "correct_answer" not in _collect_keys(start_data)
     assert "correct_answers" not in start_data["attempt"]
     assert "incorrect_answers" not in start_data["attempt"]
     assert "accuracy_percentage" not in start_data["attempt"]
@@ -110,7 +122,7 @@ def test_online_attempt_api_flow_and_confidentiality(override_get_db, test_db_se
     assert save_response.status_code == 200
     save_data = save_response.json()
     assert save_data["current_question"]["question_number"] == 2
-    assert "correct_answer" not in json.dumps(save_data)
+    assert "correct_answer" not in _collect_keys(save_data)
 
     next_response = client.post(
         f"/api/v1/attempts/{start_data['attempt']['id']}/next/1",
@@ -134,7 +146,8 @@ def test_online_attempt_api_flow_and_confidentiality(override_get_db, test_db_se
     result_data = submit_response.json()
     assert result_data["grade"]["source_type"] == GradeSourceType.ONLINE.value
     assert result_data["attempt"]["status"] == "graded"
-    assert "correct_answer" not in json.dumps(result_data)
+    assert "correct_answer" not in _collect_keys(result_data)
+    assert "correct_answers" in result_data["attempt"]
 
     result_response = client.get(
         f"/api/v1/attempts/{start_data['attempt']['id']}/result",
