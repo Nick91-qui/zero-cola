@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.attempt import Attempt, AttemptAnswer
+from app.models.enums import ExamStatus
 from app.models.exam import Exam
 from app.models.user import User
 from app.repositories.attempt import AttemptRepository
@@ -84,12 +85,9 @@ class ExamService:
         return exam
 
     def publish_exam(self, exam_id: UUID) -> Exam:
-        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
-        if not exam:
-            raise ValueError(f"Exam {exam_id} not found.")
-
-        if exam.answer_key and exam.answer_key.is_published:
-            return exam
+        exam = self._require_exam(exam_id)
+        if exam.status != ExamStatus.DRAFT.value:
+            raise ValueError(f"Exam {exam_id} must be draft to publish.")
 
         if exam.answer_key is None:
             self.answer_key_service.publish_for_exam(exam_id)
@@ -98,7 +96,50 @@ class ExamService:
                 raise ValueError(f"Exam {exam_id} has an empty AnswerKey.")
             self.answer_key_service.publish_answer_key(exam.answer_key.id)
 
+        exam.status = ExamStatus.PUBLISHED.value
+        self.db.commit()
         self.db.refresh(exam)
+        return exam
+
+    def return_exam_to_draft(self, exam_id: UUID) -> Exam:
+        exam = self._require_exam(exam_id)
+        if exam.status == ExamStatus.ARCHIVED.value:
+            raise ValueError(f"Exam {exam_id} is archived and cannot return to draft.")
+
+        if exam.status == ExamStatus.DRAFT.value:
+            return exam
+
+        if exam.attempts:
+            raise ValueError(f"Exam {exam_id} has Attempts and cannot return to draft.")
+
+        exam.status = ExamStatus.DRAFT.value
+        exam.is_active = True
+        exam.deleted_at = None
+        self.db.commit()
+        self.db.refresh(exam)
+        return exam
+
+    def archive_exam(self, exam_id: UUID) -> Exam:
+        exam = self._require_exam(exam_id)
+        if exam.status == ExamStatus.ARCHIVED.value:
+            return exam
+
+        exam.status = ExamStatus.ARCHIVED.value
+        exam.is_active = False
+        exam.deleted_at = datetime.now(timezone.utc)
+        if exam.omr_template_id:
+            tmpl = self.template_repo.get_by_id(exam.omr_template_id)
+            if tmpl:
+                tmpl.is_active = False
+                tmpl.deleted_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(exam)
+        return exam
+
+    def _require_exam(self, exam_id: UUID) -> Exam:
+        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+        if not exam:
+            raise ValueError(f"Exam {exam_id} not found.")
         return exam
 
     def get_exam(self, exam_id: UUID) -> Optional[Exam]:
@@ -110,6 +151,11 @@ class ExamService:
         return self.exam_repo.get_all(teacher_id=teacher_id, class_id=class_id)
 
     def update_exam(self, exam_id: UUID, update_in: ExamUpdate) -> Optional[Exam]:
+        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+        if not exam:
+            return None
+        if exam.status == ExamStatus.ARCHIVED.value:
+            raise ValueError(f"Exam {exam_id} is archived and cannot be edited.")
         return self.exam_repo.update(exam_id, update_in)
 
     def soft_delete_exam(self, exam_id: UUID) -> bool:
@@ -120,13 +166,8 @@ class ExamService:
         exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
         if not exam:
             return False
-        # Also soft delete linked template if exists
-        if exam.omr_template_id:
-            tmpl = self.template_repo.get_by_id(exam.omr_template_id)
-            if tmpl:
-                tmpl.is_active = False
-                tmpl.deleted_at = datetime.now(timezone.utc)
-        return self.exam_repo.soft_delete(exam_id)
+        self.archive_exam(exam.id)
+        return True
 
     def soft_delete_template(self, template_id: UUID) -> bool:
         """

@@ -4,11 +4,16 @@ from uuid import UUID
 import pytest
 
 from app.models.answer_key import AnswerKey, AnswerKeyItem
-from app.models.enums import UserRole
+from app.models.attempt import Attempt
+from app.models.enums import ExamStatus, GradeSourceType, UserRole
+from app.models.exam import Exam
+from app.models.grade import Grade
 from app.models.omr import OMRTemplate
 from app.models.question import Question
 from app.models.skill import Skill
 from app.models.user import User
+from app.repositories.attempt import AttemptRepository
+from app.repositories.grade import GradeRepository
 from app.schemas.exam import ExamCreate, ExamQuestionCreate, QuestionCreate
 from app.services.exam import ExamService
 
@@ -39,6 +44,7 @@ def test_create_exam_with_auto_template(test_db_session):
     assert exam.omr_template_id is not None
     assert exam.total_questions == 20
     assert len(exam.questions) == 0
+    assert exam.status == ExamStatus.DRAFT.value
     assert exam.answer_key is not None
     assert len(exam.answer_key.items) == 3
 
@@ -66,6 +72,15 @@ def test_soft_delete_exam_and_template(test_db_session):
 
     deleted_exam = service.get_exam(exam.id)
     assert deleted_exam is None  # default get_exam excludes inactive
+
+    archived_exam = (
+        test_db_session.query(Exam)
+        .filter(Exam.id == exam.id)
+        .first()
+    )
+    assert archived_exam is not None
+    assert archived_exam.status == ExamStatus.ARCHIVED.value
+    assert archived_exam.is_active is False
 
     tmpl = test_db_session.query(OMRTemplate).filter(OMRTemplate.id == tmpl_id).first()
     assert tmpl is not None
@@ -147,6 +162,7 @@ def test_create_exam_with_question_bank_creates_exam_questions(test_db_session):
     assert len(exam.exam_questions) == 2
     assert [eq.display_order for eq in exam.exam_questions] == [1, 2]
     assert [q.statement for q in exam.questions] == ["Questão 1", "Questão 2"]
+    assert exam.status == ExamStatus.DRAFT.value
 
 
 def test_publish_exam_projects_workflow_a_snapshot(test_db_session):
@@ -211,6 +227,7 @@ def test_publish_exam_projects_workflow_a_snapshot(test_db_session):
         Decimal("1.00"),
         Decimal("2.00"),
     ]
+    assert published_exam.status == ExamStatus.PUBLISHED.value
     assert [item.question_id for item in published_exam.answer_key.items] == [
         published_exam.exam_questions[0].question_id,
         published_exam.exam_questions[1].question_id,
@@ -321,6 +338,173 @@ def test_published_answer_key_items_are_immutable(test_db_session):
         test_db_session.commit()
 
 
+def test_exam_lifecycle_status_transitions_without_attempts(test_db_session):
+    teacher = User(
+        email="teacher_lifecycle@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(teacher)
+    test_db_session.commit()
+
+    service = ExamService(test_db_session)
+    exam = service.create_exam(
+        ExamCreate(
+            title="Lifecycle sem tentativas",
+            total_questions=1,
+            questions=[
+                ExamQuestionCreate(
+                    display_order=1,
+                    question=QuestionCreate(
+                        statement="Questão",
+                        correct_answer="A",
+                    ),
+                ),
+            ],
+        ),
+        teacher_id=teacher.id,
+    )
+
+    assert exam.status == ExamStatus.DRAFT.value
+
+    published_exam = service.publish_exam(exam.id)
+    assert published_exam.status == ExamStatus.PUBLISHED.value
+    assert published_exam.answer_key is not None
+    assert published_exam.answer_key.is_published is True
+
+    with pytest.raises(ValueError, match="must be draft"):
+        service.publish_exam(exam.id)
+
+    draft_exam = service.return_exam_to_draft(exam.id)
+    assert draft_exam.status == ExamStatus.DRAFT.value
+    assert draft_exam.answer_key is not None
+    assert draft_exam.answer_key.is_published is True
+
+    republished_exam = service.publish_exam(exam.id)
+    assert republished_exam.status == ExamStatus.PUBLISHED.value
+
+
+def test_exam_cannot_return_to_draft_when_attempts_exist(test_db_session):
+    teacher = User(
+        email="teacher_attempt_guard@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    student = User(
+        email="student_attempt_guard@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.STUDENT,
+    )
+    test_db_session.add_all([teacher, student])
+    test_db_session.commit()
+
+    service = ExamService(test_db_session)
+    exam = service.create_exam(
+        ExamCreate(
+            title="Lifecycle com tentativas",
+            total_questions=1,
+            correct_answers={"1": "A"},
+        ),
+        teacher_id=teacher.id,
+    )
+    published_exam = service.publish_exam(exam.id)
+
+    attempt_repo = AttemptRepository(test_db_session)
+    attempt_repo.create_attempt(
+        exam_id=published_exam.id,
+        answer_key_id=published_exam.answer_key.id,
+        student_id=student.id,
+        student_code=None,
+        omr_scan_id=None,
+        total_questions=1,
+        correct_answers=1,
+        incorrect_answers=0,
+        accuracy_percentage=Decimal("100.00"),
+        raw_score=Decimal("1.00"),
+        final_score=Decimal("1.00"),
+        source="OMR",
+        status="graded",
+    )
+
+    with pytest.raises(ValueError, match="cannot return to draft"):
+        service.return_exam_to_draft(exam.id)
+
+
+def test_archived_exam_preserves_attempts_answers_and_grades(test_db_session):
+    teacher = User(
+        email="teacher_archive@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    student = User(
+        email="student_archive@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.STUDENT,
+    )
+    test_db_session.add_all([teacher, student])
+    test_db_session.commit()
+
+    service = ExamService(test_db_session)
+    exam = service.create_exam(
+        ExamCreate(
+            title="Arquivamento",
+            total_questions=1,
+            correct_answers={"1": "A"},
+        ),
+        teacher_id=teacher.id,
+    )
+    published_exam = service.publish_exam(exam.id)
+
+    attempt_repo = AttemptRepository(test_db_session)
+    attempt = attempt_repo.create_attempt(
+        exam_id=published_exam.id,
+        answer_key_id=published_exam.answer_key.id,
+        student_id=student.id,
+        student_code=None,
+        omr_scan_id=None,
+        total_questions=1,
+        correct_answers=1,
+        incorrect_answers=0,
+        accuracy_percentage=Decimal("100.00"),
+        raw_score=Decimal("1.00"),
+        final_score=Decimal("1.00"),
+        source="OMR",
+        status="graded",
+    )
+    attempt_repo.create_answers_bulk(
+        [
+            {
+                "attempt_id": attempt.id,
+                "question_number": 1,
+                "answer_key_item_id": published_exam.answer_key.items[0].id,
+                "question_id": None,
+                "selected_option": "A",
+                "correct_option": "A",
+                "is_correct": True,
+                "answered_at": published_exam.answer_key.published_at,
+            }
+        ]
+    )
+    grade_repo = GradeRepository(test_db_session)
+    grade_repo.create_or_update(
+        student_id=student.id,
+        source_type=GradeSourceType.OMR,
+        source_id=attempt.id,
+        score=Decimal("1.00"),
+        teacher_id=teacher.id,
+    )
+
+    archived_exam = service.archive_exam(exam.id)
+    assert archived_exam.status == ExamStatus.ARCHIVED.value
+    assert archived_exam.is_active is False
+    assert service.get_exam(exam.id) is None
+
+    attempts = test_db_session.query(Attempt).filter(Attempt.exam_id == exam.id).all()
+    assert len(attempts) == 1
+    assert attempts[0].answer_key_id == published_exam.answer_key.id
+    assert test_db_session.query(Grade).filter(Grade.source_id == attempt.id).count() == 1
+
+
 def test_publish_exam_rejects_invalid_workflow_a(test_db_session):
     teacher = User(
         email="teacher_invalid_publish@cola-zero.edu",
@@ -420,6 +604,7 @@ def test_publish_workflow_b_answer_key_without_question_bank(test_db_session):
 
     assert published_exam.answer_key is not None
     assert published_exam.answer_key.is_published is True
+    assert published_exam.status == ExamStatus.PUBLISHED.value
     assert [item.question_id for item in published_exam.answer_key.items] == [None, None]
 
 

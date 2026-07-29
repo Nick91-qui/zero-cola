@@ -17,3 +17,9 @@ class OMRScanStatus(str, Enum):
 class GradeSourceType(str, Enum):
     ONLINE = "ONLINE"
     OMR = "OMR"
+
+
+class ExamStatus(str, Enum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+    ARCHIVED = "archived"

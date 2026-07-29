@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.models.enums import ExamStatus
 from app.models.exam import Exam
 from app.models.exam_question import ExamQuestion
 from app.models.question import Question
@@ -24,6 +25,7 @@ class ExamRepository:
             omr_template_id=exam_in.omr_template_id,
             total_questions=exam_in.total_questions,
             max_score=exam_in.max_score,
+            status=ExamStatus.DRAFT.value,
             is_active=True,
         )
         self.db.add(db_exam)
@@ -76,6 +78,7 @@ class ExamRepository:
         exam = self.get_by_id(exam_id, include_inactive=True)
         if not exam:
             return False
+        exam.status = ExamStatus.ARCHIVED.value
         exam.is_active = False
         exam.deleted_at = datetime.now(timezone.utc)
         self.db.commit()

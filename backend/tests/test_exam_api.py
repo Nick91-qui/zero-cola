@@ -38,9 +38,11 @@ def test_create_and_get_exam_api(auth_headers):
     assert exam["title"] == "Avaliação de Física - 1º Bimestre"
     assert exam["class_id"] == "TURMA-101"
     assert exam["omr_template_id"] is None
+    assert exam["status"] == "draft"
 
     publish_res = client.post(f"/api/v1/exams/{exam_id}/publish", headers=auth_headers)
     assert publish_res.status_code == 200
+    assert publish_res.json()["status"] == "published"
 
     # 2. List Exams
     list_res = client.get("/api/v1/exams", headers=auth_headers)
@@ -73,3 +75,45 @@ def test_create_and_get_exam_api(auth_headers):
     xlsx_res = client.get(f"/api/v1/exams/{exam_id}/export/xlsx", headers=auth_headers)
     assert xlsx_res.status_code == 200
     assert "spreadsheetml" in xlsx_res.headers["content-type"]
+
+
+def test_exam_lifecycle_api(auth_headers):
+    payload = {
+        "title": "Avaliação de Química - 2º Bimestre",
+        "description": "Tabela periódica",
+        "class_id": "TURMA-202",
+        "total_questions": 1,
+        "questions": [
+            {
+                "display_order": 1,
+                "question": {
+                    "statement": "Questão 1",
+                    "correct_answer": "A",
+                },
+            }
+        ],
+    }
+
+    response = client.post("/api/v1/exams", json=payload, headers=auth_headers)
+    assert response.status_code == 201
+    exam_id = response.json()["id"]
+    assert response.json()["status"] == "draft"
+
+    publish_res = client.post(f"/api/v1/exams/{exam_id}/publish", headers=auth_headers)
+    assert publish_res.status_code == 200
+    assert publish_res.json()["status"] == "published"
+
+    draft_res = client.post(f"/api/v1/exams/{exam_id}/draft", headers=auth_headers)
+    assert draft_res.status_code == 200
+    assert draft_res.json()["status"] == "draft"
+
+    republish_res = client.post(f"/api/v1/exams/{exam_id}/publish", headers=auth_headers)
+    assert republish_res.status_code == 200
+    assert republish_res.json()["status"] == "published"
+
+    archive_res = client.post(f"/api/v1/exams/{exam_id}/archive", headers=auth_headers)
+    assert archive_res.status_code == 200
+    assert archive_res.json()["status"] == "archived"
+
+    get_res = client.get(f"/api/v1/exams/{exam_id}", headers=auth_headers)
+    assert get_res.status_code == 404

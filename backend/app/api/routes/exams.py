@@ -68,7 +68,16 @@ async def update_exam(
     db: Session = Depends(get_db),
 ):
     service = ExamService(db)
-    exam = service.update_exam(exam_id, update_in)
+    try:
+        exam = service.update_exam(exam_id, update_in)
+    except ValueError as e:
+        detail = str(e)
+        status_code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in detail.lower()
+            else status.HTTP_400_BAD_REQUEST
+        )
+        raise HTTPException(status_code=status_code, detail=detail)
     if not exam:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -97,6 +106,46 @@ async def publish_exam(
         raise HTTPException(status_code=status_code, detail=detail)
 
 
+@router.post("/{exam_id}/draft", response_model=ExamResponse)
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def return_exam_to_draft(
+    exam_id: UUID,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ExamService(db)
+    try:
+        return service.return_exam_to_draft(exam_id)
+    except ValueError as e:
+        detail = str(e)
+        status_code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in detail.lower()
+            else status.HTTP_400_BAD_REQUEST
+        )
+        raise HTTPException(status_code=status_code, detail=detail)
+
+
+@router.post("/{exam_id}/archive", response_model=ExamResponse)
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def archive_exam(
+    exam_id: UUID,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ExamService(db)
+    try:
+        return service.archive_exam(exam_id)
+    except ValueError as e:
+        detail = str(e)
+        status_code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in detail.lower()
+            else status.HTTP_400_BAD_REQUEST
+        )
+        raise HTTPException(status_code=status_code, detail=detail)
+
+
 @router.delete("/{exam_id}", status_code=status.HTTP_204_NO_CONTENT)
 @require_role(UserRole.TEACHER, UserRole.ADMIN)
 async def delete_exam(
@@ -105,12 +154,10 @@ async def delete_exam(
     db: Session = Depends(get_db),
 ):
     service = ExamService(db)
-    success = service.soft_delete_exam(exam_id)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Exam {exam_id} not found.",
-        )
+    try:
+        service.archive_exam(exam_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return None
 
 

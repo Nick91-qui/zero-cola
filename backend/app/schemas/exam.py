@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from app.models.enums import ExamStatus
 from app.schemas.skill import SkillResponse
 
 
@@ -84,6 +85,7 @@ class ExamUpdate(BaseModel):
 class ExamResponse(ExamBase):
     id: UUID
     teacher_id: UUID
+    status: ExamStatus
     is_active: bool
     deleted_at: Optional[datetime] = None
     created_at: datetime
