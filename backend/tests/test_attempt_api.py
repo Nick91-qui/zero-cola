@@ -90,6 +90,11 @@ def test_online_attempt_api_flow_and_confidentiality(override_get_db, test_db_se
     assert start_data["attempt"]["status"] == "in_progress"
     assert start_data["current_question"]["question_number"] == 1
     assert "correct_answer" not in json.dumps(start_data)
+    assert "correct_answers" not in start_data["attempt"]
+    assert "incorrect_answers" not in start_data["attempt"]
+    assert "accuracy_percentage" not in start_data["attempt"]
+    assert "raw_score" not in start_data["attempt"]
+    assert "final_score" not in start_data["attempt"]
 
     current_question = start_data["current_question"]
     answer_key_item = (

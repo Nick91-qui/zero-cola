@@ -130,6 +130,12 @@ def test_online_attempt_workflow_a_randomization_and_navigation(test_db_session)
     assert attempt.answer_key_id == exam.answer_key.id
     assert session.current_question is not None
     assert "correct_answer" not in session.current_question.model_dump()
+    attempt_payload = session.attempt.model_dump()
+    assert "correct_answers" not in attempt_payload
+    assert "incorrect_answers" not in attempt_payload
+    assert "accuracy_percentage" not in attempt_payload
+    assert "raw_score" not in attempt_payload
+    assert "final_score" not in attempt_payload
 
     canonical_items = _answer_key_items_for_exam(test_db_session, exam.id)
     expected_order = list(canonical_items)
