@@ -32,6 +32,19 @@ class Exam(BaseModel):
         nullable=True,
     )
     total_questions: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
+    total_time_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    max_attempts: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+    )
+    randomization_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
     max_score: Mapped[Decimal] = mapped_column(
         Numeric(5, 2),
         nullable=False,

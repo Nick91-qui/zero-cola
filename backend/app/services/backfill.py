@@ -313,12 +313,13 @@ def _legacy_questions_table_name(bind) -> str | None:
     inspector = inspect(bind)
     legacy_required = {"exam_id", "question_number", "correct_option", "weight"}
 
-    for table_name in ("questions_legacy", "questions"):
-        if table_name not in inspector.get_table_names():
-            continue
-        column_names = {column["name"] for column in inspector.get_columns(table_name)}
-        if legacy_required.issubset(column_names):
-            return table_name
+    table_name = "questions_legacy"
+    if table_name not in inspector.get_table_names():
+        return None
+
+    column_names = {column["name"] for column in inspector.get_columns(table_name)}
+    if legacy_required.issubset(column_names):
+        return table_name
     return None
 
 

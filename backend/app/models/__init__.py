@@ -1,6 +1,6 @@
 from app.models.answer_key import AnswerKey, AnswerKeyItem, answer_key_item_skills
 from app.models.attempt import Attempt, AttemptAnswer
-from app.models.enums import GradeSourceType, OMRScanStatus, UserRole
+from app.models.enums import AttemptStatus, GradeSourceType, OMRScanStatus, UserRole
 from app.models.exam import Exam
 from app.models.exam_question import ExamQuestion
 from app.models.grade import Grade
@@ -17,6 +17,7 @@ __all__ = [
     "OMRScanStatus",
     "Grade",
     "GradeSourceType",
+    "AttemptStatus",
     "Exam",
     "Question",
     "Skill",

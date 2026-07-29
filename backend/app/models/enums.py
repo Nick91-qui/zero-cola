@@ -23,3 +23,10 @@ class ExamStatus(str, Enum):
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"
+
+
+class AttemptStatus(str, Enum):
+    NOT_STARTED = "not_started"
+    IN_PROGRESS = "in_progress"
+    SUBMITTED = "submitted"
+    GRADED = "graded"

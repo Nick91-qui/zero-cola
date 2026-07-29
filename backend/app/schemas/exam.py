@@ -65,6 +65,9 @@ class ExamBase(BaseModel):
     class_id: Optional[str] = None
     omr_template_id: Optional[UUID] = None
     total_questions: int = 20
+    total_time_seconds: Optional[int] = None
+    max_attempts: int = 1
+    randomization_enabled: bool = False
     max_score: Decimal = Decimal("10.00")
 
 
@@ -78,6 +81,9 @@ class ExamUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     class_id: Optional[str] = None
+    total_time_seconds: Optional[int] = None
+    max_attempts: Optional[int] = None
+    randomization_enabled: Optional[bool] = None
     max_score: Optional[Decimal] = None
     is_active: Optional[bool] = None
 

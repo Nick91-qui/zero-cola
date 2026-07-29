@@ -1,4 +1,15 @@
-from app.schemas.attempt import AttemptAnswerResponse, AttemptResponse
+from app.schemas.attempt import (
+    AttemptAnswerResponse,
+    AttemptResponse,
+    OnlineAttemptActiveAnswerResponse,
+    OnlineAttemptAnswerInput,
+    OnlineAttemptQuestionResponse,
+    OnlineAttemptResultResponse,
+    OnlineAttemptSessionResponse,
+    OnlineAttemptStartRequest,
+    StudentAttemptAnswerResponse,
+    StudentAttemptResponse,
+)
 from app.schemas.exam import (
     ExamCreate,
     ExamDetailResponse,
@@ -47,6 +58,14 @@ __all__ = [
     "ExamStatisticsResponse",
     "AttemptResponse",
     "AttemptAnswerResponse",
+    "StudentAttemptAnswerResponse",
+    "StudentAttemptResponse",
+    "OnlineAttemptActiveAnswerResponse",
+    "OnlineAttemptQuestionResponse",
+    "OnlineAttemptSessionResponse",
+    "OnlineAttemptStartRequest",
+    "OnlineAttemptAnswerInput",
+    "OnlineAttemptResultResponse",
     "SkillCreate",
     "SkillResponse",
 ]

@@ -48,3 +48,10 @@ class GradeRepository:
         if isinstance(grade_id, str):
             grade_id = UUID(grade_id)
         return self.db.query(Grade).filter(Grade.id == grade_id).first()
+
+    def get_by_source(self, source_type: GradeSourceType, source_id: UUID) -> Grade | None:
+        return (
+            self.db.query(Grade)
+            .filter(Grade.source_type == source_type, Grade.source_id == source_id)
+            .first()
+        )

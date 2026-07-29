@@ -7,6 +7,7 @@ from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.models import BaseModel
+from app.models.enums import AttemptStatus
 
 
 class Attempt(BaseModel):
@@ -15,6 +16,10 @@ class Attempt(BaseModel):
         CheckConstraint(
             "source IN ('OMR', 'ONLINE')",
             name="ck_attempts_source_valid",
+        ),
+        CheckConstraint(
+            "status IN ('not_started', 'in_progress', 'submitted', 'graded')",
+            name="ck_attempts_status_valid",
         ),
     )
 
@@ -44,8 +49,8 @@ class Attempt(BaseModel):
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        default="not_started",
-        server_default="not_started",
+        default=AttemptStatus.NOT_STARTED.value,
+        server_default=AttemptStatus.NOT_STARTED.value,
     )
     source: Mapped[str] = mapped_column(
         String(10),
