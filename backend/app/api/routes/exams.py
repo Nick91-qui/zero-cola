@@ -77,6 +77,26 @@ async def update_exam(
     return exam
 
 
+@router.post("/{exam_id}/publish", response_model=ExamResponse)
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def publish_exam(
+    exam_id: UUID,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ExamService(db)
+    try:
+        return service.publish_exam(exam_id)
+    except ValueError as e:
+        detail = str(e)
+        status_code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in detail.lower()
+            else status.HTTP_400_BAD_REQUEST
+        )
+        raise HTTPException(status_code=status_code, detail=detail)
+
+
 @router.delete("/{exam_id}", status_code=status.HTTP_204_NO_CONTENT)
 @require_role(UserRole.TEACHER, UserRole.ADMIN)
 async def delete_exam(

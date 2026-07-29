@@ -39,6 +39,9 @@ def test_create_and_get_exam_api(auth_headers):
     assert exam["class_id"] == "TURMA-101"
     assert exam["omr_template_id"] is None
 
+    publish_res = client.post(f"/api/v1/exams/{exam_id}/publish", headers=auth_headers)
+    assert publish_res.status_code == 200
+
     # 2. List Exams
     list_res = client.get("/api/v1/exams", headers=auth_headers)
     assert list_res.status_code == 200

@@ -72,7 +72,6 @@ class ExamService:
                 questions_in=exam_in.questions,
                 created_by=teacher_id,
             )
-            self.answer_key_service.create_from_exam_questions(exam.id)
 
         # 4. Materialize AnswerKey rows from the direct answer mapping.
         if exam_in.correct_answers:
@@ -80,6 +79,24 @@ class ExamService:
                 exam_id=exam.id,
                 correct_answers=exam_in.correct_answers,
             )
+
+        self.db.refresh(exam)
+        return exam
+
+    def publish_exam(self, exam_id: UUID) -> Exam:
+        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+        if not exam:
+            raise ValueError(f"Exam {exam_id} not found.")
+
+        if exam.answer_key and exam.answer_key.is_published:
+            return exam
+
+        if exam.answer_key is None:
+            self.answer_key_service.publish_for_exam(exam_id)
+        else:
+            if not exam.answer_key.items:
+                raise ValueError(f"Exam {exam_id} has an empty AnswerKey.")
+            self.answer_key_service.publish_answer_key(exam.answer_key.id)
 
         self.db.refresh(exam)
         return exam
