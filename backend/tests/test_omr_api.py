@@ -170,16 +170,16 @@ def test_omr_api_template_isolation_between_teachers(
         ),
         teacher_id=teacher_b.id,
     )
-    template_a_id = str(template_a.id)
-    template_b_id = str(template_b.id)
+    template_a_id = template_a.id
+    template_b_id = template_b.id
 
     listed_a = client.get("/api/v1/omr/templates", headers=teacher_a_headers)
     assert listed_a.status_code == 200
-    assert [item["id"] for item in listed_a.json()] == [template_a_id]
+    assert [item["id"] for item in listed_a.json()] == [str(template_a_id)]
 
     listed_b = client.get("/api/v1/omr/templates", headers=teacher_b_headers)
     assert listed_b.status_code == 200
-    assert [item["id"] for item in listed_b.json()] == [template_b_id]
+    assert [item["id"] for item in listed_b.json()] == [str(template_b_id)]
 
     forbidden_template = client.get(
         f"/api/v1/omr/templates/{template_a_id}",
@@ -209,7 +209,7 @@ def test_omr_api_template_isolation_between_teachers(
                 "image/png",
             )
         },
-        data={"omr_template_id": template_a_id},
+        data={"omr_template_id": str(template_a_id)},
     )
     assert forbidden_upload.status_code == 404
 
@@ -223,7 +223,7 @@ def test_omr_api_template_isolation_between_teachers(
                 "image/png",
             )
         },
-        data={"omr_template_id": template_a_id},
+        data={"omr_template_id": str(template_a_id)},
     )
     assert scan_response.status_code == 201
     scan_id = scan_response.json()["id"]
