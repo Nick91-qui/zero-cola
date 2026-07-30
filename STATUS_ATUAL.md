@@ -1,73 +1,91 @@
-# COLA-ZERO — Status Atual (2026-07-24)
+# COLA-ZERO — Status Atual do Projeto
 
-## Progresso Geral
-
-**Milestone 1: Fundação & Autenticação**
-- Bloco 1 (Fundação Backend): **100% completo**
-- Bloco 2 (Autenticação Backend + Frontend): **100% completo**
-
-**Milestone 2: COLA-ZERO OMR (MVP)**
-- Backend (models, migration, layouts, PDF, engine, API): **100% completo**
-- Frontend (criar gabarito, PDF/preview, upload e revisão): **100% completo**
-- `student_code` no cadastro/perfil: **100% completo**
-
-**Milestone 3: Question Bank / Exams / Assessment Engine**
-- Backend (Avaliações, Questões, Habilidades BNCC, Tentativas e Respostas): **100% completo**
-- Integração OMR ↔ Exam: **100% completo** (confirmação de OMR gera Exam, Attempt e AttemptAnswers automaticamente)
-- Relatórios & Exportação (Estatísticas por questão, Relatórios PDF e Planilhas Excel XLSX): **100% completo**
-- Cobertura de Testes Automatizados (41 testes pytest + vitest): **100% verde**
+> **Single Source of Truth** para o status real do desenvolvimento, funcionalidades já implementadas, limitações conhecidas e débitos técnicos.
 
 ---
 
-## Bloco 1 — Fundação do Backend (COMPLETO)
+## 1. Resumo Executivo do Status
 
-### Entregas
-- FastAPI aplicação funcional
-- PostgreSQL conectado e validado
-- Alembic configurado com migrations
-- Health check endpoint
-- Docker Compose com Postgres, Backend, Frontend
+- **Status Geral**: Backend MVP Milestones 1 (Auth), 2 (OMR Standalone), 3 (Assessment Core) e 4 (Online Attempt Engine) implementados e validados. Frontend funcional para Auth e OMR.
+- **Suíte de Testes Automatizados**: **80 testes de backend passando sem erros** na validação mais recente.
+- **Infraestrutura**: Totalmente containerizada com Docker e Docker Compose (`postgres`, `backend`, `frontend`).
 
 ---
 
-## Bloco 2 — Identidade e Segurança (COMPLETO)
+## 2. Funcionalidades Implemented & Validadas (Completed Milestones)
 
-**Auth**
-- Register / login / refresh / logout / me / patch me
-- JWT via Bearer + cookies HttpOnly no cliente
-- bcrypt + RBAC
-- `student_code` (5 dígitos) obrigatório para alunos no registro; editável via `PATCH /auth/me`
+### 2.1 Milestone 1 — Autenticação e Gestão de Identidade (RBAC) ✅
+- **Cadastro e Login**: Suporte a perfis `STUDENT`, `TEACHER` e `ADMIN`.
+- **Código do Estudante (`student_code`)**: Campo numérico de 5 dígitos obrigatório para perfis de alunos (criado no registro e editável via `PATCH /api/v1/auth/me`).
+- **Segurança de Tokens**: JWT Access Token (15 min) e Refresh Token (7 dias) gerenciados via cookies HttpOnly (`SameSite=Lax/Strict`).
+- **Hashing de Senha**: Criptografia segura com `bcrypt`.
+- **Endpoints de Autenticação**:
+  - `POST /api/v1/auth/register`
+  - `POST /api/v1/auth/login`
+  - `POST /api/v1/auth/refresh`
+  - `POST /api/v1/auth/logout`
+  - `GET /api/v1/auth/me`
+  - `PATCH /api/v1/auth/me`
+
+### 2.2 Milestone 2 — Módulo OMR Standalone e Integrado ✅
+- **Layouts OMR em Código**: Layouts versionados `v1_std_20q` (20 questões) e `v1_std_50q` (50 questões) mantidos estaticamente em `app/core/omr_layouts.py`.
+- **Geração de PDF com ReportLab**: Geração dinâmica de cartões-resposta em PDF com âncoras nos cantos e `student_code` de 5 dígitos preenchido/sombreado. Preview em PNG disponível.
+- **Motor de Visão Computacional OpenCV**:
+  - Alinhamento perspectivo de imagem (deskew & warp).
+  - Leitura do grid numérico de 5 dígitos do aluno.
+  - Leitura de densidade de bolhas de resposta (alternativas A–E).
+- **Processamento e Correção Automática**: Upload de imagem única (JPG/PNG), cálculo automático de pontuação e interface visual de revisão com overlay colorido (verde/vermelho).
+- **Confirmação de Nota**: Confirmação da correção pelo professor salvando o registro final na tabela unificada `grades`.
+
+### 2.3 Milestone 3 — Core Domain & Relatórios ✅
+- **Domínio Acadêmico no Backend**:
+  - Modelos e migrations para `questions`, `skills`, `question_skills`, `classes`, `class_students`, `exams`, `exam_questions`, `attempts`, `attempt_answers`, `omr_templates`, `omr_scans`, `grades`.
+  - Suporte a Habilidades SEDU/BNCC.
+  - CRUD de exames, questões e habilidades.
+- **Integração OMR ↔ Exam**:
+  - Confirmação de folha OMR integrada gera automaticamente registros em `exams`, `attempts` e `attempt_answers`.
+- **Relatórios & Exportação**:
+  - Estatísticas por questão e desempenho no backend (`GET /api/v1/exams/{id}/statistics`).
+  - Exportação de relatórios em PDF (`GET /api/v1/exams/{id}/export/pdf`) e planilhas Excel XLSX (`GET /api/v1/exams/{id}/export/xlsx`).
+
+### 2.4 Milestone 4 — Online Attempt Engine ✅
+- **Fluxo Online de Tentativas**: suporte ao ciclo `not_started -> in_progress -> submitted -> graded`.
+- **Entrega Sequencial**: a API entrega uma questão por vez para o estudante.
+- **Persistência e Autosave**: respostas são salvas incrementalmente durante a tentativa.
+- **Correção Unificada**: a correção online usa `AnswerKeyItem.correct_answer` como fonte autoritativa, com notas unificadas em `grades` via `source_type = ONLINE`.
+- **Compatibilidade de Modelos**: os fluxos de Workflow A e Workflow B continuam funcionando no mesmo modelo unificado de `Exam`, `AnswerKey`, `Attempt` e `AttemptAnswer`.
 
 ---
 
-## Milestone 2 & 3 — OMR & Assessment Core (COMPLETO)
+## 3. Limitações Conhecidas
 
-### Backend
-- Tabelas `omr_templates`, `omr_scans`, `grades`, `exams`, `questions`, `skills`, `question_skills`, `attempts`, `attempt_answers`
-- Layouts `v1_std_20q` / `v1_std_50q`
-- PDF (ReportLab) + preview PNG
-- OMR Engine OpenCV + score + confirm → gera `grades`, `attempts` e `attempt_answers`
-- Endpoints:
-  - `POST/GET /omr/templates`, `GET /omr/templates/{id}`, `DELETE /omr/templates/{id}`
-  - `POST /omr/scans/upload`, `GET/PATCH /omr/scans/{id}`, `POST .../confirm`
-  - `POST/GET/PATCH/DELETE /exams`, `GET /exams/{id}/statistics`
-  - `GET /exams/{id}/export/pdf`, `GET /exams/{id}/export/xlsx`
-  - `POST/GET /skills`
-
-### Frontend (`/omr`)
-- Lista e criação de gabarito (chave A–E)
-- Detalhe: baixar PDF / preview PNG, upload JPG/PNG
-- Revisão: editar código/respostas, confirmar nota
-- Dashboard para teacher/admin e student
+1. **Upload OMR Individual**: O endpoint OMR aceita apenas uma imagem por requisição (JPG/PNG). Não há suporte para uploads de PDFs multipágina contendo várias folhas digitalizadas em lote.
+2. **Layouts OMR Fixos**: Somente os layouts `v1_std_20q` e `v1_std_50q` estão registrados no código. Novos formatos exigem inclusão manual no registry de layouts em código.
+3. **Calibração de Iluminação OMR**: Fotos com sombras extremamente fortes ou iluminação muito desfavorável podem exigir revisão manual pelo professor na interface de conferência.
+4. **Interface Frontend para Provas Online**: As rotas de backend do Assessment Engine estão 100% implementadas e testadas, porém a interface visual Next.js para alunos realizarem a prova online sequencial ainda não foi construída.
 
 ---
 
-## Próximos Passos
+## 4. Débitos Técnicos (Technical Debt)
 
-1. Desenvolver interfaces Next.js no Frontend para Gestão de Avaliações (`/exams`) e Visualização de Desempenho Pedagógico / Habilidades BNCC.
-2. Validar com folhas **impressas** e fotos reais em ambiente físico.
+1. **Auditoria de Login**: Embora o fluxo de autenticação e RBAC esteja 100% funcional, o logging automático em `audit_logs` para eventos de login (sucesso e falha) ainda precisa ser integrado aos interceptores de auth para conformidade de produção.
+2. **Migração de Hashing de Senha**: O sistema utiliza `bcrypt` (ADR-001 / Design Decision DECISION-001). A migração para `Argon2` permanece como um item de hardening técnico pré-produção.
+3. **Persistência Temporária de Uploads OMR**: Imagens enviadas para o OMR são armazenadas no sistema de arquivos local (`uploads/`). Para ambientes de produção com múltiplas instâncias, será necessário abstrair o armazenamento para um serviço de storage S3/Object Storage.
 
 ---
 
-**Última atualização**: 2026-07-24  
-**Status**: Backend M1 + M2 + M3 Completo | 41 Testes Automatizados Verificados | Pronto para Frontend M3
+## 5. Histórico de Verificação de Qualidade
+
+- **Backend Pytest**: 80 testes passando sem erros.
+  - Step 8 online attempt API: 2 testes passando.
+  - Step 8 attempt service: 6 testes passando.
+  - OMR API: 4 testes passando.
+  - Suite completa do backend: 80 passed, 0 failed, 0 skipped.
+- **Execução dos Testes**:
+  - Os testes foram executados dentro do container `cola_zero_backend`.
+  - O PostgreSQL estava acessível durante a execução.
+  - `alembic current` reportou `e6f7a8b9c0d1 (head)`.
+  - `alembic_version` no PostgreSQL: `e6f7a8b9c0d1`.
+  - Health endpoint da API: `{"status":"ok"}`.
+  - A falha de timeout observada anteriormente na execução via virtualenv do host foi ambiental; a execução dentro do container backend completou com sucesso.
+- **Frontend Vitest**: Testes de componentes de autenticação e formulários 100% verde.
