@@ -52,7 +52,11 @@ class AuthService:
             user = self.user_repo.create(user_create, password_hash)
         except Exception as e:
             self.db.rollback()
-            if "duplicate" in str(e).lower() or "unique" in str(e).lower() or "integrityerror" in type(e).__name__.lower():
+            if (
+                "duplicate" in str(e).lower()
+                or "unique" in str(e).lower()
+                or "integrityerror" in type(e).__name__.lower()
+            ):
                 raise ValueError("Email or student_code already registered")
             raise e
         return self._user_payload(user)
@@ -73,7 +77,12 @@ class AuthService:
     def authenticate_user(self, login: UserLogin) -> dict | None:
         """Authenticate user and return tokens."""
         user = self.user_repo.get_by_email(login.email)
-        if not user or not self.verify_password(login.password, user.password_hash):
+        if (
+            not user
+            or not user.is_active
+            or user.anonymized_at is not None
+            or not self.verify_password(login.password, user.password_hash)
+        ):
             return None
 
         access_token = self.create_access_token(user.id, user.role)
@@ -139,7 +148,7 @@ class AuthService:
 
         user_id = payload.get("sub")
         user = self.user_repo.get_by_id(user_id)
-        if not user:
+        if not user or not user.is_active or user.anonymized_at is not None:
             return None
 
         new_access_token = self.create_access_token(user.id, user.role)

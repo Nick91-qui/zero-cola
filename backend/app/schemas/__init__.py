@@ -10,6 +10,16 @@ from app.schemas.attempt import (
     StudentAttemptAnswerResponse,
     StudentAttemptResponse,
 )
+from app.schemas.audit_log import AuditLogResponse
+from app.schemas.class_ import (
+    ClassCreate,
+    ClassDetailResponse,
+    ClassResponse,
+    ClassStudentCreate,
+    ClassStudentResponse,
+    ClassUpdate,
+)
+from app.schemas.consent import ConsentCreate, ConsentResponse, MonitoringConsentCreate
 from app.schemas.exam import (
     ExamCreate,
     ExamDetailResponse,
@@ -30,6 +40,8 @@ from app.schemas.omr import (
     OMRTemplateCreate,
     OMRTemplateResponse,
 )
+from app.schemas.privacy import DataExportResponse, PrivacyPolicyResponse
+from app.schemas.security_event import SecurityEventCreate, SecurityEventResponse
 from app.schemas.skill import SkillCreate, SkillResponse
 from app.schemas.user import UserBase, UserCreate, UserLogin, UserResponse, UserUpdate
 
@@ -39,7 +51,6 @@ __all__ = [
     "UserLogin",
     "UserResponse",
     "UserUpdate",
-
     "OMRTemplateCreate",
     "OMRTemplateResponse",
     "OMRScanResponse",
@@ -68,4 +79,18 @@ __all__ = [
     "OnlineAttemptResultResponse",
     "SkillCreate",
     "SkillResponse",
+    "ClassCreate",
+    "ClassUpdate",
+    "ClassResponse",
+    "ClassDetailResponse",
+    "ClassStudentCreate",
+    "ClassStudentResponse",
+    "ConsentCreate",
+    "MonitoringConsentCreate",
+    "ConsentResponse",
+    "AuditLogResponse",
+    "SecurityEventCreate",
+    "SecurityEventResponse",
+    "PrivacyPolicyResponse",
+    "DataExportResponse",
 ]

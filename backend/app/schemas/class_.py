@@ -1,0 +1,54 @@
+from datetime import datetime
+from typing import Optional
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.user import UserResponse
+
+
+class ClassBase(BaseModel):
+    name: str = Field(..., max_length=255)
+    description: Optional[str] = None
+
+
+class ClassCreate(ClassBase):
+    teacher_id: Optional[UUID] = None
+
+
+class ClassUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=255)
+    description: Optional[str] = None
+
+
+class ClassStudentCreate(BaseModel):
+    student_ids: list[UUID]
+
+
+class ClassStudentResponse(BaseModel):
+    id: UUID
+    class_id: UUID
+    student_id: UUID
+    student: Optional[UserResponse] = None
+    is_active: bool
+    archived_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClassResponse(ClassBase):
+    id: UUID
+    teacher_id: UUID
+    is_active: bool
+    archived_at: Optional[datetime] = None
+    student_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClassDetailResponse(ClassResponse):
+    memberships: list[ClassStudentResponse] = Field(default_factory=list)

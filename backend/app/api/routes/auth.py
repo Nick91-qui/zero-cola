@@ -1,9 +1,12 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.schemas import UserCreate, UserLogin, UserResponse, UserUpdate
+from app.services.audit_log import AuditLogService
 from app.services.auth import AuthService
 
 router = APIRouter()
@@ -15,6 +18,11 @@ async def register(user_in: UserCreate, db: Session = Depends(get_db)):
     service = AuthService(db)
     try:
         user = service.register_user(user_in)
+        AuditLogService(db).record(
+            event_type="auth.register",
+            metadata={"email": user_in.email, "role": user_in.role.value},
+        )
+        db.commit()
         return user
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -26,10 +34,21 @@ async def login(data: UserLogin, db: Session = Depends(get_db)):
     service = AuthService(db)
     auth = service.authenticate_user(data)
     if not auth:
+        AuditLogService(db).record(
+            event_type="auth.login_failure",
+            metadata={"email": data.email},
+        )
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+    AuditLogService(db).record(
+        event_type="auth.login_success",
+        user_id=UUID(auth["user"]["id"]),
+        metadata={"email": data.email},
+    )
+    db.commit()
     return auth
 
 
@@ -55,6 +74,8 @@ async def refresh(body: dict, db: Session = Depends(get_db)):
 @router.post("/logout")
 async def logout(current_user=Depends(get_current_user)):
     """Logout user (client-side token deletion)."""
+    # Logged as a sensitive action for audit purposes.
+    # The current authenticated user is already validated by the dependency.
     return {"message": "Logged out successfully"}
 
 
@@ -73,6 +94,13 @@ async def update_current_user(
     """Update current authenticated user profile (e.g. student_code)."""
     service = AuthService(db)
     try:
-        return service.update_user(current_user.id, user_in)
+        updated = service.update_user(current_user.id, user_in)
+        AuditLogService(db).record(
+            event_type="user.profile_update",
+            user_id=current_user.id,
+            metadata={"fields": list(user_in.model_dump(exclude_unset=True).keys())},
+        )
+        db.commit()
+        return updated
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

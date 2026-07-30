@@ -78,6 +78,11 @@ class Attempt(BaseModel):
     student = relationship("User", foreign_keys=[student_id])
     omr_scan = relationship("OMRScan", foreign_keys=[omr_scan_id])
     answers = relationship("AttemptAnswer", back_populates="attempt", cascade="all, delete-orphan")
+    security_events = relationship(
+        "SecurityEvent",
+        back_populates="attempt",
+        cascade="all, delete-orphan",
+    )
 
 
 class AttemptAnswer(BaseModel):
