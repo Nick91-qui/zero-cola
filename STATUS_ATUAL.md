@@ -6,8 +6,8 @@
 
 ## 1. Resumo Executivo do Status
 
-- **Status Geral**: Backend MVP Milestones 1 (Auth), 2 (OMR Standalone), 3 (Assessment Core) e 4 (Online Attempt Engine) implementados e validados. Frontend funcional para Auth e OMR.
-- **Suíte de Testes Automatizados**: **80 testes de backend passando sem erros** na validação mais recente.
+- **Status Geral**: Backend MVP Milestones 1 (Auth), 2 (OMR Standalone), 3 (Assessment Core), 4 (Online Attempt Engine) e 5 (Classes, Monitoring, Audit & LGPD) implementados e validados. Frontend funcional para Auth e OMR.
+- **Suíte de Testes Automatizados**: **111 testes de backend passando sem erros** na validação mais recente.
 - **Infraestrutura**: Totalmente containerizada com Docker e Docker Compose (`postgres`, `backend`, `frontend`).
 
 ---
@@ -55,6 +55,15 @@
 - **Correção Unificada**: a correção online usa `AnswerKeyItem.correct_answer` como fonte autoritativa, com notas unificadas em `grades` via `source_type = ONLINE`.
 - **Compatibilidade de Modelos**: os fluxos de Workflow A e Workflow B continuam funcionando no mesmo modelo unificado de `Exam`, `AnswerKey`, `Attempt` e `AttemptAnswer`.
 
+### 2.5 Milestone 5 — Classes, Monitoring, Audit & LGPD ✅
+- **Classes e Matrículas**: modelos e rotas para `classes` e `class_students`, com ownership por professor, acesso administrativo e listagem de vínculos do estudante.
+- **RBAC e Isolamento**: professores só acessam suas próprias turmas; admins têm acesso ampliado; estudantes acessam apenas turmas autorizadas.
+- **Auditoria Imutável**: trilha de auditoria em `audit_logs` para ações sensíveis de autenticação, classes, consentimentos, privacidade e monitoramento.
+- **Eventos de Segurança**: `security_events` registra eventos observáveis de monitoramento em tentativas online.
+- **Consentimentos**: modelo dedicado `consents` com registro, revogação e auditoria; o consentimento de monitoramento é pré-requisito para eventos de segurança.
+- **Privacidade e LGPD**: endpoint público de política de privacidade, exportação estruturada de dados do usuário e anonimização suave com preservação de integridade histórica.
+- **Validação de Banco de Dados**: migração Alembic `f7a8b9c0d1e2` aplicada com sucesso em PostgreSQL de desenvolvimento, a partir de `e6f7a8b9c0d1`.
+
 ---
 
 ## 3. Limitações Conhecidas
@@ -63,29 +72,30 @@
 2. **Layouts OMR Fixos**: Somente os layouts `v1_std_20q` e `v1_std_50q` estão registrados no código. Novos formatos exigem inclusão manual no registry de layouts em código.
 3. **Calibração de Iluminação OMR**: Fotos com sombras extremamente fortes ou iluminação muito desfavorável podem exigir revisão manual pelo professor na interface de conferência.
 4. **Interface Frontend para Provas Online**: As rotas de backend do Assessment Engine estão 100% implementadas e testadas, porém a interface visual Next.js para alunos realizarem a prova online sequencial ainda não foi construída.
+5. **Interfaces Frontend de Step 9**: A gestão visual de classes, auditoria, consentimentos, eventos de segurança e LGPD ainda não foi implementada no frontend.
 
 ---
 
 ## 4. Débitos Técnicos (Technical Debt)
 
-1. **Auditoria de Login**: Embora o fluxo de autenticação e RBAC esteja 100% funcional, o logging automático em `audit_logs` para eventos de login (sucesso e falha) ainda precisa ser integrado aos interceptores de auth para conformidade de produção.
-2. **Migração de Hashing de Senha**: O sistema utiliza `bcrypt` (ADR-001 / Design Decision DECISION-001). A migração para `Argon2` permanece como um item de hardening técnico pré-produção.
-3. **Persistência Temporária de Uploads OMR**: Imagens enviadas para o OMR são armazenadas no sistema de arquivos local (`uploads/`). Para ambientes de produção com múltiplas instâncias, será necessário abstrair o armazenamento para um serviço de storage S3/Object Storage.
+1. **Migração de Hashing de Senha**: O sistema utiliza `bcrypt` (ADR-001 / Design Decision DECISION-001). A migração para `Argon2` permanece como um item de hardening técnico pré-produção.
+2. **Persistência Temporária de Uploads OMR**: Imagens enviadas para o OMR são armazenadas no sistema de arquivos local (`uploads/`). Para ambientes de produção com múltiplas instâncias, será necessário abstrair o armazenamento para um serviço de storage S3/Object Storage.
 
 ---
 
 ## 5. Histórico de Verificação de Qualidade
 
-- **Backend Pytest**: 80 testes passando sem erros.
+- **Backend Pytest**: 111 testes passando sem erros.
   - Step 8 online attempt API: 2 testes passando.
   - Step 8 attempt service: 6 testes passando.
   - OMR API: 4 testes passando.
-  - Suite completa do backend: 80 passed, 0 failed, 0 skipped.
+  - Step 9 targeted tests: 10 testes passando.
+  - Suite completa do backend: 111 passed, 0 failed, 0 skipped.
 - **Execução dos Testes**:
   - Os testes foram executados dentro do container `cola_zero_backend`.
   - O PostgreSQL estava acessível durante a execução.
-  - `alembic current` reportou `e6f7a8b9c0d1 (head)`.
-  - `alembic_version` no PostgreSQL: `e6f7a8b9c0d1`.
+  - `alembic current` reportou `e6f7a8b9c0d1` antes da migração e `f7a8b9c0d1e2 (head)` após a migração.
+  - `alembic_version` no PostgreSQL: `f7a8b9c0d1e2`.
   - Health endpoint da API: `{"status":"ok"}`.
   - A falha de timeout observada anteriormente na execução via virtualenv do host foi ambiental; a execução dentro do container backend completou com sucesso.
 - **Frontend Vitest**: Testes de componentes de autenticação e formulários 100% verde.
