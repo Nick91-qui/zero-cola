@@ -26,6 +26,7 @@ from app.schemas.attempt import (
     StudentAttemptResponse,
 )
 from app.services.answer_key import AnswerKeyService
+from app.services.exam import ExamService
 
 
 class AttemptService:
@@ -35,9 +36,10 @@ class AttemptService:
         self.exam_repo = ExamRepository(db)
         self.grade_repo = GradeRepository(db)
         self.answer_key_service = AnswerKeyService(db)
+        self.exam_service = ExamService(db)
 
     def start_online_attempt(self, exam_id: UUID, student: User) -> OnlineAttemptSessionResponse:
-        exam = self._require_published_exam(exam_id)
+        exam = self._require_published_exam(exam_id, student)
 
         active_attempt = self.attempt_repo.get_latest_for_student_exam_source(
             exam.id,
@@ -324,15 +326,19 @@ class AttemptService:
             raise PermissionError(f"Attempt {attempt_id} does not belong to this student.")
         return attempt
 
-    def _require_published_exam(self, exam_id: UUID) -> Exam:
+    def _require_published_exam(self, exam_id: UUID, student: User) -> Exam:
         exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
         if not exam:
             raise ValueError(f"Exam {exam_id} not found.")
         if exam.status != ExamStatus.PUBLISHED.value or not exam.is_active:
             raise ValueError(f"Exam {exam_id} must be published to start an online attempt.")
-        if exam.answer_key is None or not exam.answer_key.is_published:
+
+        available_exam = self.exam_service.get_exam_for_student(exam_id, student.id)
+        if available_exam is None:
+            raise ValueError(f"Exam {exam_id} must be published to start an online attempt.")
+        if available_exam.answer_key is None or not available_exam.answer_key.is_published:
             raise ValueError(f"Exam {exam_id} must have a published AnswerKey.")
-        return exam
+        return available_exam
 
     def _ensure_attempt_in_progress(self, attempt: Attempt) -> None:
         if attempt.status in {AttemptStatus.SUBMITTED.value, AttemptStatus.GRADED.value}:

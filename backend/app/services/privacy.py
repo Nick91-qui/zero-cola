@@ -52,7 +52,7 @@ class PrivacyService:
             .options(
                 joinedload(User.grades),
                 joinedload(User.consents),
-                joinedload(User.owned_classes),
+                joinedload(User.created_classes),
                 joinedload(User.class_memberships),
             )
             .filter(User.id == user_id)
@@ -108,7 +108,7 @@ class PrivacyService:
                 }
                 for membership in user.class_memberships
             ],
-            "owned_classes": [
+            "created_classes": [
                 {
                     "id": str(class_obj.id),
                     "name": class_obj.name,
@@ -116,7 +116,7 @@ class PrivacyService:
                     "is_active": class_obj.is_active,
                     "archived_at": class_obj.archived_at,
                 }
-                for class_obj in user.owned_classes
+                for class_obj in user.created_classes
             ],
             "authored_exams": [
                 {

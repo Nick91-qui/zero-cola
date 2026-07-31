@@ -53,8 +53,16 @@ def backfill_answer_keys(session: Session) -> dict:
             .first()
         )
 
+    omr_templates_have_correct_answers = _legacy_omr_templates_have_correct_answers(
+        session.get_bind()
+    )
+
     # --- Scenario A: Orphan OMR templates (correct_answers exists, exam_id is NULL) ---
-    orphan_templates = _load_legacy_omr_templates(session, exam_id_is_null=True)
+    orphan_templates = (
+        _load_legacy_omr_templates(session, exam_id_is_null=True)
+        if omr_templates_have_correct_answers
+        else []
+    )
 
     if orphan_templates and default_teacher is None:
         raise RuntimeError(
@@ -98,7 +106,11 @@ def backfill_answer_keys(session: Session) -> dict:
     existing_answer_key_exam_ids = session.query(AnswerKey.exam_id).all()
     existing_ak_set = {_uuid_object(row[0]) for row in existing_answer_key_exam_ids}
 
-    templates_with_answers = _load_legacy_omr_templates(session, exam_id_is_not_null=True)
+    templates_with_answers = (
+        _load_legacy_omr_templates(session, exam_id_is_not_null=True)
+        if omr_templates_have_correct_answers
+        else []
+    )
 
     for tmpl in templates_with_answers:
         if tmpl["exam_id"] in existing_ak_set:
@@ -122,9 +134,9 @@ def backfill_answer_keys(session: Session) -> dict:
         if exam.id in existing_ak_set:
             continue
 
-        # Get correct_answers from template if available
+        # Get correct_answers from template if available on legacy schemas.
         template_correct = None
-        if exam.omr_template_id is not None:
+        if omr_templates_have_correct_answers and exam.omr_template_id is not None:
             tmpl = session.execute(
                 sa.text(
                     "SELECT correct_answers FROM omr_templates WHERE id = :tmpl_id"
@@ -232,6 +244,9 @@ def _load_legacy_omr_templates(
     exam_id_is_null: bool = False,
     exam_id_is_not_null: bool = False,
 ):
+    if not _legacy_omr_templates_have_correct_answers(session.get_bind()):
+        return []
+
     clauses = []
     if exam_id_is_null:
         clauses.append("exam_id IS NULL")
@@ -265,6 +280,14 @@ def _load_legacy_omr_templates(
         for row in rows
         if _coerce_correct_answers(row["correct_answers"])
     ]
+
+
+def _legacy_omr_templates_have_correct_answers(bind) -> bool:
+    inspector = inspect(bind)
+    if "omr_templates" not in inspector.get_table_names():
+        return False
+    column_names = {column["name"] for column in inspector.get_columns("omr_templates")}
+    return "correct_answers" in column_names
 
 
 def _coerce_correct_answers(raw_value):

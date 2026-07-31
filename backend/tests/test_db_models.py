@@ -3,10 +3,10 @@ from pathlib import Path
 from app.db.models import BaseModel
 from app.models.attempt import Attempt
 from app.models.audit_log import AuditLog
-from app.models.class_ import Class, ClassStudent
+from app.models.class_ import Class, ClassStudent, TeacherClass
 from app.models.consent import Consent
 from app.models.enums import AttemptStatus, ExamStatus
-from app.models.exam import Exam
+from app.models.exam import Exam, ExamClass
 from app.models.security_event import SecurityEvent
 from app.models.user import User
 
@@ -68,16 +68,36 @@ def test_step9_models_define_classes_monitoring_and_lgpd_tables() -> None:
     class_table = Class.__table__
     assert class_table.name == "classes"
     assert "teacher_id" in class_table.c
+    assert "academic_period" in class_table.c
     assert any(
-        constraint.name == "uq_classes_teacher_name" for constraint in class_table.constraints
+        constraint.name == "uq_classes_name_period" for constraint in class_table.constraints
     )
 
     class_student_table = ClassStudent.__table__
     assert class_student_table.name == "class_students"
     assert "student_id" in class_student_table.c
+    assert "academic_period" in class_student_table.c
     assert any(
         constraint.name == "uq_class_students_class_student"
         for constraint in class_student_table.constraints
+    )
+    assert any(
+        index.name == "ix_class_students_student_period_active"
+        for index in class_student_table.indexes
+    )
+
+    teacher_class_table = TeacherClass.__table__
+    assert teacher_class_table.name == "teacher_classes"
+    assert any(
+        constraint.name == "uq_teacher_classes_teacher_class"
+        for constraint in teacher_class_table.constraints
+    )
+
+    exam_class_table = ExamClass.__table__
+    assert exam_class_table.name == "exam_classes"
+    assert any(
+        constraint.name == "uq_exam_classes_exam_class"
+        for constraint in exam_class_table.constraints
     )
 
     audit_log_table = AuditLog.__table__
@@ -130,3 +150,22 @@ def test_step9_migration_source_declares_classes_monitoring_and_lgpd_support() -
     assert '"audit_logs"' in source
     assert '"security_events"' in source
     assert '"consents"' in source
+
+
+def test_step9_academic_model_migration_declares_many_to_many_class_support() -> None:
+    migration_path = (
+        Path(__file__).resolve().parents[1]
+        / "alembic"
+        / "versions"
+        / "a9b0c1d2e3f4_add_academic_class_teacher_exam_assignments.py"
+    )
+    source = migration_path.read_text()
+
+    assert "Revision ID: a9b0c1d2e3f4" in source
+    assert "Revises: f7a8b9c0d1e2" in source
+    assert '"teacher_classes"' in source
+    assert '"exam_classes"' in source
+    assert "academic_period" in source
+    assert "uq_classes_name_period" in source
+    assert "uq_teacher_classes_teacher_class" in source
+    assert "uq_exam_classes_exam_class" in source

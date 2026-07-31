@@ -2,10 +2,11 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.models.enums import ExamStatus
-from app.models.exam import Exam
+from app.models.exam import Exam, ExamClass
 from app.models.exam_question import ExamQuestion
 from app.models.question import Question
 from app.models.skill import Skill
@@ -58,8 +59,23 @@ class ExamRepository:
         if teacher_id:
             query = query.filter(Exam.teacher_id == teacher_id)
         if class_id:
-            query = query.filter(Exam.class_id == class_id)
-        return query.order_by(Exam.created_at.desc()).offset(skip).limit(limit).all()
+            try:
+                class_uuid = UUID(class_id)
+            except ValueError:
+                class_uuid = None
+            if class_uuid is not None:
+                query = query.outerjoin(ExamClass, ExamClass.exam_id == Exam.id).filter(
+                    or_(
+                        Exam.class_id == class_id,
+                        and_(
+                            ExamClass.class_id == class_uuid,
+                            ExamClass.is_active.is_(True),
+                        ),
+                    )
+                )
+            else:
+                query = query.filter(Exam.class_id == class_id)
+        return query.distinct().order_by(Exam.created_at.desc()).offset(skip).limit(limit).all()
 
     def update(self, exam_id: str | UUID, update_data: ExamUpdate | dict) -> Optional[Exam]:
         exam = self.get_by_id(exam_id, include_inactive=True)
@@ -135,9 +151,7 @@ class ExamRepository:
             created_by=created_by,
         )
         if question_in.skill_ids:
-            question.skills = (
-                self.db.query(Skill).filter(Skill.id.in_(question_in.skill_ids)).all()
-            )
+            question.skills = self.db.query(Skill).filter(Skill.id.in_(question_in.skill_ids)).all()
         self.db.add(question)
         self.db.flush()
         return question

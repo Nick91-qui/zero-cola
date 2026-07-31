@@ -9,6 +9,7 @@ from app.schemas.user import UserResponse
 
 class ClassBase(BaseModel):
     name: str = Field(..., max_length=255)
+    academic_period: Optional[str] = Field(default=None, max_length=20)
     description: Optional[str] = None
 
 
@@ -25,10 +26,15 @@ class ClassStudentCreate(BaseModel):
     student_ids: list[UUID]
 
 
+class ClassTeacherCreate(BaseModel):
+    teacher_ids: list[UUID]
+
+
 class ClassStudentResponse(BaseModel):
     id: UUID
     class_id: UUID
     student_id: UUID
+    academic_period: str
     student: Optional[UserResponse] = None
     is_active: bool
     archived_at: Optional[datetime] = None
@@ -50,5 +56,19 @@ class ClassResponse(ClassBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ClassTeacherResponse(BaseModel):
+    id: UUID
+    class_id: UUID
+    teacher_id: UUID
+    teacher: Optional[UserResponse] = None
+    is_active: bool
+    archived_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ClassDetailResponse(ClassResponse):
     memberships: list[ClassStudentResponse] = Field(default_factory=list)
+    teachers: list[ClassTeacherResponse] = Field(default_factory=list)

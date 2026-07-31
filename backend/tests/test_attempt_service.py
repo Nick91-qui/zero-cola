@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from random import Random
+from uuid import UUID
 
 import pytest
 from sqlalchemy import update
@@ -13,6 +14,7 @@ from app.models.grade import Grade
 from app.models.user import User
 from app.schemas.exam import ExamCreate, ExamQuestionCreate, QuestionCreate
 from app.services.attempt import AttemptService
+from app.services.class_service import ClassService
 from app.services.exam import ExamService
 
 
@@ -33,10 +35,33 @@ def _create_teacher_and_student(test_db_session, *, student_code: str = "12345")
     return teacher, student
 
 
+def _create_class_and_enroll_student(
+    test_db_session,
+    *,
+    teacher: User,
+    student: User,
+    name: str,
+    academic_period: str = "2026",
+):
+    class_service = ClassService(test_db_session)
+    class_obj = class_service.create_class(
+        current_user=teacher,
+        name=name,
+        academic_period=academic_period,
+    )
+    class_service.add_students(
+        class_id=class_obj.id,
+        current_user=teacher,
+        student_ids=[student.id],
+    )
+    return class_obj
+
+
 def _create_workflow_a_exam(
     test_db_session,
     teacher: User,
     *,
+    class_ids: list[UUID] | None = None,
     randomization_enabled: bool = False,
     max_attempts: int = 1,
     total_time_seconds: int | None = None,
@@ -46,6 +71,7 @@ def _create_workflow_a_exam(
         ExamCreate(
             title="Online Workflow A",
             total_questions=4,
+            class_ids=class_ids,
             randomization_enabled=randomization_enabled,
             max_attempts=max_attempts,
             total_time_seconds=total_time_seconds,
@@ -89,12 +115,18 @@ def _create_workflow_a_exam(
     return service.publish_exam(exam.id)
 
 
-def _create_workflow_b_exam(test_db_session, teacher: User) -> Exam:
+def _create_workflow_b_exam(
+    test_db_session,
+    teacher: User,
+    *,
+    class_ids: list[UUID] | None = None,
+) -> Exam:
     service = ExamService(test_db_session)
     exam = service.create_exam(
         ExamCreate(
             title="Online Workflow B",
             total_questions=1,
+            class_ids=class_ids,
             correct_answers={"1": "A"},
         ),
         teacher_id=teacher.id,
@@ -114,9 +146,16 @@ def _answer_key_items_for_exam(test_db_session, exam_id):
 
 def test_online_attempt_workflow_a_randomization_and_navigation(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="11111")
+    class_obj = _create_class_and_enroll_student(
+        test_db_session,
+        teacher=teacher,
+        student=student,
+        name="Turma tentativa A",
+    )
     exam = _create_workflow_a_exam(
         test_db_session,
         teacher,
+        class_ids=[class_obj.id],
         randomization_enabled=True,
         max_attempts=2,
     )
@@ -174,7 +213,13 @@ def test_online_attempt_workflow_a_randomization_and_navigation(test_db_session)
 
 def test_online_attempt_submission_grades_against_answer_key_item(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="22222")
-    exam = _create_workflow_a_exam(test_db_session, teacher)
+    class_obj = _create_class_and_enroll_student(
+        test_db_session,
+        teacher=teacher,
+        student=student,
+        name="Turma tentativa B",
+    )
+    exam = _create_workflow_a_exam(test_db_session, teacher, class_ids=[class_obj.id])
 
     exam_row = test_db_session.query(Exam).filter(Exam.id == exam.id).one()
     source_question = exam_row.exam_questions[0].question
@@ -209,8 +254,32 @@ def test_online_attempt_submission_grades_against_answer_key_item(test_db_sessio
 
 def test_online_attempt_respects_max_attempts_and_student_isolation(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="33333")
-    _, other_student = _create_teacher_and_student(test_db_session, student_code="44444")
-    exam = _create_workflow_a_exam(test_db_session, teacher, max_attempts=1)
+    other_student = User(
+        email="other_student_attempt_44444@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.STUDENT,
+        student_code="44444",
+    )
+    test_db_session.add(other_student)
+    test_db_session.commit()
+    class_obj = _create_class_and_enroll_student(
+        test_db_session,
+        teacher=teacher,
+        student=student,
+        name="Turma tentativa C",
+    )
+    class_service = ClassService(test_db_session)
+    class_service.add_students(
+        class_id=class_obj.id,
+        current_user=teacher,
+        student_ids=[other_student.id],
+    )
+    exam = _create_workflow_a_exam(
+        test_db_session,
+        teacher,
+        class_ids=[class_obj.id],
+        max_attempts=1,
+    )
 
     service = AttemptService(test_db_session)
     session = service.start_online_attempt(exam.id, student)
@@ -231,11 +300,18 @@ def test_online_attempt_respects_max_attempts_and_student_isolation(test_db_sess
 
 def test_online_attempt_blocks_draft_and_archived_exams(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="55555")
+    class_obj = _create_class_and_enroll_student(
+        test_db_session,
+        teacher=teacher,
+        student=student,
+        name="Turma tentativa D",
+    )
     service = ExamService(test_db_session)
     draft_exam = service.create_exam(
         ExamCreate(
             title="Draft exam",
             total_questions=1,
+            class_ids=[class_obj.id],
             questions=[
                 ExamQuestionCreate(
                     display_order=1,
@@ -260,7 +336,13 @@ def test_online_attempt_blocks_draft_and_archived_exams(test_db_session):
 
 def test_online_attempt_supports_workflow_b_without_question_bank(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="66666")
-    exam = _create_workflow_b_exam(test_db_session, teacher)
+    class_obj = _create_class_and_enroll_student(
+        test_db_session,
+        teacher=teacher,
+        student=student,
+        name="Turma workflow B",
+    )
+    exam = _create_workflow_b_exam(test_db_session, teacher, class_ids=[class_obj.id])
 
     service = AttemptService(test_db_session)
     session = service.start_online_attempt(exam.id, student)
@@ -282,9 +364,16 @@ def test_online_attempt_supports_workflow_b_without_question_bank(test_db_sessio
 
 def test_online_attempt_time_limit_blocks_updates(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="77777")
+    class_obj = _create_class_and_enroll_student(
+        test_db_session,
+        teacher=teacher,
+        student=student,
+        name="Turma tempo",
+    )
     exam = _create_workflow_a_exam(
         test_db_session,
         teacher,
+        class_ids=[class_obj.id],
         total_time_seconds=60,
     )
 

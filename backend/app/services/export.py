@@ -1,12 +1,10 @@
 from io import BytesIO
 from typing import Any, Dict, List
 
-import openpyxl
-from openpyxl.styles import Alignment, Font, PatternFill
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
 class ExportService:
@@ -176,8 +174,15 @@ class ExportService:
         attempts: List[Dict[str, Any]],
         question_stats: List[Dict[str, Any]],
     ) -> bytes:
+        try:
+            import openpyxl
+        except ImportError as exc:
+            raise RuntimeError(
+                "XLSX export requires the optional 'openpyxl' dependency."
+            ) from exc
+
         wb = openpyxl.Workbook()
-        
+
         # Sheet 1: Alunos e Notas
         ws1 = wb.active
         ws1.title = "Resultados dos Alunos"

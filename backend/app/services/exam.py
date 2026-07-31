@@ -6,8 +6,9 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.attempt import Attempt, AttemptAnswer
+from app.models.class_ import Class, ClassStudent, TeacherClass
 from app.models.enums import ExamStatus
-from app.models.exam import Exam
+from app.models.exam import Exam, ExamClass
 from app.models.user import User
 from app.repositories.attempt import AttemptRepository
 from app.repositories.exam import ExamRepository
@@ -17,6 +18,7 @@ from app.repositories.skill import SkillRepository
 from app.schemas.exam import ExamCreate, ExamUpdate
 from app.schemas.omr import OMRTemplateCreate
 from app.services.answer_key import AnswerKeyService
+from app.services.audit_log import AuditLogService
 from app.services.export import ExportService
 
 
@@ -30,12 +32,124 @@ class ExamService:
         self.grade_repo = GradeRepository(db)
         self.skill_repo = SkillRepository(db)
         self.answer_key_service = AnswerKeyService(db)
+        self.audit_log_service = AuditLogService(db)
+
+    @staticmethod
+    def _normalize_class_ids(class_ids: list[UUID] | None) -> list[UUID]:
+        if class_ids is None:
+            return []
+        return list(dict.fromkeys(class_ids))
+
+    def _load_classes(self, class_ids: list[UUID]) -> list[Class]:
+        if not class_ids:
+            return []
+        classes = self.db.query(Class).filter(Class.id.in_(class_ids)).all()
+        class_by_id = {class_obj.id: class_obj for class_obj in classes}
+        missing_ids = [class_id for class_id in class_ids if class_id not in class_by_id]
+        if missing_ids:
+            raise ValueError(f"Class {missing_ids[0]} not found.")
+        return [class_by_id[class_id] for class_id in class_ids]
+
+    def _teacher_can_manage_class(
+        self,
+        *,
+        class_obj: Class,
+        teacher_id: UUID,
+        can_manage_all_classes: bool,
+    ) -> bool:
+        if can_manage_all_classes:
+            return True
+        return (
+            self.db.query(TeacherClass)
+            .filter(
+                TeacherClass.class_id == class_obj.id,
+                TeacherClass.teacher_id == teacher_id,
+                TeacherClass.is_active.is_(True),
+            )
+            .first()
+            is not None
+        )
+
+    def _sync_exam_classes(
+        self,
+        exam: Exam,
+        class_ids: list[UUID] | None,
+        *,
+        teacher_id: UUID,
+        can_manage_all_classes: bool = False,
+    ) -> None:
+        if class_ids is None:
+            return
+
+        desired_class_ids = self._normalize_class_ids(class_ids)
+        desired_classes = self._load_classes(desired_class_ids)
+
+        for class_obj in desired_classes:
+            if not class_obj.is_active:
+                raise ValueError(f"Class {class_obj.id} not found.")
+            if not self._teacher_can_manage_class(
+                class_obj=class_obj,
+                teacher_id=teacher_id,
+                can_manage_all_classes=can_manage_all_classes,
+            ):
+                raise ValueError(f"Class {class_obj.id} not found.")
+
+        existing_links = {link.class_id: link for link in exam.class_assignments}
+        desired_names = [class_obj.name for class_obj in desired_classes]
+        now = datetime.now(timezone.utc)
+
+        for link in list(exam.class_assignments):
+            if link.class_id not in desired_class_ids and link.is_active:
+                link.is_active = False
+                link.archived_at = now
+
+        for class_obj in desired_classes:
+            link = existing_links.get(class_obj.id)
+            if link is None:
+                self.db.add(
+                    ExamClass(
+                        exam_id=exam.id,
+                        class_id=class_obj.id,
+                        is_active=True,
+                    )
+                )
+            else:
+                link.is_active = True
+                link.archived_at = None
+
+        exam.class_id = ", ".join(desired_names) if desired_names else None
+        self.audit_log_service.record(
+            event_type="exam.class_assignment.sync",
+            user_id=teacher_id,
+            resource_type="exam",
+            resource_id=exam.id,
+            metadata={"class_ids": [str(class_id) for class_id in desired_class_ids]},
+        )
+
+    def _student_has_access_to_exam(self, exam: Exam, student_id: UUID) -> bool:
+        active_class_ids = [link.class_id for link in exam.class_assignments if link.is_active]
+        if not active_class_ids:
+            return False
+        return (
+            self.db.query(ClassStudent.id)
+            .join(Class, Class.id == ClassStudent.class_id)
+            .filter(
+                ClassStudent.student_id == student_id,
+                ClassStudent.is_active.is_(True),
+                Class.is_active.is_(True),
+                ClassStudent.class_id.in_(active_class_ids),
+            )
+            .first()
+            is not None
+        )
 
     def create_exam(
         self,
         exam_in: ExamCreate,
         teacher_id: UUID,
         owner_id: Optional[UUID] = None,
+        *,
+        can_manage_all_classes: bool = False,
     ) -> Exam:
         if exam_in.questions and exam_in.correct_answers:
             raise ValueError(
@@ -67,6 +181,14 @@ class ExamService:
         exam_in.omr_template_id = omr_template_id
         exam = self.exam_repo.create(exam_in, teacher_id=teacher_id)
 
+        if exam_in.class_ids is not None:
+            self._sync_exam_classes(
+                exam,
+                exam_in.class_ids,
+                teacher_id=teacher_id,
+                can_manage_all_classes=can_manage_all_classes,
+            )
+
         # 2. Link OMRTemplate back to exam
         if omr_template_id:
             tmpl = self.template_repo.get_by_id(omr_template_id, owner_id=owner_id)
@@ -90,6 +212,7 @@ class ExamService:
                 correct_answers=exam_in.correct_answers,
             )
 
+        self.db.commit()
         self.db.refresh(exam)
         return exam
 
@@ -161,6 +284,22 @@ class ExamService:
             return None
         return exam
 
+    def get_exam_for_student(
+        self,
+        exam_id: UUID,
+        student_id: Optional[UUID] = None,
+    ) -> Optional[Exam]:
+        exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
+        if not exam:
+            return None
+        if exam.status != ExamStatus.PUBLISHED.value or not exam.is_active:
+            return None
+        if student_id is not None and not self._student_has_access_to_exam(exam, student_id):
+            raise PermissionError(
+                f"Student {student_id} is not enrolled in an assigned class for exam {exam_id}."
+            )
+        return exam
+
     def list_exams(
         self, teacher_id: Optional[UUID] = None, class_id: Optional[str] = None
     ) -> List[Exam]:
@@ -171,6 +310,7 @@ class ExamService:
         exam_id: UUID,
         update_in: ExamUpdate,
         teacher_id: Optional[UUID] = None,
+        can_manage_all_classes: bool = False,
     ) -> Optional[Exam]:
         exam = self.exam_repo.get_by_id(exam_id, include_inactive=True)
         if not exam:
@@ -179,7 +319,19 @@ class ExamService:
             return None
         if exam.status == ExamStatus.ARCHIVED.value:
             raise ValueError(f"Exam {exam_id} is archived and cannot be edited.")
-        return self.exam_repo.update(exam_id, update_in)
+        updated_exam = self.exam_repo.update(exam_id, update_in)
+        if updated_exam is None:
+            return None
+        if update_in.class_ids is not None:
+            self._sync_exam_classes(
+                updated_exam,
+                update_in.class_ids,
+                teacher_id=teacher_id or updated_exam.teacher_id,
+                can_manage_all_classes=can_manage_all_classes,
+            )
+            self.db.commit()
+            self.db.refresh(updated_exam)
+        return updated_exam
 
     def soft_delete_exam(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> bool:
         """

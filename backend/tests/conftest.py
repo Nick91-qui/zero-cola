@@ -5,11 +5,11 @@ from sqlalchemy.orm import sessionmaker
 from app.db.models import BaseModel
 
 
-@pytest.fixture(scope="session")
-def test_db_engine():
+@pytest.fixture
+def test_db_engine(tmp_path):
     """Create test database engine."""
-    test_db_url = "sqlite:///:memory:"
-    engine = create_engine(test_db_url, connect_args={"check_same_thread": False})
+    db_path = tmp_path / "test.db"
+    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
 
     BaseModel.metadata.create_all(bind=engine)
     yield engine
@@ -21,26 +21,30 @@ def test_db_engine():
 @pytest.fixture
 def test_db_session(test_db_engine):
     """Create a new database session for each test."""
-    connection = test_db_engine.connect()
-    transaction = connection.begin()
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=connection)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
     session = TestingSessionLocal()
 
     yield session
 
     session.close()
-    transaction.rollback()
-    connection.close()
 
 
 @pytest.fixture
-def override_get_db(test_db_session):
+def override_get_db(test_db_engine):
     """Override FastAPI dependency for database session."""
+    from sqlalchemy.orm import sessionmaker
+
     from app.db.session import get_db
     from app.main import app
 
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
+
     def get_db_override():
-        return test_db_session
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
 
     app.dependency_overrides[get_db] = get_db_override
     yield
@@ -77,4 +81,3 @@ def auth_headers(override_get_db, test_db_session):
     token_data = service.authenticate_user(user_login)
     access_token = token_data["access_token"]
     return {"Authorization": f"Bearer {access_token}"}
-

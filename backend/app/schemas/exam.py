@@ -63,6 +63,7 @@ class ExamBase(BaseModel):
     title: str
     description: Optional[str] = None
     class_id: Optional[str] = None
+    class_ids: Optional[List[UUID]] = None
     omr_template_id: Optional[UUID] = None
     total_questions: int = 20
     total_time_seconds: Optional[int] = None
@@ -81,6 +82,7 @@ class ExamUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     class_id: Optional[str] = None
+    class_ids: Optional[List[UUID]] = None
     total_time_seconds: Optional[int] = None
     max_attempts: Optional[int] = None
     randomization_enabled: Optional[bool] = None

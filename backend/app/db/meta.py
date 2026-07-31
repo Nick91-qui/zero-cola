@@ -9,6 +9,7 @@ from app.models import (
     ClassStudent,
     Consent,
     Exam,
+    ExamClass,
     ExamQuestion,
     Grade,
     OMRScan,
@@ -16,6 +17,7 @@ from app.models import (
     Question,
     SecurityEvent,
     Skill,
+    TeacherClass,
     User,
 )
 
@@ -38,7 +40,9 @@ __all__ = [
     "ExamQuestion",
     "Class",
     "ClassStudent",
+    "TeacherClass",
     "Consent",
     "AuditLog",
     "SecurityEvent",
+    "ExamClass",
 ]

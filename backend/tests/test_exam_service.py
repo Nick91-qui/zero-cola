@@ -6,7 +6,7 @@ import pytest
 from app.models.answer_key import AnswerKey, AnswerKeyItem
 from app.models.attempt import Attempt
 from app.models.enums import ExamStatus, GradeSourceType, UserRole
-from app.models.exam import Exam
+from app.models.exam import Exam, ExamClass
 from app.models.grade import Grade
 from app.models.omr import OMRTemplate
 from app.models.question import Question
@@ -15,6 +15,7 @@ from app.models.user import User
 from app.repositories.attempt import AttemptRepository
 from app.repositories.grade import GradeRepository
 from app.schemas.exam import ExamCreate, ExamQuestionCreate, QuestionCreate
+from app.services.class_service import ClassService
 from app.services.exam import ExamService
 
 
@@ -163,6 +164,56 @@ def test_create_exam_with_question_bank_creates_exam_questions(test_db_session):
     assert [eq.display_order for eq in exam.exam_questions] == [1, 2]
     assert [q.statement for q in exam.questions] == ["Questão 1", "Questão 2"]
     assert exam.status == ExamStatus.DRAFT.value
+
+
+def test_create_exam_can_be_assigned_to_multiple_classes(test_db_session):
+    teacher = User(
+        email="teacher_multi_class@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(teacher)
+    test_db_session.commit()
+
+    class_service = ClassService(test_db_session)
+    class_a = class_service.create_class(
+        current_user=teacher,
+        name="Turma A multi",
+        academic_period="2026",
+    )
+    class_b = class_service.create_class(
+        current_user=teacher,
+        name="Turma B multi",
+        academic_period="2027",
+    )
+
+    service = ExamService(test_db_session)
+    exam = service.create_exam(
+        ExamCreate(
+            title="Prova em múltiplas turmas",
+            total_questions=1,
+            class_ids=[class_a.id, class_b.id],
+            questions=[
+                ExamQuestionCreate(
+                    display_order=1,
+                    question=QuestionCreate(
+                        statement="Questão",
+                        correct_answer="A",
+                    ),
+                )
+            ],
+        ),
+        teacher_id=teacher.id,
+    )
+
+    test_db_session.refresh(exam)
+
+    assert exam.class_ids == [class_a.id, class_b.id]
+    assert [assignment.class_id for assignment in exam.class_assignments] == [
+        class_a.id,
+        class_b.id,
+    ]
+    assert test_db_session.query(ExamClass).filter(ExamClass.exam_id == exam.id).count() == 2
 
 
 def test_publish_exam_projects_workflow_a_snapshot(test_db_session):

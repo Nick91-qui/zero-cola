@@ -28,7 +28,12 @@ async def create_exam(
 ):
     service = ExamService(db)
     owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
-    return service.create_exam(exam_in, teacher_id=current_user.id, owner_id=owner_id)
+    return service.create_exam(
+        exam_in,
+        teacher_id=current_user.id,
+        owner_id=owner_id,
+        can_manage_all_classes=current_user.role == UserRole.ADMIN,
+    )
 
 
 @router.get("", response_model=List[ExamResponse])
@@ -43,7 +48,7 @@ async def list_exams(
     return service.list_exams(teacher_id=teacher_id, class_id=class_id)
 
 
-@router.get("/{exam_id}", response_model=ExamDetailResponse)
+@router.get("/{exam_id}", response_model=None)
 @require_role(UserRole.TEACHER, UserRole.ADMIN, UserRole.STUDENT)
 async def get_exam(
     exam_id: UUID,
@@ -51,6 +56,19 @@ async def get_exam(
     db: Session = Depends(get_db),
 ):
     service = ExamService(db)
+
+    if current_user.role == UserRole.STUDENT:
+        try:
+            exam = service.get_exam_for_student(exam_id, current_user.id)
+        except PermissionError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+        if not exam:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Exam {exam_id} not found.",
+            )
+        return ExamResponse.model_validate(exam)
+
     owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
     exam = service.get_exam(exam_id, teacher_id=owner_id)
     if not exam:
@@ -58,7 +76,7 @@ async def get_exam(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Exam {exam_id} not found.",
         )
-    return exam
+    return ExamDetailResponse.model_validate(exam)
 
 
 @router.patch("/{exam_id}", response_model=ExamResponse)
@@ -72,7 +90,12 @@ async def update_exam(
     service = ExamService(db)
     try:
         owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
-        exam = service.update_exam(exam_id, update_in, teacher_id=owner_id)
+        exam = service.update_exam(
+            exam_id,
+            update_in,
+            teacher_id=owner_id,
+            can_manage_all_classes=current_user.role == UserRole.ADMIN,
+        )
     except ValueError as e:
         detail = str(e)
         status_code = (

@@ -3,7 +3,17 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -69,3 +79,51 @@ class Exam(BaseModel):
     )
     questions = association_proxy("exam_questions", "question")
     attempts = relationship("Attempt", back_populates="exam", cascade="all, delete-orphan")
+    class_assignments = relationship(
+        "ExamClass",
+        back_populates="exam",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def class_ids(self) -> list[UUID]:
+        return [
+            assignment.class_id
+            for assignment in sorted(
+                self.class_assignments,
+                key=lambda assignment: assignment.created_at,
+            )
+            if assignment.is_active
+        ]
+
+
+class ExamClass(BaseModel):
+    __tablename__ = "exam_classes"
+    __table_args__ = (
+        UniqueConstraint("exam_id", "class_id", name="uq_exam_classes_exam_class"),
+        Index("ix_exam_classes_exam_id", "exam_id"),
+        Index("ix_exam_classes_class_id", "class_id"),
+        Index("ix_exam_classes_is_active", "is_active"),
+    )
+
+    exam_id: Mapped[UUID] = mapped_column(
+        ForeignKey("exams.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    class_id: Mapped[UUID] = mapped_column(
+        ForeignKey("classes.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+    archived_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    exam = relationship("Exam", back_populates="class_assignments")
+    class_ = relationship("Class", backref="exam_class_links")

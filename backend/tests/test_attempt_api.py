@@ -5,7 +5,7 @@ from app.models.enums import GradeSourceType, UserRole
 from app.models.exam import Exam
 from app.models.user import User
 from app.schemas.exam import ExamCreate, ExamQuestionCreate, QuestionCreate
-from app.services.auth import AuthService
+from app.services.class_service import ClassService
 from app.services.exam import ExamService
 
 client = TestClient(app)
@@ -25,29 +25,39 @@ def _collect_keys(payload):
     return set()
 
 
+def _register_user(*, email: str, password: str, role: UserRole, student_code: str | None = None):
+    payload = {
+        "email": email,
+        "password": password,
+        "role": role.value,
+    }
+    if student_code is not None:
+        payload["student_code"] = student_code
+    response = client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def _login_user(email: str, password: str) -> dict[str, str]:
+    response = client.post("/api/v1/auth/login", json={"email": email, "password": password})
+    assert response.status_code == 200, response.text
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
 def _student_headers(
     test_db_session,
     *,
     email: str = "student_api_online@cola-zero.edu",
     student_code: str = "88888",
 ):
-    service = AuthService(test_db_session)
-    password_hash = service.hash_password("studentpass123")
-    user = User(
+    _register_user(
         email=email,
-        password_hash=password_hash,
+        password="studentpass123",
         role=UserRole.STUDENT,
         student_code=student_code,
     )
-    test_db_session.add(user)
-    test_db_session.commit()
-    login_payload = type(
-        "UserLogin",
-        (),
-        {"email": email, "password": "studentpass123"},
-    )()
-    token = service.authenticate_user(login_payload)["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    test_db_session.query(User).filter(User.email == email).one()
+    return _login_user(email, "studentpass123")
 
 
 def _teacher_and_published_exam(test_db_session):
@@ -59,11 +69,19 @@ def _teacher_and_published_exam(test_db_session):
     test_db_session.add(teacher)
     test_db_session.commit()
 
+    class_service = ClassService(test_db_session)
+    class_obj = class_service.create_class(
+        current_user=teacher,
+        name="Turma API online",
+        academic_period="2026",
+    )
+
     service = ExamService(test_db_session)
     exam = service.create_exam(
         ExamCreate(
             title="API online exam",
             total_questions=2,
+            class_ids=[class_obj.id],
             questions=[
                 ExamQuestionCreate(
                     display_order=1,
@@ -85,12 +103,20 @@ def _teacher_and_published_exam(test_db_session):
         ),
         teacher_id=teacher.id,
     )
-    return service.publish_exam(exam.id)
+    return service.publish_exam(exam.id), class_obj, teacher
 
 
 def test_online_attempt_api_flow_and_confidentiality(override_get_db, test_db_session):
-    exam = _teacher_and_published_exam(test_db_session)
+    exam, class_obj, teacher = _teacher_and_published_exam(test_db_session)
     student_headers = _student_headers(test_db_session)
+    student = (
+        test_db_session.query(User).filter(User.email == "student_api_online@cola-zero.edu").one()
+    )
+    ClassService(test_db_session).add_students(
+        class_id=class_obj.id,
+        current_user=teacher,
+        student_ids=[student.id],
+    )
 
     start_response = client.post(
         "/api/v1/attempts/start",
@@ -158,11 +184,19 @@ def test_online_attempt_api_flow_and_confidentiality(override_get_db, test_db_se
 
 
 def test_online_attempt_api_enforces_student_isolation(override_get_db, test_db_session):
-    exam = _teacher_and_published_exam(test_db_session)
+    exam, class_obj, teacher = _teacher_and_published_exam(test_db_session)
     student_headers = _student_headers(
         test_db_session,
         email="student_one@cola-zero.edu",
         student_code="88888",
+    )
+    student_one = (
+        test_db_session.query(User).filter(User.email == "student_one@cola-zero.edu").one()
+    )
+    ClassService(test_db_session).add_students(
+        class_id=class_obj.id,
+        current_user=teacher,
+        student_ids=[student_one.id],
     )
     other_student_headers = _student_headers(
         test_db_session,
