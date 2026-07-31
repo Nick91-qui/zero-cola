@@ -182,6 +182,13 @@ def test_class_ownership_and_student_access_controls(override_get_db, test_db_se
     assert add_student.status_code == 201, add_student.text
     assert add_student.json()[0]["student_id"] == str(student.id)
 
+    conflict_student = client.post(
+        f"/api/v1/classes/{class_b['id']}/students",
+        json={"student_ids": [str(student.id)]},
+        headers=teacher_b_headers,
+    )
+    assert conflict_student.status_code == 409
+
     forbidden_add_student = client.post(
         f"/api/v1/classes/{class_a['id']}/students",
         json={"student_ids": [str(student.id)]},
@@ -238,6 +245,71 @@ def test_class_ownership_and_student_access_controls(override_get_db, test_db_se
     assert admin_memberships.json()[0]["student_id"] == str(student.id)
 
 
+def test_teachers_can_share_a_class_and_operate_on_it(override_get_db, test_db_session):
+    teacher_a, teacher_a_headers = _create_teacher_user(
+        test_db_session,
+        "teacher_share_a@cola-zero.edu",
+        "teacher-share-a-pass",
+    )
+    teacher_b, teacher_b_headers = _create_teacher_user(
+        test_db_session,
+        "teacher_share_b@cola-zero.edu",
+        "teacher-share-b-pass",
+    )
+    student, student_headers = _create_student_user(
+        test_db_session,
+        email="student_share@cola-zero.edu",
+        password="student-share-pass",
+        student_code="24680",
+    )
+
+    class_res = client.post(
+        "/api/v1/classes",
+        json={
+            "name": "Turma Compartilhada",
+            "description": "turma de teste",
+            "academic_period": "2026",
+        },
+        headers=teacher_a_headers,
+    )
+    assert class_res.status_code == 201, class_res.text
+    class_id = class_res.json()["id"]
+
+    forbidden_before_share = client.get(f"/api/v1/classes/{class_id}", headers=teacher_b_headers)
+    assert forbidden_before_share.status_code == 404
+
+    share_res = client.post(
+        f"/api/v1/classes/{class_id}/teachers",
+        json={"teacher_ids": [str(teacher_b.id)]},
+        headers=teacher_a_headers,
+    )
+    assert share_res.status_code == 201, share_res.text
+    assert [item["teacher_id"] for item in share_res.json()] == [str(teacher_b.id)]
+
+    teacher_b_list = client.get("/api/v1/classes", headers=teacher_b_headers)
+    assert teacher_b_list.status_code == 200
+    assert class_id in [item["id"] for item in teacher_b_list.json()]
+
+    class_detail_b = client.get(f"/api/v1/classes/{class_id}", headers=teacher_b_headers)
+    assert class_detail_b.status_code == 200
+    assert {item["teacher_id"] for item in class_detail_b.json()["teachers"]} == {
+        str(teacher_a.id),
+        str(teacher_b.id),
+    }
+
+    add_student_res = client.post(
+        f"/api/v1/classes/{class_id}/students",
+        json={"student_ids": [str(student.id)]},
+        headers=teacher_b_headers,
+    )
+    assert add_student_res.status_code == 201, add_student_res.text
+    assert add_student_res.json()[0]["student_id"] == str(student.id)
+
+    student_classes = client.get("/api/v1/me/classes", headers=student_headers)
+    assert student_classes.status_code == 200
+    assert [item["id"] for item in student_classes.json()] == [class_id]
+
+
 def test_audit_logs_consents_and_monitoring_security_events(override_get_db, test_db_session):
     teacher, teacher_headers = _create_teacher_user(
         test_db_session,
@@ -279,6 +351,10 @@ def test_audit_logs_consents_and_monitoring_security_events(override_get_db, tes
     assert consent_res.status_code == 201, consent_res.text
     assert consent_res.json()["consent_type"] == "monitoring"
     assert consent_res.json()["granted"] is True
+
+    my_consents_res = client.get("/api/v1/me/consents", headers=student_headers)
+    assert my_consents_res.status_code == 200
+    assert [item["consent_type"] for item in my_consents_res.json()] == ["monitoring"]
 
     first_event_res = client.post(
         f"/api/v1/attempts/{attempt.id}/security-events",
@@ -350,6 +426,10 @@ def test_privacy_export_and_anonymization_blocks_access(override_get_db, test_db
     )
     assert consent_res.status_code == 201, consent_res.text
 
+    my_consents_res = client.get("/api/v1/me/consents", headers=student_headers)
+    assert my_consents_res.status_code == 200
+    assert my_consents_res.json()[0]["granted"] is True
+
     export_res = client.get("/api/v1/me/data-export", headers=student_headers)
     assert export_res.status_code == 200
     export_payload = export_res.json()["data"]
@@ -363,6 +443,7 @@ def test_privacy_export_and_anonymization_blocks_access(override_get_db, test_db
     assert anonymize_res.status_code == 202
     assert anonymize_res.json()["status"] == "anonymized"
 
+    test_db_session.expire_all()
     anonymized_student = test_db_session.query(User).filter(User.id == student.id).one()
     assert anonymized_student.is_active is False
     assert anonymized_student.anonymized_at is not None

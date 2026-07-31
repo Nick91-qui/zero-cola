@@ -16,7 +16,7 @@ async def upsert_consent(
     db: Session = Depends(get_db),
 ):
     service = ConsentService(db)
-    return service.upsert_consent(
+    consent = service.upsert_consent(
         user_id=current_user.id,
         consent_type=consent_in.consent_type,
         purpose=consent_in.purpose,
@@ -24,6 +24,8 @@ async def upsert_consent(
         policy_version=consent_in.policy_version,
         metadata=consent_in.metadata,
     )
+    db.commit()
+    return consent
 
 
 @router.post(
@@ -35,7 +37,7 @@ async def upsert_monitoring_consent(
     db: Session = Depends(get_db),
 ):
     service = ConsentService(db)
-    return service.upsert_consent(
+    consent = service.upsert_consent(
         user_id=current_user.id,
         consent_type="monitoring",
         purpose=consent_in.purpose,
@@ -43,6 +45,8 @@ async def upsert_monitoring_consent(
         policy_version=consent_in.policy_version,
         metadata=consent_in.metadata,
     )
+    db.commit()
+    return consent
 
 
 @router.delete("/consents/{consent_type}", response_model=ConsentResponse)
@@ -53,7 +57,9 @@ async def revoke_consent(
 ):
     service = ConsentService(db)
     try:
-        return service.revoke_consent(user_id=current_user.id, consent_type=consent_type)
+        consent = service.revoke_consent(user_id=current_user.id, consent_type=consent_type)
+        db.commit()
+        return consent
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
