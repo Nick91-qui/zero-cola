@@ -56,6 +56,28 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {user?.role === 'student' && (
+            <div className="grid grid-cols-1 gap-6">
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Provas Online</h3>
+                  <span className="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    Tentativas Sequenciais
+                  </span>
+                </div>
+                <p className="text-sm text-slate-600 mb-6">
+                  Inicie uma avaliação online usando o código do exame, responda uma questão por vez e acompanhe seu resultado final ao submeter a prova.
+                </p>
+                <Link
+                  href="/attempts/start"
+                  className="inline-flex items-center justify-center w-full rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600 transition"
+                >
+                  Iniciar Prova Online →
+                </Link>
+              </div>
+            </div>
+          )}
+
           {(user?.role === 'teacher' || user?.role === 'admin') && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Card OMR */}
@@ -88,12 +110,20 @@ export default function DashboardPage() {
                 <p className="text-sm text-slate-600 mb-6">
                   Acompanhe médias por turma, estatísticas por questão (% acertos), vinculação com matriz de habilidades BNCC e baixe relatórios PDF / Excel.
                 </p>
-                <Link
-                  href="/exams"
-                  className="inline-flex items-center justify-center w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition"
-                >
-                  Gerenciar Avaliações & Exportar →
-                </Link>
+                <div className="grid gap-3">
+                  <Link
+                    href="/exams/new"
+                    className="inline-flex items-center justify-center w-full rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600 transition"
+                  >
+                    Criar Prova Online →
+                  </Link>
+                  <Link
+                    href="/exams"
+                    className="inline-flex items-center justify-center w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition"
+                  >
+                    Gerenciar Avaliações & Exportar →
+                  </Link>
+                </div>
               </div>
             </div>
           )}

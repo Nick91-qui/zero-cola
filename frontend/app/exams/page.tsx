@@ -25,20 +25,33 @@ export default function ExamsListPage() {
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const fetchExams = async (filter?: string) => {
-    try {
-      setLoading(true);
-      const data = await listExams(filter);
-      setExams(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao carregar avaliações');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchExams(classFilter);
+    let active = true;
+
+    const load = async () => {
+      try {
+        setError(null);
+        setLoading(true);
+        const data = await listExams(classFilter);
+        if (active) {
+          setExams(data);
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Falha ao carregar avaliações');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
   }, [classFilter]);
 
   const handleExportPdf = async (examId: string, title: string) => {
@@ -102,12 +115,20 @@ export default function ExamsListPage() {
                 Acompanhe o desempenho por prova, análise por questão e exporte relatórios consolidados em PDF e XLSX.
               </p>
             </div>
-            <Link
-              href="/omr/new"
-              className="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-600"
-            >
-              + Criar Gabarito / Prova
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/exams/new"
+                className="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-600"
+              >
+                + Criar Prova Online
+              </Link>
+              <Link
+                href="/omr/new"
+                className="inline-flex items-center justify-center rounded-md border border-emerald-700 bg-white px-4 py-2.5 text-sm font-medium text-emerald-700 shadow-sm hover:bg-emerald-50"
+              >
+                + Criar Gabarito OMR
+              </Link>
+            </div>
           </div>
 
           <div className="mb-6 flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
