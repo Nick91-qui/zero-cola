@@ -1,503 +1,82 @@
-# AGENTS.md
+# AGENTS.md — COLA-ZERO
 
-# COLA-ZERO
-
-Secure Online Assessment Platform
+Guidelines, conventions, and instructions for AI agents working on the COLA-ZERO repository.
 
 ---
 
-# Purpose
+## 1. Document Purpose & Scope
 
-This document defines the development rules, architecture principles, priorities, and implementation constraints for all AI agents working on the COLA-ZERO codebase.
+This document specifies repository standards, coding conventions, documentation rules, and execution workflows for AI agents.
 
-Agents must follow this document before making architectural, database, security, or UI decisions.
-
----
-
-# Project Vision
-
-COLA-ZERO is an online assessment platform designed for schools and educational institutions.
-
-The system focuses on:
-
-- Question bank management
-- Dynamic exam delivery
-- Exam integrity monitoring
-- Teacher workflow optimization
-- Student usability
-- Security by design
-- LGPD compliance
-
-COLA-ZERO is NOT a surveillance platform.
-
-Monitoring exists only to provide evidence of suspicious behavior and improve assessment integrity.
+Architectural principles, domain model details, database schemas, and design decisions are specified in [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md). Agents MUST consult [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md) before making database, structural, or API contract changes.
 
 ---
 
-# Core Architectural Principle
+## 2. Core Project Principles
 
-Everything revolves around:
-
-> Question Bank + Attempt Engine
-
-The Question Bank is the core content repository. Exams are delivery configurations composed of reusable questions. Academic history is represented by Attempts and Answers.
-
-Domain flow: Question -> Exam -> Attempt -> Answer
+1. **Keep It Simple**: Prefer clean, simple implementations over complex abstractions or premature optimizations.
+2. **Security First**: Every endpoint and feature must enforce authentication and role-based authorization (RBAC).
+3. **Privacy & LGPD by Design**: Minimize data collection. Explicitly inform users of any online monitoring.
+4. **Answer Key Centrality**: Maintain the core domain model centered on `Answer Key + Attempt Engine` *(Gabarito + Motor de Tentativas/Avaliação)*. Treat the Question Bank as an optional producer of Answer Keys, not as the core of the assessment model. Refer to [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md) for full domain flows.
 
 ---
 
-# Technology Stack
+## 3. Repository Conventions
 
-## Backend
+### 3.1 Directory Structure
+- `backend/`: FastAPI application, Alembic migrations, SQLAlchemy models, Pydantic schemas, OpenCV/ReportLab services, pytest suite.
+- `frontend/`: Next.js App Router application, React components, TailwindCSS styles, Vitest suite.
+- `docs/`: Historical archive (`docs/archive/`) and documentation sitemaps.
+- Root `.md` files: Official specifications (`README.md`, `ARCHITECTURE.md`, `STATUS_ATUAL.md`, `ROADMAP.md`, `PLANO_*.md`).
 
-- Python
-- FastAPI
-- SQLAlchemy
-- Alembic
-- PostgreSQL
-- Pydantic
-
-## Frontend
-
-- Next.js
-- React
-- TypeScript
-- TailwindCSS
-
-## Infrastructure
-
-- Docker
-- Docker Compose
+### 3.2 File & Identifier Naming
+- Database tables and columns: `snake_case` (e.g., `student_code`, `created_at`).
+- Python files and variables: `snake_case`.
+- TypeScript / React components: `PascalCase` (e.g., `QuestionCard.tsx`).
+- API Endpoints: lowercase with hyphens for multi-word paths (e.g., `/api/v1/omr/scans/upload`).
 
 ---
 
-# Development Philosophy
+## 4. Coding Conventions
 
-## Keep It Simple
+### 4.1 Backend (Python / FastAPI / SQLAlchemy)
+- **Service Layer**: Keep business logic inside service classes (`app/services/`), not inside route handlers or database controllers.
+- **Schemas**: Always validate request/response payloads with Pydantic schemas (`app/schemas/`).
+- **Database Access**: Inject SQLAlchemy sessions into endpoints via FastAPI dependencies.
+- **UUID Primary Keys**: Ensure all new models use `UUID v4` as primary key (`id`). Never use auto-incrementing integer IDs.
+- **Security & Auth**: Use `@get_current_user` for authentication and `@require_role` for RBAC enforcement. Tokens must be read from secure HttpOnly cookies.
 
-Prefer simple solutions over complex abstractions.
-
-Avoid premature optimization.
-
-Avoid overengineering.
-
----
-
-## Security First
-
-Every new feature must be evaluated for:
-
-- Authentication impact
-- Authorization impact
-- Data exposure
-- LGPD implications
+### 4.2 Frontend (Next.js / React / TypeScript)
+- **Component Design**: Keep visual components focused and reusable. Avoid putting business logic or raw API fetches directly inside presentation UI components.
+- **Type Safety**: Strictly type all props and API responses in TypeScript.
+- **Styling**: Use Vanilla CSS / TailwindCSS. Maintain cohesive color tokens and responsive layouts.
+- **Security**: Never store JWT tokens in `localStorage` or `sessionStorage`.
 
 ---
 
-## Privacy by Design
+## 5. Documentation Conventions
 
-Collect the minimum amount of information required.
-
-Never collect data without a clear purpose.
-
-Monitoring features must always be transparent to users.
-
----
-
-# User Roles
-
-## Student
-
-Can:
-
-- View assigned exams
-- Start attempts
-- Submit answers
-- View released results
-
-Cannot:
-
-- Access question bank
-- Access other students' data
-- Modify exams
+1. **Single Source of Truth**: Each topic has exactly ONE authoritative document. Do not duplicate information across markdown files.
+   - System Architecture, Data Model, Database Schema & Design Decisions -> [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md)
+   - Current Project Status & Implemented Features -> [STATUS_ATUAL.md](file:///var/home/nmoreira/Projetos/cola-zero/STATUS_ATUAL.md)
+   - Future Phases & Priorities -> [ROADMAP.md](file:///var/home/nmoreira/Projetos/cola-zero/ROADMAP.md)
+   - OMR Printed Exams -> [PLANO_OMR.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_OMR.md)
+   - Assessment System & Attempts -> [PLANO_AVALIACOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_AVALIACOES.md)
+   - Question Bank (Optional Producer) -> [PLANO_BANCO_QUESTOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_BANCO_QUESTOES.md)
+   - Pedagogical Analytics & Dashboard -> [PLANO_DASHBOARD.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_DASHBOARD.md)
+   - Online Integrity & LGPD -> [PLANO_ANTI_COLA.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_ANTI_COLA.md)
+2. **Internal Links**: Always use markdown file links (e.g. `[ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md)`) when referencing other documents.
+3. **Preserve Valid Data**: When updating documentation, update the relevant single source of truth without erasing valid historical information.
 
 ---
 
-## Teacher
-
-Can:
-
-- Create questions
-- Manage question bank
-- Create exams
-- Grade exams
-- View monitoring reports
-
-Cannot:
-
-- Access system administration
-
----
-
-## Administrator
-
-Can:
-
-- Manage users
-- Manage institutions
-- Access platform settings
-- View audit logs
-
----
-
-# Database Rules
-
-## UUIDs
-
-All primary keys must use UUID.
-
-Never use incremental IDs.
-
-Example:
-
-```sql
-id UUID PRIMARY KEY
-```
-
----
-
-## Auditability
-
-Never delete important academic records.
-
-Prefer:
-
-- soft delete
-- archival
-
-instead of hard deletion.
-
----
-
-## Historical Data
-
-Answers must never be overwritten.
-
-Create new records when historical preservation is required.
-
----
-
-# Question Bank Rules
-
-Questions must be reusable.
-
-A question may belong to many exams.
-
-Exams must never contain duplicated question content.
-
-Use relationships.
-
-Correct:
-
-```text
-Exam
- └── ExamQuestion
-       └── Question
-```
-
-Wrong:
-
-```text
-Exam
- └── Question Copy
-```
-
----
-
-# Exam Delivery Rules
-
-## One Question At A Time
-
-The frontend must never receive the entire exam.
-
-Allowed:
-
-```text
-Question 1
-submit
-Question 2
-submit
-Question 3
-```
-
-Not allowed:
-
-```text
-Receive all questions at once
-```
-
-Reason:
-
-- Reduces leakage
-- Improves monitoring
-- Simplifies autosave
-
----
-
-## Autosave
-
-Answers must be saved immediately after submission.
-
-No answer should depend on a final submit action.
-
----
-
-# Exam Publication Rules
-
-An exam may only be published if:
-
-- It has a title
-- It contains at least 1 question
-- All referenced questions exist
-- All question weights are greater than 0
-- Total weight equals 100
-- A class is assigned
-- A valid time limit is configured
-- The publishing user is the owner teacher or an admin
-
----
-
-# Attempt Rules
-
-The attempt model and rules are defined as follows:
-
-Exam fields:
-- `max_attempts` (INTEGER, default = 1)
-- `time_limit`
-- `randomize` (or `randomization_enabled`)
-- `status`
-
-Attempt fields:
-- `attempt_number` (INTEGER, NOT NULL)
-- `status`
-- `score`
-
-Rules:
-- Only one active attempt (`in_progress`) is allowed per student per exam.
-- Existing active attempts must be resumed instead of creating a new one.
-- A new attempt can only be created if `max_attempts` is not exceeded.
-- Submitted attempts cannot be modified.
-- Graded attempts are immutable.
-
----
-
-# Monitoring Rules
-
-COLA-ZERO is not a lockdown browser and must never claim:
-- Detection of ChatGPT usage
-- Detection of external devices
-- Prevention of screenshots
-- Prevention of all cheating
-
-The platform only records and reports observable browser events (stored in `security_events` table).
-
-The platform can only:
-
-- Detect events
-- Record events
-- Generate reports
-
----
-
-## Supported Events
-
-Frontend monitoring may include:
-
-- visibilitychange
-- blur
-- focus
-- fullscreen enter
-- fullscreen exit
-
----
-
-## Unsupported Claims
-
-Do not implement features that claim to:
-
-- Detect ChatGPT usage
-- Detect another device
-- Detect external phones
-- Detect screenshots reliably
-- Prevent all forms of cheating
-
-These claims are technically inaccurate.
-
----
-
-# LGPD Requirements
-
-All monitoring requires transparency.
-
-Users must be informed that monitoring exists.
-
----
-
-## Minimum Data Collection
-
-Collect only:
-
-- Account information
-- Exam answers
-- Exam-related events
-- Audit logs
-
-Avoid collecting:
-
-- Contacts
-- Personal files
-- Device contents
-- Browser history
-
----
-
-## Data Export
-
-The system must support user data export.
-
----
-
-## Data Deletion
-
-The system must support anonymization when legally permitted.
-
-Academic records may have retention requirements.
-
----
-
-# Security Standards
-
-## Authentication
-
-Required:
-
-- JWT Access Token: Must be stored in a secure HttpOnly cookie (Secure, SameSite=Lax, short expiration 15–30 min).
-- JWT Refresh Token: Must be stored in a secure HttpOnly cookie (Secure, SameSite=Strict, long expiration 7–30 days).
-
-Do not use localStorage or sessionStorage for JWT storage.
-
-Passwords:
-
-- Argon2 preferred
-- bcrypt acceptable
-
-Never store plain text passwords.
-
----
-
-## Authorization
-
-RBAC required.
-
-Every endpoint must validate permissions.
-
----
-
-## Logging
-
-Security-sensitive actions must generate audit records.
-
-Examples:
-
-- Login
-- Password change
-- Exam creation
-- Grade modification
-
----
-
-# Backend Guidelines
-
-Use:
-
-- Service layer
-- Repository pattern when useful
-- Dependency injection
-
-Avoid:
-
-- Business logic in routes
-- Large route files
-- Direct database access inside controllers
-
----
-
-# Frontend Guidelines
-
-Prefer:
-
-- Reusable components
-- Server-safe rendering
-- Strong TypeScript typing
-
-Avoid:
-
-- Massive pages
-- Business logic inside UI components
-
----
-
-# Testing Requirements
-
-Every critical module must include tests.
-
-Priority:
-
-1. Authentication
-2. Authorization
-3. Exam delivery
-4. Answer submission
-5. Grading
-6. Monitoring
-
----
-
-# Performance Goals
-
-Target:
-
-- Question delivery < 500ms
-- Login < 1 second
-- Exam submission < 500ms
-
----
-
-# Future Features
-
-Possible future modules:
-
-- AI-assisted question generation
-- Statistical item analysis
-- Difficulty calibration
-- Learning analytics
-- Institutional multi-tenancy
-- Safe Exam Browser integration
-
-These features are optional and must not affect the MVP architecture.
-
----
-
-# MVP Definition
-
-The MVP is complete when:
-
-- Users authenticate
-- Teachers create questions
-- Teachers create exams
-- Students take exams
-- Answers are graded
-- Monitoring events are recorded
-- Reports are generated
-- LGPD requirements are satisfied
-
-Everything else is secondary.
+## 6. Implementation Workflow for AI Agents
+
+1. **Inspect Before Modifying**: Search and view target code/documentation files before making changes.
+2. **Enforce Core Business Rules**:
+   - The **Answer Key** is the central domain concept. The Question Bank is an optional producer of Answer Keys.
+   - Online exams with question content MUST deliver **one question at a time** (`GET /attempts/{id}/next-question`).
+   - Answers MUST be saved immediately upon submission (autosave).
+   - OMR is ONLY for printed exams; online exams NEVER use OMR.
+   - The pedagogical dashboard MUST function even if no registered questions exist in the Question Bank (operating directly on Answer Key & Skills).
+3. **Verify Implementation**: After completing code changes, run automated tests (`pytest` / `vitest`) or lint checks. Never declare victory without empirical verification.
