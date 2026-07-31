@@ -12,7 +12,7 @@ export default function Home() {
     if (isLoading) return;
 
     if (isAuthenticated) {
-      router.push('/pages/dashboard');
+      router.push('/dashboard');
     } else {
       router.push('/auth/login');
     }
