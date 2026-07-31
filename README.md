@@ -1,6 +1,6 @@
 # COLA-ZERO — Secure Online Assessment & OMR Platform
 
-COLA-ZERO é uma plataforma educacional de avaliação segura, combinando gestão de banco de questões, entrega dinâmica de exames online e um **módulo de Leitura Óptica de Cartão-Resposta (OMR)** para correção automática de provas físicas.
+COLA-ZERO é uma plataforma educacional de avaliação segura para instituições de ensino, centrada no **Gabarito (Answer Key)** como conceito principal de domínio. O sistema já suporta entrega dinâmica de exames online, correção automática por **Leitura Óptica de Cartão-Resposta (OMR)** para provas físicas impressas, repositório opcional de **Banco de Questões**, turmas com vínculos explícitos, auditoria, consentimentos e infraestrutura LGPD básica.
 
 ---
 
@@ -8,48 +8,36 @@ COLA-ZERO é uma plataforma educacional de avaliação segura, combinando gestã
 
 O sistema é construído sobre o princípio central:
 
-> **Question Bank + Attempt Engine**
+> **Answer Key + Attempt Engine** *(Gabarito + Motor de Tentativas/Avaliação)*
 
-- **Backend**: Python 3.12, FastAPI 0.137.x, SQLAlchemy 2.0.x, Alembic 1.18.x, OpenCV (motor OMR), ReportLab (gerador de PDF OMR), Pydantic 2.13.x.
+O **Gabarito (Answer Key)** é a unidade operacional central do sistema. O **Banco de Questões (Question Bank)** atua como um **produtor opcional de Gabaritos**, permitindo a reutilização de questões, enquanto avaliações com Gabarito direto funcionam sem dependência de acervos de questões.
+
+- **Backend**: Python 3.12, FastAPI 0.137.x, SQLAlchemy 2.0.x, Alembic 1.18.x, OpenCV (Motor OMR), ReportLab (Gerador de PDF OMR), Pydantic 2.13.x.
 - **Frontend**: Next.js 16.2.x (App Router), React 19.2.x, TypeScript 5.9.x, TailwindCSS 4.3.x, Vitest.
-- **Banco de Dados**: PostgreSQL 16.14.
+- **Banco de Dados**: PostgreSQL 16.14 (Chaves Primárias em UUID v4).
 - **Infraestrutura**: Docker & Docker Compose.
 
 ---
 
-## 2. Status Funcional do Projeto
+## 2. Índice da Documentação (Documentation Index)
 
-### ✅ Funcionalidades Implementadas e Validadas
+A documentação do COLA-ZERO é organizada com base no princípio de **Fonte Única da Verdade (Single Source of Truth)**. Cada assunto possui exatamente um documento autoritativo:
 
-1. **Milestone 1 — Autenticação e Gestão de Identidade (RBAC)**
-   - Cadastro e Login de Usuários com perfis (`teacher`, `student`, `admin`).
-   - `student_code` (código de 5 dígitos) obrigatório para o perfil de estudante.
-   - Autenticação via JWT (Access Token e Refresh Token) armazenados com segurança pelo backend em cookies HttpOnly (`SameSite=Lax/Strict`).
-   - Hashing de senhas com `bcrypt`.
-   - Consulta e atualização de perfil (`GET /api/v1/auth/me`, `PATCH /api/v1/auth/me`).
-
-2. **Milestone 2 — Módulo OMR Standalone (Leitura Óptica de Cartão-Resposta)**
-   - Criação de gabaritos/templates OMR (layouts `v1_std_20q` de 20 questões e `v1_std_50q` de 50 questões).
-   - Geração automática da folha de respostas em **PDF** para impressão e **preview PNG** de calibração.
-   - Upload de digitalizações/fotos do cartão-resposta (formatos JPG/PNG).
-   - Motor visual OpenCV para detecção de marcas de alinhamento, código do aluno (5 dígitos) e bolhas preenchidas (alternativas A–E).
-   - Processamento de imagem, correção automática comparando a imagem com o gabarito.
-   - Interface de revisão para verificação de respostas detectadas e confirmação de nota final, persistida na entidade unificada `grades`.
-
----
-
-### ⏳ Funcionalidades Planejadas / Em Desenvolvimento
-
-- **Milestone 3 — Question Bank & Engine de Provas Online**:
-  - Banco de Questões reutilizáveis (professores).
-  - Composição e publicação de exames online com entrega de **uma questão por vez**.
-  - Persistência imediata de respostas por tentativa (Autosave).
-- **Monitoramento de Tentativas Online**:
-  - Registro de eventos do navegador (`visibilitychange`, `blur`, `focus`, `fullscreen enter/exit`) na tabela `security_events`.
-- **Integração OMR ↔ Exam**:
-  - Vinculação direta de folhas OMR a exames do Question Bank.
-- **Auditoria e LGPD**:
-  - Logs detalhados de auditoria e rotas de exportação/anonimização de dados do usuário.
+| Documento | Assunto / Responsabilidade |
+|-----------|----------------------------|
+| [README.md](file:///var/home/nmoreira/Projetos/cola-zero/README.md) | Visão geral do projeto, guia de instalação, execução e índice da documentação. |
+| [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md) | **Fonte da Verdade Arquitetural**: Modelo de domínio centrado no Gabarito, modelo de dados relacional (PostgreSQL), interações entre componentes e decisões de design. |
+| [TARGET_DOMAIN_MODEL.md](file:///var/home/nmoreira/Projetos/cola-zero/TARGET_DOMAIN_MODEL.md) | Especificação aprovada do modelo de domínio alvo e das etapas de implementação principais. |
+| [STATUS_ATUAL.md](file:///var/home/nmoreira/Projetos/cola-zero/STATUS_ATUAL.md) | **Status do Projeto**: Funcionalidades já implementadas, relatórios de testes, limitações conhecidas e débitos técnicos. |
+| [ROADMAP.md](file:///var/home/nmoreira/Projetos/cola-zero/ROADMAP.md) | **Roadmap e Planejamento**: Fases futuras de desenvolvimento, prioridades, dependências e Definition of Done (DoD). |
+| [PLANO_AVALIACOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_AVALIACOES.md) | Especificação funcional do sistema de avaliações centrado no Gabarito, ciclo de vida de provas, fluxos de trabalho (Workflow A e B), tentativas online e consolidação de notas. |
+| [PLANO_BANCO_QUESTOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_BANCO_QUESTOES.md) | Especificação do Banco de Questões como produtor opcional de Gabaritos, versionamento imutável e habilidades SEDU/BNCC. |
+| [PLANO_OMR.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_OMR.md) | Pipeline de Leitura Óptica de Cartão-Resposta (OMR) validado contra o Gabarito. |
+| [PLANO_DASHBOARD.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_DASHBOARD.md) | Analytics pedagógico baseado no Gabarito, desempenho por habilidade SEDU/BNCC, relatórios executivos e exportações (PDF/XLSX). |
+| [PLANO_ANTI_COLA.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_ANTI_COLA.md) | Monitoramento de integridade em provas online, eventos de segurança de tela (`security_events`), auditoria, consentimento e LGPD. |
+| [PLANO_MODELO_ACADEMICO.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_MODELO_ACADEMICO.md) | Modelo acadêmico de turmas, matrículas, professores e atribuição multi-turma de exames. |
+| [AGENTS.md](file:///var/home/nmoreira/Projetos/cola-zero/AGENTS.md) | Convenções de código, padrões do repositório, fluxo de trabalho e instruções para agentes de IA. |
+| [docs/archive/](file:///var/home/nmoreira/Projetos/cola-zero/docs/archive/) | Arquivo histórico de planejamentos técnicos anteriores e backlog inicial. |
 
 ---
 
@@ -57,7 +45,7 @@ O sistema é construído sobre o princípio central:
 
 O projeto é totalmente containerizado para desenvolvimento local rápido e reproduzível.
 
-### Serviços Existentes
+### Serviços Containerizados
 
 - **`postgres`** (`cola_zero_postgres`): Banco de dados relacional PostgreSQL 16 na porta `5432`.
 - **`backend`** (`cola_zero_backend`): Aplicação FastAPI com execução automática de migrations Alembic no startup, escutando na porta `8000`.
@@ -124,9 +112,9 @@ SECRET_KEY=dev-secret-key-change-in-production
 NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 ```
 
-### Como Acessar o Banco de Dados e Verificar Tabelas
+### Como Acessar o Banco de Dados via Terminal (`psql`)
 
-Para abrir o terminal interativo do PostgreSQL (`psql`):
+Para abrir o terminal interativo do PostgreSQL:
 
 ```bash
 docker compose exec postgres psql -U colazero -d colazero
@@ -134,50 +122,22 @@ docker compose exec postgres psql -U colazero -d colazero
 
 Comandos úteis dentro do `psql`:
 
-- `\dt` — Lista todas as tabelas criadas no banco de dados (`users`, `omr_templates`, `omr_scans`, `grades`, `alembic_version`, etc.).
+- `\dt` — Lista todas as tabelas criadas no banco de dados (`users`, `questions`, `exams`, `attempts`, `grades`, `omr_templates`, `omr_scans`, etc.).
 - `SELECT id, email, role, student_code FROM users;` — Consulta usuários cadastrados.
-- `SELECT id, title, total_questions FROM omr_templates;` — Consulta gabaritos OMR.
-- `SELECT id, status, score_percentage FROM omr_scans;` — Consulta digitalizações de folhas.
-- `SELECT id, student_id, score, max_score, source_type FROM grades;` — Consulta notas confirmadas.
-- `\q` — Sair do psql.
+- `SELECT id, student_id, score, source_type FROM grades;` — Consulta notas unificadas registradas.
+- `\q` — Sair do terminal psql.
 
 ---
 
-## 5. Fluxo OMR Validado (Passo a Passo)
-
-O fluxo completo de correção OMR avulsa foi validado de ponta a ponta:
-
-1. **Professor cria uma conta**:
-   - Acesse [http://localhost:3000/auth/register](http://localhost:3000/auth/register) e registre-se com o perfil **Teacher**.
-2. **Professor cria um gabarito/template**:
-   - Acesse o dashboard do professor e navegue até **Módulo OMR** (`/omr`).
-   - Clique em **Novo Gabarito**, insira o título, selecione a quantidade de questões (ex: 20 questões) e defina a chave de respostas (ex: Q1=A, Q2=B, etc.).
-3. **Sistema gera e permite baixar a folha**:
-   - O sistema gera dinamicamente a folha de respostas em **PDF** para download (ou preview PNG).
-4. **Folha é respondida/preenchida**:
-   - A folha em PDF é impressa e preenchida manualmente pelo aluno (ou preenchida digitalmente sobre a imagem PNG de preview para testes).
-5. **Folha respondida é enviada ao sistema**:
-   - No painel do template, faça o upload do arquivo de imagem preenchido (JPG/PNG).
-6. **Sistema processa a imagem**:
-   - O motor visual OpenCV realiza o pré-processamento, alinhamento por âncoras, leitura do código do aluno (5 dígitos) e extração do preenchimento das bolhas.
-7. **Sistema realiza a correção**:
-   - O backend compara as respostas extraídas da imagem com a chave de respostas do gabarito e calcula a pontuação.
-8. **Resultado da correção é retornado**:
-   - A tela exibe o resultado do scanner com os marcadores visuais. O professor pode ajustar o código do aluno ou respostas se necessário e clicar em **Confirmar Nota**, salvando o registro final na tabela `grades`.
-
----
-
-## 6. Testes e Qualidade
+## 5. Execução de Testes Automatizados
 
 ### Testes do Backend (Pytest)
 
-Para executar a suíte completa de testes unitários e de integração do backend:
+Para executar a suíte de testes unitários e de integração do backend:
 
 ```bash
 docker compose exec backend pytest
 ```
-
-*(Resultado: 37 testes automatizados cobrindo autenticação, modelos, serviços e rotas de OMR com 100% de aprovação).*
 
 ### Testes do Frontend (Vitest)
 
@@ -189,7 +149,7 @@ docker compose exec frontend npm test
 
 ---
 
-## 7. Estrutura do Repositório
+## 6. Estrutura de Diretórios do Repositório
 
 ```text
 cola-zero/
@@ -197,19 +157,30 @@ cola-zero/
 │   ├── alembic/                # Migrações do banco de dados
 │   ├── app/
 │   │   ├── api/                # Rotas FastAPI (v1)
-│   │   ├── core/               # Configurações e segurança (JWT)
+│   │   ├── core/               # Configurações, segurança (JWT) e layouts OMR em código
 │   │   ├── db/                 # Sessão do SQLAlchemy
-│   │   ├── models/             # Entidades SQLAlchemy (User, OMR, Grade)
+│   │   ├── models/             # Entidades SQLAlchemy (User, Question, Exam, OMR, Grade, etc.)
 │   │   ├── repositories/       # Camada de repositório
 │   │   ├── schemas/            # Schemas Pydantic
-│   │   └── services/           # Regras de negócio, motor OMR (OpenCV) e gerador de PDF
+│   │   └── services/           # Lógica de negócio, motor OMR (OpenCV) e gerador de PDF
 │   └── tests/                  # Suíte de testes pytest
 ├── frontend/
-│   ├── app/                    # Telas Next.js (App Router: auth, dashboard, omr)
+│   ├── app/                    # Páginas Next.js (App Router: auth, dashboard, attempts, omr, exams)
 │   ├── lib/                    # Cliente de API e utilitários
 │   └── tests/                  # Testes do frontend (Vitest)
+├── docs/
+│   └── archive/                # Documentos de planejamento técnicos legados e arquivados
 ├── docker-compose.yml          # Orquestração de containers
-├── Makefile                    # Atalhos para comandos do Podman/Docker
-├── STATUS_ATUAL.md             # Status detalhado do desenvolvimento
-└── README.md                   # Documentação principal
+├── Makefile                    # Atalhos para comandos do Docker
+├── ARCHITECTURE.md             # Fonte Única da Verdade da Arquitetura e Modelo de Dados
+├── STATUS_ATUAL.md             # Status Atual das Implementações
+├── ROADMAP.md                  # Planejamento das Próximas Fases
+├── PLANO_AVALIACOES.md         # Especificação de Avaliações e Tentativas
+├── PLANO_BANCO_QUESTOES.md     # Especificação do Banco de Questões (Produtor Opcional)
+├── PLANO_OMR.md                # Especificação do Módulo OMR Impresso
+├── PLANO_DASHBOARD.md          # Especificação do Analytics Pedagógico
+├── PLANO_ANTI_COLA.md          # Especificação de Integridade Online e LGPD
+├── PLANO_MODELO_ACADEMICO.md   # Especificação do Modelo Acadêmico de Turmas
+├── AGENTS.md                   # Diretrizes para Agentes de IA
+└── README.md                   # Visão Geral do Projeto e Guia de Instalação
 ```

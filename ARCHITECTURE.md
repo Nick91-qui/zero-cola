@@ -1,389 +1,174 @@
 # COLA-ZERO — Arquitetura do Sistema
 
----
-
-# 1. Visão geral
-
-O COLA-ZERO é uma plataforma de avaliação online orientada por:
-
-> Question Bank + Attempt Engine
-
-O banco de questões (Question Bank) é o repositório central de conteúdo. As provas (Exams) são configurações de entrega compostas por questões reutilizáveis. O histórico acadêmico é representado por tentativas (Attempts) e respostas (Answers).
-
-Fluxo do domínio:
-Question -> Exam -> Attempt -> Answer
-
-Pilares arquiteturais:
-
-- banco de questões reutilizável
-- entrega de uma questão por vez
-- persistência imediata de respostas
-- monitoramento transparente de eventos
-- segurança por padrão
-- conformidade com LGPD
+> **Single Source of Truth** para a arquitetura do sistema, modelo de domínio, modelo de dados e decisões de design.
 
 ---
 
-# 2. Componentes principais
+## 1. Visão Geral e Princípios Arquiteturais
 
-## 2.1 Frontend
+COLA-ZERO é uma plataforma educacional de avaliação orientada por:
 
-Responsabilidades:
+> **Answer Key + Attempt Engine** *(Gabarito + Motor de Tentativas/Avaliação)*
 
-- autenticação do usuário
-- dashboard por perfil
-- interface de tentativa
-- exibição de uma questão por vez
-- envio imediato de respostas
-- captura de eventos suportados de monitoramento
+O **Gabarito (Answer Key)** é o **conceito central de domínio** de todo o sistema. Qualquer avaliação (`Exam`), tentativa digital (`Attempt`) ou leitura física (`OMRScan`) existe e é corrigida em torno de um Gabarito (número do item, resposta correta, peso e mapeamento de habilidades).
 
-Tecnologias:
+O **Banco de Questões (Question Bank)** atua como um **produtor opcional de Gabaritos**. Ele permite gerar Gabaritos estruturados a partir de questões reutilizáveis, mas a plataforma não exige a existência de questões cadastradas para operar.
 
-- Next.js 16.2.x
-- React 19.2.x
-- TypeScript 5.9.x
-- TailwindCSS 4.3.x
+### Fluxo de Domínio Central
+```text
+(Question Bank [Produtor Opcional]) ──> Answer Key (Gabarito) ──> Exam ──> Attempt / OMRScan ──> Answer ──> Grade
+```
 
----
-
-## 2.2 Backend
-
-Responsabilidades:
-
-- autenticação e autorização
-- gestão de usuários
-- banco de questões
-- composição e publicação de provas
-- motor de tentativas
-- persistência de respostas
-- correção automática e manual
-- auditoria e eventos de monitoramento
-- recursos de LGPD
-
-Tecnologias:
-
-- Python 3.12
-- FastAPI 0.137.x
-- SQLAlchemy 2.0.x
-- Alembic 1.18.x
-- Pydantic 2.13.x
+### Pilares Arquiteturais
+- **Gabarito como Centro do Domínio**: Todas as correções, notas e relatórios pedagógicos processam estruturas de Gabarito.
+- **Question Bank como Produtor Opcional**: O repositório de questões gera Gabaritos vinculados a enunciados e alternativas, mas o Gabarito pode ser cadastrado diretamente sem questões.
+- **Entrega Sequencial (Uma questão por vez)**: Exames online com questões entregam uma questão por vez com autosave.
+- **Persistência Imediata (Autosave)**: Respostas digitais são salvas imediatamente após submissão contra o Gabarito.
+- **Entidade Unificada de Nota (`Grade`)**: Consolidação de notas acadêmicas independentemente da origem (Online ou OMR).
+- **Segurança por Padrão**: Identidade fortificada por cookies HttpOnly (`SameSite=Lax/Strict`), RBAC em todas as rotas e auditoria de ações sensíveis.
 
 ---
 
-## 2.3 Banco de dados
+## 2. Visão de Componentes e Interações
 
-Banco relacional PostgreSQL com foco em rastreabilidade e histórico.
+```mermaid
+graph TD
+    Client[Next.js Frontend] -->|HTTPS + HttpOnly Cookies| API[FastAPI Backend]
+    API -->|SQLAlchemy / Alembic| DB[(PostgreSQL 16)]
+    API -->|OpenCV Engine| OMR[Motor OMR Visão Computacional]
+    API -->|ReportLab| PDF[Gerador de PDF OMR]
 
-Entidades centrais:
+    subgraph Backend Core
+        API --> Auth[Auth & RBAC Service]
+        API --> AnswerKeyService[Answer Key & Assessment Core]
+        API --> QBank[Question Bank Service - Produtor Opcional]
+        API --> AttemptService[Attempt Engine]
+        API --> GradeService[Unified Grade Service]
+        API --> Analytics[Pedagogical Analytics Engine]
+    end
+```
 
-- users
-- questions (com suporte a versionamento e imutabilidade)
-- exams
-- exam_questions
-- attempts
-- answers
-- security_events
-- audit_logs
-- omr_templates
-- omr_scans
-- grades (entidade de notas unificada)
+### 2.1 Frontend (`frontend/`)
+- **Tecnologias**: Next.js 16 (App Router), React 19, TypeScript 5, TailwindCSS 4.
+- **Responsabilidades**:
+  - Autenticação e gestão de sessão via cookies HttpOnly.
+  - Dashboards por perfil (`STUDENT`, `TEACHER`, `ADMIN`).
+  - Execução de tentativas online (renderizando 1 questão por vez quando vinculada ao Question Bank).
+  - Base para captura de eventos de segurança de tela (`visibilitychange`, `blur`, `focus`, `fullscreen`) quando a instrumentação do fluxo online está habilitada.
+  - Interface de OMR (criação de gabarito, download de PDF, upload de foto e revisão visual).
+  - Visualização de estatísticas pedagógicas e desempenho por habilidade (SEDU/BNCC) alimentados pelo Gabarito.
 
-Regras:
+### 2.2 Backend (`backend/`)
+- **Tecnologias**: Python 3.12, FastAPI 0.137, SQLAlchemy 2.0, Alembic 1.18, Pydantic 2.13, OpenCV, ReportLab.
+- **Responsabilidades**:
+  - Autenticação JWT e autorização RBAC decorada (`@require_role`).
+  - Gestão e resolução de Gabaritos (`AnswerKey`) para exames online e impressos.
+  - Gestão do Banco de Questões como produtor de Gabaritos (com imutabilidade e versionamento).
+  - Composição e publicação de exames (online e impressos).
+  - Motor de tentativas online e autosave de respostas contra o Gabarito.
+  - Motor OMR de leitura óptica de cartões-resposta impressos contra o Gabarito.
+  - Processamento de estatísticas pedagógicas unificadas (operando diretamente sobre o Gabarito e Habilidades).
+  - Auditoria de segurança e governança LGPD.
 
-- chaves primárias com UUID
-- sem IDs incrementais
-- preservação de histórico acadêmico
-- preferência por soft delete ou arquivamento quando aplicável
-
----
-
-# 3. Modelo de domínio
-
-## 3.1 Banco de questões e versionamento
-
-Uma questão pode ser reutilizada em várias provas.
-
-Relacionamento principal:
-`Exam -> ExamQuestion -> Question`
-
-A prova não deve conter cópias independentes do conteúdo da questão.
-
-**Regras de Imutabilidade e Versionamento**:
-- Questões publicadas no sistema são **estritamente imutáveis**.
-- Qualquer edição em uma questão publicada gera um novo registro no banco de dados (um novo UUID/row), com `parent_id` apontando para o registro original e com o contador `version` incrementado. A versão anterior tem o campo `is_active` definido como `FALSE`.
-- As tentativas online (`attempts`) e os modelos OMR (`omr_templates`) sempre travam e referenciam o ID da versão específica da questão no momento de sua criação ou publicação do exame. Isso garante que alterações posteriores na questão não alterem o conteúdo histórico das avaliações já aplicadas.
-
----
-
-## 3.2 Motor de tentativas
-
-A tentativa controla:
-
-- início da prova
-- ordem de entrega das questões
-- tempo total
-- submissão incremental de respostas
-- finalização
-- cálculo de score (que é então persistido na entidade unificada `Grade`)
-
-A tentativa é a unidade operacional da execução da prova.
+### 2.3 Banco de Dados (`PostgreSQL 16`)
+- Banco relacional com chaves primárias **UUID v4** e foco na rastreabilidade acadêmica imutável.
 
 ---
 
-## 3.3 Entidade Unificada de Nota (Grade)
+## 3. Modelo de Domínio
 
-Todas as avaliações no COLA-ZERO resultam em notas consolidadas registradas na entidade única compartilhada `Grade` (tabela `grades`), independentemente da origem da correção (online ou gabaritos OMR físicos).
+### 3.1 O Gabarito (`Answer Key`) — Conceito Central
+O Gabarito é o contrato operacional da avaliação. Ele define:
+- Coleção de itens numerados ($1 \dots N$).
+- Resposta esperada / gabarito oficial de cada item.
+- Peso acadêmico de cada item.
+- Associação com Habilidades Pedagogicas (`skills` BNCC/SEDU).
+- Conteúdo visual de questão (opcional, fornecido quando produzido pelo Question Bank).
 
-**Estrutura de dados**:
-- `student_id`: Estudante avaliado.
-- `source_type`: Origem da avaliação (ex: `ONLINE` para tentativas do Exam Engine ou `OMR` para correções do OMR Engine).
-- `source_id`: Vínculo lógico (polimórfico) para `attempts.id` ou `omr_scans.id`.
-- `score`: Nota final computada.
-- `teacher_id`: Professor responsável pelo lançamento ou confirmação da nota.
-- `created_at` / `updated_at`: Timestamps de auditoria.
+### 3.2 O Banco de Questões (`Question Bank`) — Produtor Opcional
+- O Question Bank é um repositório reutilizável que **produz Gabaritos enriquecidos**.
+- Quando um exame é montado via Question Bank, o sistema gera o Gabarito e anexa as referências das questões (`exam_questions` -> `questions`).
+- **Imutabilidade e Versionamento**: Questões publicadas no Question Bank são imutáveis (`parent_id`, `version`, `is_active`).
 
-**Extensibilidade**:
-Novos módulos avaliativos futuros (ex: avaliações discursivas manuais, projetos práticos) devem reutilizar essa mesma entidade unificada para gravação de histórico acadêmico.
+### 3.3 Habilidades Pedagógicas (`Skills`)
+- Habilidades BNCC/SEDU são vinculadas diretamente aos itens do Gabarito (seja via `question_skills` no Question Bank ou via `exam_item_skills` no Gabarito direto).
 
----
+### 3.4 Avaliações e Provas (`Exams`)
+- Uma avaliação (`Exam`) estrutura a execução de um Gabarito para uma turma (`class_id`), definindo status (`draft`, `published`, `archived`), tempo limite, máximo de tentativas e randomização.
 
-# 4. Fluxo da prova
+### 3.5 Motor de Tentativas e OMR (`Attempt Engine` / `OMR Engine`)
+- Avaliações digitais (`attempts` & `attempt_answers`) e cartões impressos (`omr_scans`) submetem respostas que são validadas contra o Gabarito do exame.
 
-## 4.1 Inicialização
-
-1. aluno autentica
-2. aluno inicia tentativa
-3. backend cria a tentativa
-4. frontend solicita a próxima questão
-
----
-
-## 4.2 Execução
-
-1. backend retorna apenas uma questão
-2. frontend exibe a questão atual
-3. aluno envia resposta
-4. backend persiste imediatamente
-5. frontend solicita a próxima questão
-
-Regra obrigatória:
-
-O frontend nunca deve receber todas as questões da prova em uma única resposta.
+### 3.6 Entidade Unificada de Nota (`Grade`)
+- Os acertos validados contra o Gabarito geram notas consolidadas registradas na tabela `grades` (`source_type = 'ONLINE'` ou `'OMR'`).
 
 ---
 
-## 4.3 Finalização
+## 4. Modelo de Banco de Dados Atual
 
-1. tentativa é encerrada
-2. backend consolida score
-3. eventos e auditoria permanecem associados à tentativa
-4. resultado pode ser liberado conforme regra pedagógica
+O schema relacional atual mantém o COLA-ZERO centrado em `AnswerKey` e em vínculos explícitos de acesso e atribuição. As tabelas principais já presentes são:
 
----
+| Grupo | Tabelas | Responsabilidade |
+|-------|---------|------------------|
+| Identidade | `users` | usuários, credenciais, perfis e `student_code` |
+| Banco de Questões | `questions`, `question_skills`, `skills` | reuso de questões, versionamento e vínculo com habilidades |
+| Turmas e acesso | `classes`, `teacher_classes`, `class_students` | turma concreta, vínculo professor↔turma, matrícula histórica do aluno |
+| Avaliações | `exams`, `exam_classes`, `exam_questions` | configuração da prova, atribuição multi-turma e composição via Question Bank |
+| Gabarito | `answer_keys`, `answer_key_items`, `answer_key_item_skills` | fonte canônica de correção e snapshot de habilidades |
+| Tentativas | `attempts`, `attempt_answers` | execução online e persistência das respostas |
+| OMR | `omr_templates`, `omr_scans` | layout e processamento das folhas de resposta sem armazenar resposta correta no template |
+| Notas | `grades` | nota unificada para origem `ONLINE` e `OMR` |
+| Governança | `security_events`, `audit_logs`, `consents` | monitoramento, trilha de auditoria e consentimentos LGPD |
 
-# 5. Estratégia de backend
+### 4.1 Regras de relacionamento já consolidadas
 
-Princípios de implementação:
+- `Class` representa uma turma concreta de um período acadêmico.
+- `Class.teacher_id` permanece como metadado de proveniência/criação; a autorização de professor usa `teacher_classes`.
+- `class_students` preserva histórico de matrícula e permite no máximo uma matrícula ativa por estudante e período.
+- `Exam.class_id` continua como campo legado de compatibilidade e não é a fonte primária de atribuição; `exam_classes` é o vínculo canônico entre exame e turma.
+- `ExamQuestion` projeta `Question` em `AnswerKeyItem` durante Workflow A.
+- `AnswerKeyItem.correct_answer` é a única resposta canônica para correção.
+- `AnswerKeyItem.question_id` é `NULL` em Workflow B e preenchido em Workflow A.
+- `OMRTemplate.correct_answers` foi removido do modelo e do schema.
+- `Attempt` e `AttemptAnswer` carregam referências para `AnswerKey`/`AnswerKeyItem` e preservam a proveniência da tentativa.
+- `AuditLog` é imutável por política de aplicação e `SecurityEvent` está vinculado à tentativa online correspondente.
 
-- rotas finas
-- lógica de negócio concentrada em services
-- uso de repositories quando útil para persistência
-- dependency injection
-- validação via schemas
-- sem acesso direto ao banco dentro de controladores
+### 4.2 Índices e constraints relevantes
 
----
-
-# 6. Estratégia de frontend
-
-Princípios de implementação:
-
-- componentes reutilizáveis
-- tipagem forte
-- páginas pequenas e focadas
-- lógica de negócio fora dos componentes visuais
-- renderização segura para ambiente Next.js
-- lint obrigatório
-- Prettier obrigatório para consistência de formatação
-
----
-
-# 7. Estratégia de qualidade
-
-Princípios obrigatórios:
-
-- TDD nas áreas críticas do MVP
-- ciclo: teste falha, implementação mínima, refatoração
-- teste de regressão para bug crítico corrigido
-- lint deve bloquear desvios básicos de qualidade
-- Prettier deve padronizar arquivos compatíveis do frontend e configurações relacionadas
-
-Prioridades de TDD:
-
-- autenticação
-- autorização
-- delivery de questão
-- submissão de resposta
-- monitoramento
+- `users.email` é único e `student_code` possui índice único parcial quando presente.
+- `class_students` possui constraint para impedir duplicidade ativa por estudante/período.
+- `teacher_classes` e `exam_classes` usam chaves únicas compostas para evitar duplicação de vínculo.
+- `answer_key_items` possui constraint para manter `item_number` determinístico por `answer_key_id`.
+- `attempt_answers` preserva `question_id` apenas como proveniência e usa `answer_key_item_id` como referência de correção.
+- `consents` mantém histórico de concessão e revogação por propósito/política.
 
 ---
 
-# 8. Segurança
+## 5. Decisões de Design (Design Decisions)
 
-## 8.1 Camada de autenticação (IMPLEMENTADO ✅)
+### DECISION-001: Hashing de Senhas e Cookies HttpOnly
+- Access Token em cookie HttpOnly (`SameSite=Lax`), Refresh Token em cookie HttpOnly (`SameSite=Strict`), senhas em `bcrypt`.
 
-**Implementação Atual:**
-- Access Token: JWT com 15 minutos de expiração (armazenado em cookie seguro HttpOnly, SameSite=Lax)
-- Refresh Token: JWT com 7 dias de expiração (armazenado em cookie seguro HttpOnly, SameSite=Strict)
-- Password hashing: bcrypt com salt (consulte ADR-001)
-- Token storage (Frontend): Cookies seguros HttpOnly (não armazenar em localStorage ou sessionStorage)
-- Token validation: decorator `@get_current_user`
-- RBAC: decorator `@require_role(*roles)`
+### DECISION-002: O Gabarito (`Answer Key`) como Entidade Central de Domínio
+- **Contexto**: Modelar o sistema tendo o Banco de Questões como núcleo impediria o suporte a provas externas, gabaritos diretos e correções OMR avulsas.
+- **Decisão**: O Gabarito (`Answer Key`) é a entidade central do domínio. O Banco de Questões é um produtor opcional de Gabaritos. Toda avaliação, correção, tentativa e relatório opera sobre o Gabarito.
 
-**Arquivos:**
-- Backend: `app/core/security.py`, `app/services/auth.py`
-- Frontend: `app/context/AuthContext.tsx`, `app/hooks/useAuth.ts`
-- Endpoints: POST `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, GET `/auth/me`
+### DECISION-003: Versionamento Imutável no Produtor de Gabaritos (Question Bank)
+- **Contexto**: Modificações em questões reutilizadas poderiam alterar retrospectivamente Gabaritos de provas já aplicadas.
+- **Decisão**: Questões no Question Bank são imutáveis. Edições geram novas linhas (`version + 1`, `parent_id = original_id`) e preservam os Gabaritos históricos travados no UUID específico da versão.
 
-**Status:** ✅ 7 testes passando, pronto para produção
+### DECISION-004: Layout Registry OMR em Código
+- Coordenadas geométricas dos cartões OMR são mantidas em código (`app/core/omr_layouts.py`). O banco salva apenas a versão (`layout_version`).
 
----
-
-## 8.2 Camada de autorização (IMPLEMENTADO ✅)
-
-- RBAC implementado com decorator `@require_role(UserRole.TEACHER, UserRole.ADMIN)`
-- Perfis: `STUDENT`, `TEACHER`, `ADMIN`
-- Validação em todos os endpoints auth
-- User model com campo `role` e `is_active`
-
-**Status:** ✅ Pronto, falta aplicação em endpoints de negócio (Question, Exam)
+### DECISION-005: Entidade Unificada de Nota (`Grade`)
+- Todas as validações efetuadas contra Gabaritos (online ou OMR) gravam a pontuação final na tabela compartilhada `grades`.
 
 ---
 
-## 8.3 Auditoria (PENDENTE ⏳)
+## 6. Documentos de Planejamento Específicos
 
-Ações sensíveis devem gerar registros auditáveis. O log de auditoria para ações de login (sucesso e falha) é obrigatório e está pendente de implementação. O fluxo de autenticação não será considerado pronto para produção até que o logging de auditoria exista.
-
-Ações auditáveis planejadas:
-- login ⏳ (pendente: autenticação funcional, mas logging de auditoria de login é obrigatório para produção)
-- troca de senha ⏳
-- criação de prova ⏳
-- publicação de prova ⏳
-- alteração de nota ⏳
-
----
-
-# 9. Monitoramento e Eventos de Segurança (Security Events)
-
-COLA-ZERO não é um lockdown browser.
-
-Eventos suportados (armazenados em `security_events`):
-
-- visibilitychange
-- blur
-- focus
-- fullscreen enter
-- fullscreen exit
-
-Objetivo do monitoramento:
-
-- detectar eventos de tela no frontend
-- registrar eventos em `security_events` no backend
-- gerar relatórios básicos de integridade
-
-Lembrete de Segurança (Limitações assumidas):
-
-O sistema NUNCA deve alegar ou prometer:
-
-- Detecção de uso de ChatGPT
-- Detecção de outros dispositivos
-- Prevenção de capturas de tela
-- Prevenção de todas as formas de cola
-
-A plataforma apenas registra e reporta eventos observáveis do navegador.
-
----
-
-# 10. LGPD
-
-Requisitos mínimos da arquitetura:
-
-- transparência sobre monitoramento
-- minimização de dados
-- exportação de dados do usuário
-- anonimização quando legalmente permitida
-- retenção compatível com requisitos acadêmicos e legais
-
-Endpoints operacionais planejados para conformidade com a LGPD:
-- `GET /me/data-export` (exportação de dados estruturados do usuário)
-- `POST /me/request-anonymization` (solicitação de anonimização/exclusão sob conformidade jurídica)
-- `GET /privacy-policy` (política de privacidade do sistema)
-- `POST /consents/monitoring` (registro de consentimento transparente de monitoramento)
-
-Dados fora de escopo de coleta:
-
-- arquivos pessoais
-- conteúdo do dispositivo
-- histórico de navegação
-- dados sem finalidade definida
-
----
-
-# 11. Estabilização do Domínio Acadêmico Core (Core Academic Domain Freeze)
-
-O domínio acadêmico core da plataforma COLA-ZERO está considerado estável e congelado (*frozen*). Qualquer alteração arquitetural ou redesenho dos seguintes componentes exige obrigatoriamente a criação e aprovação de um novo **Architectural Decision Record (ADR)**:
-- **Ano Acadêmico (AcademicYear)**
-- **Turmas (Classes)**
-- **Códigos de Estudante (Student Codes)**
-- **Controle de Acesso Baseado em Regras (RBAC)**
-- **Arquitetura do Banco de Questões (Question Bank)**
-- **Arquitetura do Motor de Tentativas (Attempt Engine)**
-
----
-
-# 12. Critério arquitetural de MVP — Status Atual (2026-07-20)
-
-**Arquitetura Milestone 1 — Fundação & Autenticação Concluídas (50%)**
-
-**Priorização e Independência do OMR**:
-- O **Online Assessment** (avaliação digital no navegador) permanece como o core da arquitetura de plataforma do COLA-ZERO.
-- A decisão de implementar o módulo **COLA-ZERO OMR** como o próximo passo de desenvolvimento (Milestone 2) é uma decisão de **PRIORIDADE DE PRODUTO**, e não uma dependência arquitetural.
-- O OMR foi projetado como um subsistema independente e desacoplado que pode ser removido ou alterado sem quebrar o core de tentativas online.
-
-**Declaração de Congelamento da Arquitetura (Architecture Freeze)**:
-A arquitetura do COLA-ZERO para o escopo do MVP está declarada como **congelada (frozen)**. Nenhuma nova funcionalidade ou alteração estrutural no modelo de dados, contratos de API ou fluxos poderá ser efetuada a partir deste momento, exceto para correção de bugs de implementação ou se formalizada por um novo Architectural Decision Record (ADR).
-
-| Requisito | Status | Notas |
-|-----------|--------|-------|
-| Autenticação segura | ⏳ | JWT e RBAC implementados, mas pendente de logs de auditoria de login para prontidão de produção |
-| Módulo OMR Independente | ⏳ | Próximo Milestone (Prioridade de Produto, 100% isolado) |
-| Banco de questões reutilizável | ⏳ | Planejado pós-OMR |
-| Criação e publicação de provas | ⏳ | Planejado pós-OMR |
-| Execução por tentativa | ⏳ | Planejado pós-OMR |
-| Uma questão por vez | ⏳ | Será garantido no motor de entrega digital |
-| Entidade Unificada de Nota | ⏳ | Planejado implementar junto ao OMR |
-| Monitoramento com transparência | ⏳ | Planejado pós-OMR |
-| Requisitos essenciais de LGPD | ⏳ | Planejado para iteração final |
-
-**Próximos passos arquiteturais:**
-1. **Milestone OMR:** Implementar tabelas OMR, layouts em código, geração de PDF (ReportLab) com 5 dígitos de student_code, engine OpenCV e APIs de correção avulsa/integrada, além da entidade unificada `Grade`.
-2. **Milestone Question Bank & Exams:** Implementar tabelas Question (com versionamento imutável), Exam, ExamQuestion e CRUD de gestão.
-3. **Milestone Attempt Engine:** Implementar motor de tentativas online (uma questão por vez e autosave).
-4. **Milestone Monitoramento & Auditoria:** Implementar logs de auditoria de negócio e tabela `security_events`.
-5. **Milestone LGPD:** Implementar consentimento explícito e endpoints de exportação/anonimização.
-
----
-
-# 13. Architectural Decision Records (ADRs)
-
-## ADR-001: Algoritmo de Hashing de Senhas (bcrypt)
-
-### Contexto
-O padrão de segurança de longo prazo definido para a plataforma COLA-ZERO é o **Argon2**, devido à sua robustez superior contra ataques de força bruta otimizados por hardware (GPU/ASIC) e canais laterais. No entanto, por razões de simplicidade no setup inicial e compatibilidade de dependências no ambiente Docker atual do MVP, a implementação atual foi construída utilizando **bcrypt** (com salt e fator de trabalho padrão).
-
-### Decisão
-Manter o uso do **bcrypt** na implementação atual da Milestone 1. Não há necessidade de alterações imediatas de código no backend. O uso do **Argon2** permanece registrado como a recomendação técnica de longo prazo e a migração de algoritmo de hash de senha está planejada para uma versão futura de hardening pré-produção.
-
-### Status
-- **Implementação Atual (Current):** bcrypt com salt.
-- **Recomendação Futura (Future):** Argon2 (migração planejada pós-MVP).
+- [PLANO_AVALIACOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_AVALIACOES.md) — Especificação funcional baseada em Gabarito.
+- [PLANO_BANCO_QUESTOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_BANCO_QUESTOES.md) — Especificação do produtor opcional de Gabaritos.
+- [PLANO_OMR.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_OMR.md) — Leitura óptica de cartões-resposta validados contra o Gabarito.
+- [PLANO_DASHBOARD.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_DASHBOARD.md) — Analytics pedagógico operando diretamente sobre o Gabarito e Habilidades.
+- [PLANO_ANTI_COLA.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_ANTI_COLA.md) — Monitoramento de integridade online e conformidade LGPD.
