@@ -1,7 +1,11 @@
 import numpy as np
 import pytest
 
-from app.core.omr_layouts import DrawingElementType, get_layout_provider
+from app.core.omr_layouts import (
+    DrawingElementType,
+    get_layout_provider,
+    resolve_layout_version,
+)
 
 
 def test_get_layout_provider_success():
@@ -22,6 +26,21 @@ def test_get_layout_provider_success():
 def test_get_layout_provider_not_found():
     with pytest.raises(ValueError):
         get_layout_provider("non_existent")
+
+
+@pytest.mark.parametrize(
+    ("total_questions", "expected_layout"),
+    [
+        (75, "v1_std_100q"),
+        (80, "v1_std_100q"),
+        (100, "v1_std_100q"),
+    ],
+)
+def test_resolve_layout_version_uses_100q_layout_for_large_exams(
+    total_questions: int,
+    expected_layout: str,
+):
+    assert resolve_layout_version(total_questions) == expected_layout
 
 
 def test_render_elements():
