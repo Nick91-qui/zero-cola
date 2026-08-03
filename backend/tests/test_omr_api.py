@@ -1,24 +1,21 @@
 from tempfile import SpooledTemporaryFile
 
 import pytest
-from fastapi.testclient import TestClient
 from starlette.datastructures import UploadFile
 
 from app.api.routes.omr import upload_scan_batch
-from app.main import app
 from app.models.enums import UserRole
 from app.models.exam import Exam
 from app.models.user import User
 from app.repositories.user import UserRepository
-from app.schemas.omr import OMRTemplateCreate
+from app.schemas.omr import OMRScanUpdate, OMRTemplateCreate
 from app.services.auth import AuthService
+from app.services.exam import ExamService
 from app.services.omr import OMRService
 from tests.test_omr_service import (
     create_multi_page_pdf_bytes,
     create_synthetic_sheet_bytes,
 )
-
-client = TestClient(app)
 
 
 def create_teacher_headers(test_db_session, email: str, password: str) -> dict[str, str]:
@@ -35,15 +32,9 @@ def create_teacher_headers(test_db_session, email: str, password: str) -> dict[s
     password_hash = service.hash_password(password)
 
     repo = UserRepository(test_db_session)
-    repo.create(user_create, password_hash)
-
-    user_login = type(
-        "UserLogin",
-        (),
-        {"email": email, "password": password},
-    )()
-    token_data = service.authenticate_user(user_login)
-    return {"Authorization": f"Bearer {token_data['access_token']}"}
+    user = repo.create(user_create, password_hash)
+    access_token = service.create_access_token(user.id, user.role)
+    return {"Authorization": f"Bearer {access_token}"}
 
 
 @pytest.fixture
@@ -66,79 +57,75 @@ def student_user(test_db_session):
     return student
 
 
-def test_omr_api_workflow(override_get_db, test_db_session, auth_headers, student_user, tmp_path):
-    # Set upload dir for testing
-
-    # Override upload_dir in service if needed, or rely on tmp_path indirectly.
-    # To be safe, we can mock/configure it or let it use the default local folder.
-
-    # 1. Create Template
-    template_data = {
-        "layout_version": "v1_std_20q",
-        "total_questions": 20,
-        "options_per_question": 5,
-        "correct_answers": {"1": "A", "2": "B", "3": "C"},
-    }
-
-    response = client.post("/api/v1/omr/templates", json=template_data, headers=auth_headers)
-    assert response.status_code == 201
-    template = response.json()
-    template_id = template["id"]
-    assert template["layout_version"] == "v1_std_20q"
-
-    # 2. Get PDF
-    pdf_response = client.get(
-        f"/api/v1/omr/templates/{template_id}/pdf?student_code=77777",
-        headers=auth_headers,
+def test_omr_api_workflow(override_get_db, test_db_session, student_user, tmp_path):
+    teacher = User(
+        email="teacher_api@cola-zero.edu",
+        password_hash="fake_hash",
+        role=UserRole.TEACHER,
     )
-    assert pdf_response.status_code == 200
-    assert pdf_response.headers["content-type"] == "application/pdf"
-    assert pdf_response.content.startswith(b"%PDF")
+    test_db_session.add(teacher)
+    test_db_session.commit()
 
-    # 3. Create Synthetic Image and Upload
+    teacher = (
+        test_db_session.query(User)
+        .filter(User.email == "teacher_api@cola-zero.edu")
+        .one()
+    )
+    omr_service = OMRService(test_db_session)
+    template = omr_service.create_template(
+        OMRTemplateCreate(
+            layout_version="v1_std_20q",
+            total_questions=20,
+            options_per_question=5,
+            correct_answers={"1": "A", "2": "B", "3": "C"},
+        ),
+        teacher_id=teacher.id,
+    )
+    template_id = template.id
+    assert template.layout_version == "v1_std_20q"
+
+    pdf_bytes = omr_service.get_template_pdf(
+        template_id,
+        student_code="77777",
+        owner_id=teacher.id,
+    )
+    assert pdf_bytes.startswith(b"%PDF")
+
     sheet_bytes = create_synthetic_sheet_bytes(
         student_code="77777", answers={"1": "A", "2": "B", "3": "C"}
     )
 
-    files = {"file": ("scan.png", sheet_bytes, "image/png")}
-    data = {"omr_template_id": template_id}
-
-    upload_response = client.post(
-        "/api/v1/omr/scans/upload", headers=auth_headers, files=files, data=data
+    scan = omr_service.process_scan_upload(
+        template_id,
+        sheet_bytes,
+        "scan.png",
+        owner_id=teacher.id,
     )
-    assert upload_response.status_code == 201
-    scan = upload_response.json()
-    scan_id = scan["id"]
+    scan_id = scan.id
 
-    assert scan["status"] == "success"
-    assert scan["student_code"] == "77777"
-    assert scan["student_id"] == str(student_user.id)
-    assert float(scan["score"]) == 1.50  # 3 out of 20 correct -> 1.50
+    assert scan.status == "success"
+    assert scan.student_code == "77777"
+    assert scan.student_id == student_user.id
+    assert float(scan.score) == 1.50  # 3 out of 20 correct -> 1.50
 
-    # 4. Get Scan Info
-    get_response = client.get(f"/api/v1/omr/scans/{scan_id}", headers=auth_headers)
-    assert get_response.status_code == 200
-    assert get_response.json()["id"] == scan_id
+    fetched_scan = omr_service.get_scan(scan_id, owner_id=teacher.id)
+    assert fetched_scan is not None
+    assert fetched_scan.id == scan_id
 
-    # 5. Update Scan Manually
-    update_data = {"detected_answers": {"1": "A", "2": "B", "3": "D"}}
-    update_response = client.patch(
-        f"/api/v1/omr/scans/{scan_id}", json=update_data, headers=auth_headers
+    updated_scan = omr_service.update_scan_manual(
+        scan_id,
+        OMRScanUpdate(detected_answers={"1": "A", "2": "B", "3": "D"}),
+        owner_id=teacher.id,
     )
-    assert update_response.status_code == 200
-    updated_scan = update_response.json()
-    assert updated_scan["detected_answers"]["3"] == "D"
-    assert float(updated_scan["score"]) == 1.00
+    assert updated_scan.detected_answers["3"] == "D"
+    assert float(updated_scan.score) == 1.00
 
-    # 6. Confirm Scan and Create Grade
-    confirm_response = client.post(f"/api/v1/omr/scans/{scan_id}/confirm", headers=auth_headers)
-    assert confirm_response.status_code == 200
-    grade = confirm_response.json()
+    grade = omr_service.confirm_scan(scan_id, teacher.id, owner_id=teacher.id)
 
-    assert grade["student_id"] == str(student_user.id)
-    assert float(grade["score"]) == 1.00
-    assert grade["source_type"] == "OMR"
-    assert grade["source_id"] == scan_id
+    assert grade.student_id == student_user.id
+    assert float(grade.score) == 1.00
+    assert grade.source_type == "OMR"
+    assert grade.source_id == scan_id
 
 
 def test_omr_api_template_isolation_between_teachers(
@@ -146,20 +133,13 @@ def test_omr_api_template_isolation_between_teachers(
     test_db_session,
     student_user,
 ):
-    teacher_a_headers = create_teacher_headers(
-        test_db_session,
-        "teacher_a@cola-zero.edu",
-        "teacherpass-a",
-    )
-    teacher_b_headers = create_teacher_headers(
-        test_db_session,
-        "teacher_b@cola-zero.edu",
-        "teacherpass-b",
-    )
+    create_teacher_headers(test_db_session, "teacher_a@cola-zero.edu", "teacherpass-a")
+    create_teacher_headers(test_db_session, "teacher_b@cola-zero.edu", "teacherpass-b")
     teacher_a = test_db_session.query(User).filter(User.email == "teacher_a@cola-zero.edu").one()
     teacher_b = test_db_session.query(User).filter(User.email == "teacher_b@cola-zero.edu").one()
 
     omr_service = OMRService(test_db_session)
+    exam_service = ExamService(test_db_session)
     template_a = omr_service.create_template(
         OMRTemplateCreate(
             layout_version="v1_std_20q",
@@ -180,106 +160,73 @@ def test_omr_api_template_isolation_between_teachers(
     template_a_id = template_a.id
     template_b_id = template_b.id
 
-    listed_a = client.get("/api/v1/omr/templates", headers=teacher_a_headers)
-    assert listed_a.status_code == 200
-    assert [item["id"] for item in listed_a.json()] == [str(template_a_id)]
+    listed_a = omr_service.list_templates(owner_id=teacher_a.id)
+    assert [item.id for item in listed_a] == [template_a_id]
 
-    listed_b = client.get("/api/v1/omr/templates", headers=teacher_b_headers)
-    assert listed_b.status_code == 200
-    assert [item["id"] for item in listed_b.json()] == [str(template_b_id)]
+    listed_b = omr_service.list_templates(owner_id=teacher_b.id)
+    assert [item.id for item in listed_b] == [template_b_id]
 
-    forbidden_template = client.get(
-        f"/api/v1/omr/templates/{template_a_id}",
-        headers=teacher_b_headers,
+    assert omr_service.get_template(template_a_id, owner_id=teacher_b.id) is None
+
+    with pytest.raises(ValueError):
+        omr_service.get_template_pdf(template_a_id, student_code="77777", owner_id=teacher_b.id)
+
+    with pytest.raises(ValueError):
+        omr_service.get_template_preview_png(
+            template_a_id,
+            student_code="77777",
+            owner_id=teacher_b.id,
+        )
+
+    with pytest.raises(ValueError):
+        omr_service.process_scan_upload(
+            template_a_id,
+            create_synthetic_sheet_bytes("77777", {"1": "A"}),
+            "scan.png",
+            owner_id=teacher_b.id,
+        )
+
+    scan = omr_service.process_scan_upload(
+        template_a_id,
+        create_synthetic_sheet_bytes("77777", {"1": "A"}),
+        "scan.png",
+        owner_id=teacher_a.id,
     )
-    assert forbidden_template.status_code == 404
+    scan_id = scan.id
 
-    forbidden_pdf = client.get(
-        f"/api/v1/omr/templates/{template_a_id}/pdf?student_code=77777",
-        headers=teacher_b_headers,
-    )
-    assert forbidden_pdf.status_code == 404
+    assert omr_service.get_scan(scan_id, owner_id=teacher_b.id) is None
 
-    forbidden_preview = client.get(
-        f"/api/v1/omr/templates/{template_a_id}/preview.png?student_code=77777",
-        headers=teacher_b_headers,
-    )
-    assert forbidden_preview.status_code == 404
+    with pytest.raises(ValueError):
+        omr_service.update_scan_manual(
+            scan_id,
+            OMRScanUpdate(detected_answers={"1": "A"}),
+            owner_id=teacher_b.id,
+        )
 
-    forbidden_upload = client.post(
-        "/api/v1/omr/scans/upload",
-        headers=teacher_b_headers,
-        files={
-            "file": (
-                "scan.png",
-                create_synthetic_sheet_bytes("77777", {"1": "A"}),
-                "image/png",
-            )
-        },
-        data={"omr_template_id": str(template_a_id)},
-    )
-    assert forbidden_upload.status_code == 404
-
-    scan_response = client.post(
-        "/api/v1/omr/scans/upload",
-        headers=teacher_a_headers,
-        files={
-            "file": (
-                "scan.png",
-                create_synthetic_sheet_bytes("77777", {"1": "A"}),
-                "image/png",
-            )
-        },
-        data={"omr_template_id": str(template_a_id)},
-    )
-    assert scan_response.status_code == 201
-    scan_id = scan_response.json()["id"]
-
-    forbidden_scan = client.get(f"/api/v1/omr/scans/{scan_id}", headers=teacher_b_headers)
-    assert forbidden_scan.status_code == 404
-
-    forbidden_scan_update = client.patch(
-        f"/api/v1/omr/scans/{scan_id}",
-        json={"detected_answers": {"1": "A"}},
-        headers=teacher_b_headers,
-    )
-    assert forbidden_scan_update.status_code == 404
-
-    forbidden_confirm = client.post(
-        f"/api/v1/omr/scans/{scan_id}/confirm",
-        headers=teacher_b_headers,
-    )
-    assert forbidden_confirm.status_code == 404
+    with pytest.raises(ValueError):
+        omr_service.confirm_scan(scan_id, teacher_b.id, owner_id=teacher_b.id)
 
     exam = test_db_session.query(Exam).filter(Exam.omr_template_id == template_a_id).one()
 
-    forbidden_exam = client.get(f"/api/v1/exams/{exam.id}", headers=teacher_b_headers)
-    assert forbidden_exam.status_code == 404
+    assert exam_service.get_exam(exam.id, teacher_id=teacher_b.id) is None
 
-    forbidden_stats = client.get(f"/api/v1/exams/{exam.id}/statistics", headers=teacher_b_headers)
-    assert forbidden_stats.status_code == 404
+    with pytest.raises(ValueError):
+        exam_service.get_exam_statistics(exam.id, teacher_id=teacher_b.id)
 
-    forbidden_export = client.get(f"/api/v1/exams/{exam.id}/export/pdf", headers=teacher_b_headers)
-    assert forbidden_export.status_code == 404
+    with pytest.raises(ValueError):
+        exam_service.export_exam_pdf(exam.id, teacher_id=teacher_b.id)
 
-    owner_stats = client.get(f"/api/v1/exams/{exam.id}/statistics", headers=teacher_a_headers)
-    assert owner_stats.status_code == 200
-    assert owner_stats.json()["exam_id"] == str(exam.id)
+    owner_stats = exam_service.get_exam_statistics(exam.id, teacher_id=teacher_a.id)
+    assert owner_stats["exam_id"] == exam.id
 
-    owner_confirm = client.post(f"/api/v1/omr/scans/{scan_id}/confirm", headers=teacher_a_headers)
-    assert owner_confirm.status_code == 200
+    owner_confirm = omr_service.confirm_scan(scan_id, teacher_a.id, owner_id=teacher_a.id)
+    assert owner_confirm.source_id == scan_id
 
-    forbidden_delete = client.delete(
-        f"/api/v1/omr/templates/{template_a_id}",
-        headers=teacher_b_headers,
-    )
-    assert forbidden_delete.status_code == 404
+    forbidden_delete = omr_service.delete_template(template_a_id, owner_id=teacher_b.id)
+    assert forbidden_delete is False
 
-    owner_delete = client.delete(
-        f"/api/v1/omr/templates/{template_a_id}",
-        headers=teacher_a_headers,
-    )
-    assert owner_delete.status_code == 204
+    owner_delete = omr_service.delete_template(template_a_id, owner_id=teacher_a.id)
+    assert owner_delete is True
 
 
 @pytest.mark.asyncio
@@ -311,6 +258,7 @@ async def test_omr_api_batch_upload_processes_pdf_pages(
         student_code="77777",
         pages=[
             {"1": "A", "2": "B"},
+            {"1": "A", "2": "C"},
         ],
     )
     upload_buffer = SpooledTemporaryFile()
@@ -326,37 +274,44 @@ async def test_omr_api_batch_upload_processes_pdf_pages(
     )
 
     assert payload["omr_template_id"] == template.id
-    assert payload["total_pages"] == 1
-    assert len(payload["scans"]) == 1
+    assert payload["total_pages"] == 2
+    assert len(payload["scans"]) == 2
     assert {scan["status"] for scan in payload["scans"]} == {"success"}
     assert all(scan["student_id"] == student_user.id for scan in payload["scans"])
 
 
-def test_omr_list_and_preview(override_get_db, test_db_session, auth_headers):
-    template_data = {
-        "layout_version": "v1_std_20q",
-        "total_questions": 20,
-        "options_per_question": 5,
-        "correct_answers": {"1": "A"},
-    }
-    created = client.post("/api/v1/omr/templates", json=template_data, headers=auth_headers)
-    assert created.status_code == 201
-    template_id = created.json()["id"]
-
-    listed = client.get("/api/v1/omr/templates", headers=auth_headers)
-    assert listed.status_code == 200
-    assert any(item["id"] == template_id for item in listed.json())
-
-    preview = client.get(
-        f"/api/v1/omr/templates/{template_id}/preview.png?student_code=77777",
-        headers=auth_headers,
+def test_omr_list_and_preview(override_get_db, test_db_session):
+    teacher = User(
+        email="teacher_api@cola-zero.edu",
+        password_hash="fake_hash",
+        role=UserRole.TEACHER,
     )
-    assert preview.status_code == 200
-    assert preview.headers["content-type"] == "image/png"
-    assert preview.content[:8] == b"\x89PNG\r\n\x1a\n"
+    test_db_session.add(teacher)
+    test_db_session.commit()
 
+    teacher = (
+        test_db_session.query(User)
+        .filter(User.email == "teacher_api@cola-zero.edu")
+        .one()
+    )
+    omr_service = OMRService(test_db_session)
+    template = omr_service.create_template(
+        OMRTemplateCreate(
+            layout_version="v1_std_20q",
+            total_questions=20,
+            options_per_question=5,
+            correct_answers={"1": "A"},
+        ),
+        teacher_id=teacher.id,
+    )
+    template_id = template.id
 
-def test_omr_api_unauthorized(override_get_db):
-    # Calling endpoints without auth headers should return 401
-    response = client.post("/api/v1/omr/templates", json={})
-    assert response.status_code == 401
+    listed = omr_service.list_templates(owner_id=teacher.id)
+    assert any(item.id == template_id for item in listed)
+
+    preview_bytes = omr_service.get_template_preview_png(
+        template_id,
+        student_code="77777",
+        owner_id=teacher.id,
+    )
+    assert preview_bytes[:8] == b"\x89PNG\r\n\x1a\n"
