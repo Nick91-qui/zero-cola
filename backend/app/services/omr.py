@@ -1,4 +1,3 @@
-import os
 import shutil
 import subprocess
 import tempfile
@@ -6,7 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Dict, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -25,12 +24,14 @@ from app.services.exam import ExamService
 from app.services.omr_engine import OMREngine
 from app.services.omr_pdf import generate_omr_pdf
 from app.services.omr_sheet_image import render_sheet_png
+from app.services.omr_storage import OMRScanStorage
 
 
 class OMRService:
     def __init__(self, db: Session, upload_dir: str = "uploads/scans"):
         self.db = db
         self.upload_dir = upload_dir
+        self.scan_storage = OMRScanStorage(upload_dir)
         self.template_repo = OMRTemplateRepository(db)
         self.scan_repo = OMRScanRepository(db)
         self.grade_repo = GradeRepository(db)
@@ -117,21 +118,8 @@ class OMRService:
         return scan
 
     def _save_uploaded_file(self, file_bytes: bytes, filename: str) -> str:
-        """Saves the uploaded file to disk and returns the relative image url."""
-        if not os.path.exists(self.upload_dir):
-            os.makedirs(self.upload_dir, exist_ok=True)
-
-        ext = os.path.splitext(filename)[1].lower()
-        if ext not in [".jpg", ".jpeg", ".png"]:
-            raise ValueError("Only JPG, JPEG, and PNG images are allowed.")
-
-        unique_filename = f"{uuid4()}{ext}"
-        filepath = os.path.join(self.upload_dir, unique_filename)
-
-        with open(filepath, "wb") as f:
-            f.write(file_bytes)
-
-        return filepath
+        """Saves the uploaded file through the configured storage backend."""
+        return self.scan_storage.save(file_bytes, filename)
 
     def _process_scan_from_image(
         self,
