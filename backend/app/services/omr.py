@@ -1,6 +1,10 @@
 import os
+import shutil
+import subprocess
+import tempfile
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 from typing import Dict, Optional
 from uuid import UUID, uuid4
 
@@ -129,32 +133,20 @@ class OMRService:
 
         return filepath
 
-    def process_scan_upload(
+    def _process_scan_from_image(
         self,
-        template_id: UUID,
+        template: OMRTemplate,
         file_bytes: bytes,
         filename: str,
-        owner_id: UUID | None = None,
     ) -> OMRScan:
-        """
-        Saves the OMR image, creates an OMRScan record, and processes the image
-        to detect student code and answers.
-        """
-        template = self.get_template(template_id, owner_id=owner_id)
-        if not template:
-            raise ValueError(f"OMR Template with ID {template_id} not found.")
-
-        # 1. Save file
+        """Processes one image page and persists the resulting scan."""
         image_url = self._save_uploaded_file(file_bytes, filename)
 
-        # 2. Create OMRScan with status processing
-        scan = self.scan_repo.create(omr_template_id=template_id, image_url=image_url)
+        scan = self.scan_repo.create(omr_template_id=template.id, image_url=image_url)
 
-        # 3. Perform OMR detection
         try:
             detected = OMREngine.process_image(file_bytes, template.layout_version)
 
-            # Resolve student_id from student_code if detected
             student_code = detected.get("student_code")
             student_id = None
             if student_code:
@@ -170,10 +162,8 @@ class OMRService:
                 if student:
                     student_id = student.id
 
-            # Grade scan
             score = self._calculate_score(template, detected.get("detected_answers", {}))
 
-            # Check for anomalies (e.g. MULTIPLE answers or missing code)
             status = OMRScanStatus.SUCCESS
             error_msg = None
 
@@ -195,9 +185,7 @@ class OMRService:
                 error_message=error_msg,
                 processed_at=datetime.now(),
             )
-
         except Exception as e:
-            # Mark scan as failed
             self.scan_repo.update(
                 scan.id,
                 status=OMRScanStatus.FAILED,
@@ -205,9 +193,89 @@ class OMRService:
                 processed_at=datetime.now(),
             )
 
-        # Refresh and return
         self.db.refresh(scan)
         return scan
+
+    def _extract_pdf_pages(
+        self,
+        file_bytes: bytes,
+        filename: str,
+    ) -> list[tuple[bytes, str]]:
+        """Converts a PDF into PNG page images using the system's pdftoppm utility."""
+        if shutil.which("pdftoppm") is None:
+            raise ValueError("PDF batch processing is unavailable in this environment.")
+
+        pages: list[tuple[bytes, str]] = []
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            pdf_path = tmp_path / "upload.pdf"
+            output_prefix = tmp_path / "page"
+            pdf_path.write_bytes(file_bytes)
+
+            result = subprocess.run(
+                ["pdftoppm", "-png", str(pdf_path), str(output_prefix)],
+                capture_output=True,
+                check=False,
+            )
+            if result.returncode != 0:
+                stderr = result.stderr.decode("utf-8", errors="ignore").strip()
+                raise ValueError(
+                    "Failed to convert PDF pages to images."
+                    + (f" pdftoppm error: {stderr}" if stderr else "")
+                )
+
+            page_files = sorted(
+                tmp_path.glob("page-*.png"),
+                key=lambda path: int(path.stem.split("-")[-1]),
+            )
+            if not page_files:
+                raise ValueError("The uploaded PDF did not contain any pages.")
+
+            base_name = Path(filename).stem or "scan"
+            for index, page_file in enumerate(page_files, start=1):
+                pages.append((page_file.read_bytes(), f"{base_name}_page_{index}.png"))
+
+        return pages
+
+    def process_scan_upload(
+        self,
+        template_id: UUID,
+        file_bytes: bytes,
+        filename: str,
+        owner_id: UUID | None = None,
+    ) -> OMRScan:
+        """
+        Saves the OMR image, creates an OMRScan record, and processes the image
+        to detect student code and answers.
+        """
+        template = self.get_template(template_id, owner_id=owner_id)
+        if not template:
+            raise ValueError(f"OMR Template with ID {template_id} not found.")
+
+        return self._process_scan_from_image(template, file_bytes, filename)
+
+    def process_scan_upload_batch(
+        self,
+        template_id: UUID,
+        file_bytes: bytes,
+        filename: str,
+        owner_id: UUID | None = None,
+    ) -> list[OMRScan]:
+        """Processes a PDF batch or a single image into one scan per page."""
+        template = self.get_template(template_id, owner_id=owner_id)
+        if not template:
+            raise ValueError(f"OMR Template with ID {template_id} not found.")
+
+        ext = Path(filename).suffix.lower()
+        if ext == ".pdf":
+            pages = self._extract_pdf_pages(file_bytes, filename)
+        else:
+            pages = [(file_bytes, filename)]
+
+        scans: list[OMRScan] = []
+        for page_bytes, page_filename in pages:
+            scans.append(self._process_scan_from_image(template, page_bytes, page_filename))
+        return scans
 
     def _calculate_score(self, template: OMRTemplate, detected_answers: Dict[str, str]) -> Decimal:
         """Calculates the score based on AnswerKeyItems."""

@@ -53,6 +53,13 @@ class OMRScanResponse(OMRScanBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class OMRBatchUploadResponse(BaseModel):
+    omr_template_id: UUID
+    source_filename: str
+    total_pages: int
+    scans: list[OMRScanResponse]
+
+
 class OMRScanUpdate(BaseModel):
     student_code: Optional[str] = None
     detected_answers: Optional[Dict[str, Optional[str]]] = None

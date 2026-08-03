@@ -1,4 +1,9 @@
 from decimal import Decimal
+from io import BytesIO
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfgen import canvas
 
 from app.models.answer_key import AnswerKey, AnswerKeyItem
 from app.models.attempt import Attempt, AttemptAnswer
@@ -14,6 +19,21 @@ from app.services.omr_sheet_image import render_sheet_png
 def create_synthetic_sheet_bytes(student_code: str, answers: dict) -> bytes:
     """Generates synthetic page bytes for v1_std_20q with specified code and answers."""
     return render_sheet_png("v1_std_20q", student_code=student_code, answers=answers)
+
+
+def create_multi_page_pdf_bytes(student_code: str, pages: list[dict[str, str]]) -> bytes:
+    """Creates a multipage PDF where each page contains a rendered OMR sheet."""
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    for page_answers in pages:
+        page_png = render_sheet_png("v1_std_20q", student_code=student_code, answers=page_answers)
+        pdf.drawImage(ImageReader(BytesIO(page_png)), 0, 0, width=width, height=height)
+        pdf.showPage()
+
+    pdf.save()
+    return buffer.getvalue()
 
 
 def test_omr_service_template_lifecycle(test_db_session):
@@ -320,3 +340,52 @@ def test_omr_service_missing_answer_key_fails(test_db_session, tmp_path):
     assert scan.status == OMRScanStatus.FAILED
     assert scan.error_message is not None
     assert "AnswerKey" in scan.error_message
+
+
+def test_omr_service_batch_pdf_upload_processes_one_scan_per_page(
+    test_db_session,
+    tmp_path,
+):
+    upload_dir = str(tmp_path / "scans")
+    service = OMRService(test_db_session, upload_dir=upload_dir)
+
+    student = User(
+        email="student_omr_batch@cola-zero.edu",
+        password_hash="pass_hash",
+        role=UserRole.STUDENT,
+        student_code="20202",
+    )
+    teacher = User(
+        email="teacher_omr_batch@cola-zero.edu",
+        password_hash="pass_hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add_all([student, teacher])
+    test_db_session.commit()
+
+    template = service.create_template(
+        OMRTemplateCreate(
+            layout_version="v1_std_20q",
+            total_questions=20,
+            options_per_question=5,
+            correct_answers={"1": "A", "2": "B"},
+        ),
+        teacher_id=teacher.id,
+    )
+
+    pdf_bytes = create_multi_page_pdf_bytes(
+        student_code="20202",
+        pages=[
+            {"1": "A", "2": "B"},
+            {"1": "A", "2": "C"},
+        ],
+    )
+
+    scans = service.process_scan_upload_batch(template.id, pdf_bytes, "batch.pdf")
+
+    assert len(scans) == 2
+    assert [scan.student_id for scan in scans] == [student.id, student.id]
+    assert scans[0].status == OMRScanStatus.SUCCESS
+    assert scans[1].status == OMRScanStatus.SUCCESS
+    assert scans[0].score == Decimal("1.00")
+    assert scans[1].score == Decimal("0.50")

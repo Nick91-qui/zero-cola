@@ -1,6 +1,10 @@
+from tempfile import SpooledTemporaryFile
+
 import pytest
 from fastapi.testclient import TestClient
+from starlette.datastructures import UploadFile
 
+from app.api.routes.omr import upload_scan_batch
 from app.main import app
 from app.models.enums import UserRole
 from app.models.exam import Exam
@@ -9,7 +13,10 @@ from app.repositories.user import UserRepository
 from app.schemas.omr import OMRTemplateCreate
 from app.services.auth import AuthService
 from app.services.omr import OMRService
-from tests.test_omr_service import create_synthetic_sheet_bytes
+from tests.test_omr_service import (
+    create_multi_page_pdf_bytes,
+    create_synthetic_sheet_bytes,
+)
 
 client = TestClient(app)
 
@@ -273,6 +280,56 @@ def test_omr_api_template_isolation_between_teachers(
         headers=teacher_a_headers,
     )
     assert owner_delete.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_omr_api_batch_upload_processes_pdf_pages(
+    override_get_db,
+    test_db_session,
+    student_user,
+):
+    teacher_user = User(
+        email="teacher_api_global@cola-zero.edu",
+        password_hash="fake_hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(teacher_user)
+    test_db_session.commit()
+
+    omr_service = OMRService(test_db_session)
+    template = omr_service.create_template(
+        OMRTemplateCreate(
+            layout_version="v1_std_20q",
+            total_questions=20,
+            options_per_question=5,
+            correct_answers={"1": "A", "2": "B"},
+        ),
+        teacher_id=teacher_user.id,
+    )
+
+    pdf_bytes = create_multi_page_pdf_bytes(
+        student_code="77777",
+        pages=[
+            {"1": "A", "2": "B"},
+        ],
+    )
+    upload_buffer = SpooledTemporaryFile()
+    upload_buffer.write(pdf_bytes)
+    upload_buffer.seek(0)
+    upload_file = UploadFile(file=upload_buffer, filename="batch.pdf")
+
+    payload = await upload_scan_batch(
+        omr_template_id=template.id,
+        file=upload_file,
+        current_user=teacher_user,
+        db=test_db_session,
+    )
+
+    assert payload["omr_template_id"] == template.id
+    assert payload["total_pages"] == 1
+    assert len(payload["scans"]) == 1
+    assert {scan["status"] for scan in payload["scans"]} == {"success"}
+    assert all(scan["student_id"] == student_user.id for scan in payload["scans"])
 
 
 def test_omr_list_and_preview(override_get_db, test_db_session, auth_headers):

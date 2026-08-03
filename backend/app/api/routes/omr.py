@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.models.enums import UserRole
 from app.schemas.omr import (
     GradeResponse,
+    OMRBatchUploadResponse,
     OMRScanResponse,
     OMRScanUpdate,
     OMRTemplateCreate,
@@ -137,6 +138,67 @@ async def upload_scan(
             owner_id=owner_id,
         )
         return scan
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/scans/upload-batch",
+    response_model=OMRBatchUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def upload_scan_batch(
+    omr_template_id: UUID = Form(...),
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Uploads a multipage PDF or single image and processes one scan per page."""
+    service = OMRService(db)
+
+    filename = file.filename or "batch.pdf"
+    ext = filename.split(".")[-1].lower()
+    if ext not in ["pdf", "jpg", "jpeg", "png"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file format. Only PDF, JPG, JPEG and PNG are allowed.",
+        )
+
+    file_bytes = await file.read()
+
+    try:
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        scans = service.process_scan_upload_batch(
+            omr_template_id,
+            file_bytes,
+            filename,
+            owner_id=owner_id,
+        )
+        serialized_scans = [
+            {
+                "id": scan.id,
+                "omr_template_id": scan.omr_template_id,
+                "student_code": scan.student_code,
+                "student_id": scan.student_id,
+                "status": scan.status,
+                "image_url": scan.image_url,
+                "detected_answers": scan.detected_answers,
+                "raw_confidence": scan.raw_confidence,
+                "score": scan.score,
+                "error_message": scan.error_message,
+                "processed_at": scan.processed_at,
+                "created_at": scan.created_at,
+                "updated_at": scan.updated_at,
+            }
+            for scan in scans
+        ]
+        return {
+            "omr_template_id": omr_template_id,
+            "source_filename": filename,
+            "total_pages": len(scans),
+            "scans": serialized_scans,
+        }
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
