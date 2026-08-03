@@ -11,6 +11,7 @@ from app.api.routes.omr import router as omr_router
 from app.api.routes.privacy import router as privacy_router
 from app.api.routes.security_events import router as security_events_router
 from app.api.routes.skills import router as skills_router
+from app.api.routes.users import router as users_router
 
 router = APIRouter()
 router.include_router(health_router, tags=["health"])
@@ -20,6 +21,7 @@ router.include_router(attempts_router, prefix="/attempts", tags=["attempts"])
 router.include_router(exams_router, prefix="/exams", tags=["exams"])
 router.include_router(skills_router, prefix="/skills", tags=["skills"])
 router.include_router(classes_router, tags=["classes"])
+router.include_router(users_router, tags=["users"])
 router.include_router(audit_logs_router, tags=["audit-logs"])
 router.include_router(consents_router, tags=["consents"])
 router.include_router(privacy_router, tags=["privacy"])

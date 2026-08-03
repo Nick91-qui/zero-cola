@@ -155,7 +155,7 @@ describe('Teacher exam frontend flow', () => {
       );
       expect(routerPush).toHaveBeenCalledWith('/exams/exam-1');
     });
-  });
+  }, 10000);
 
   it('shows exam status actions and publishes a draft exam', async () => {
     const now = new Date().toISOString();

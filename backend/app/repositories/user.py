@@ -1,7 +1,9 @@
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas import UserCreate
 
@@ -35,6 +37,38 @@ class UserRepository:
 
     def get_all(self, skip: int = 0, limit: int = 100) -> list[User]:
         return self.db.query(User).offset(skip).limit(limit).all()
+
+    def search(
+        self,
+        *,
+        query: str,
+        role: UserRole | None = None,
+        limit: int = 10,
+    ) -> list[User]:
+        normalized = query.strip()
+        if not normalized:
+            return []
+
+        safe_limit = max(1, min(limit, 20))
+        pattern = f"%{normalized}%"
+
+        search_query = self.db.query(User).filter(
+            User.is_active.is_(True),
+            User.anonymized_at.is_(None),
+        )
+        if role is not None:
+            search_query = search_query.filter(User.role == role)
+
+        filters = [User.email.ilike(pattern)]
+        if normalized.isdigit():
+            filters.append(User.student_code.ilike(pattern))
+
+        return (
+            search_query.filter(or_(*filters))
+            .order_by(User.email.asc())
+            .limit(safe_limit)
+            .all()
+        )
 
     def update(self, user_id: str | UUID, **kwargs) -> User | None:
         if isinstance(user_id, str):

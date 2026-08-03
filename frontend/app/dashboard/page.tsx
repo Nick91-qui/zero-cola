@@ -80,6 +80,24 @@ export default function DashboardPage() {
 
           {(user?.role === 'teacher' || user?.role === 'admin') && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Turmas</h3>
+                  <span className="bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    Matrículas e vínculos
+                  </span>
+                </div>
+                <p className="text-sm text-slate-600 mb-6">
+                  Organize turmas, acompanhe vínculos de professores e estudantes e abra o detalhe para ver o histórico da composição da classe.
+                </p>
+                <Link
+                  href="/classes"
+                  className="inline-flex items-center justify-center w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition"
+                >
+                  Abrir Turmas →
+                </Link>
+              </div>
+
               {/* Card OMR */}
               <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-3">
