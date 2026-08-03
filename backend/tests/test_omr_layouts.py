@@ -9,14 +9,43 @@ from app.core.omr_layouts import (
 
 
 def test_get_layout_provider_success():
+    provider_10 = get_layout_provider("v1_std_10q")
+    assert provider_10.get_layout_version() == "v1_std_10q"
+    assert provider_10.get_total_questions() == 10
+    assert provider_10.get_options_per_question() == 5
+
     provider_20 = get_layout_provider("v1_std_20q")
     assert provider_20.get_layout_version() == "v1_std_20q"
     assert provider_20.get_total_questions() == 20
     assert provider_20.get_options_per_question() == 5
 
+    provider_30 = get_layout_provider("v1_std_30q")
+    assert provider_30.get_layout_version() == "v1_std_30q"
+    assert provider_30.get_total_questions() == 30
+
+    provider_40 = get_layout_provider("v1_std_40q")
+    assert provider_40.get_layout_version() == "v1_std_40q"
+    assert provider_40.get_total_questions() == 40
+
     provider_50 = get_layout_provider("v1_std_50q")
     assert provider_50.get_layout_version() == "v1_std_50q"
     assert provider_50.get_total_questions() == 50
+
+    provider_60 = get_layout_provider("v1_std_60q")
+    assert provider_60.get_layout_version() == "v1_std_60q"
+    assert provider_60.get_total_questions() == 60
+
+    provider_70 = get_layout_provider("v1_std_70q")
+    assert provider_70.get_layout_version() == "v1_std_70q"
+    assert provider_70.get_total_questions() == 70
+
+    provider_80 = get_layout_provider("v1_std_80q")
+    assert provider_80.get_layout_version() == "v1_std_80q"
+    assert provider_80.get_total_questions() == 80
+
+    provider_90 = get_layout_provider("v1_std_90q")
+    assert provider_90.get_layout_version() == "v1_std_90q"
+    assert provider_90.get_total_questions() == 90
 
     provider_100 = get_layout_provider("v1_std_100q")
     assert provider_100.get_layout_version() == "v1_std_100q"
@@ -31,16 +60,67 @@ def test_get_layout_provider_not_found():
 @pytest.mark.parametrize(
     ("total_questions", "expected_layout"),
     [
-        (75, "v1_std_100q"),
-        (80, "v1_std_100q"),
+        (1, "v1_std_10q"),
+        (9, "v1_std_10q"),
+        (10, "v1_std_10q"),
+        (11, "v1_std_20q"),
+        (20, "v1_std_20q"),
+        (21, "v1_std_30q"),
+        (30, "v1_std_30q"),
+        (31, "v1_std_40q"),
+        (32, "v1_std_40q"),
+        (40, "v1_std_40q"),
+        (41, "v1_std_50q"),
+        (50, "v1_std_50q"),
+        (51, "v1_std_60q"),
+        (60, "v1_std_60q"),
+        (61, "v1_std_70q"),
+        (70, "v1_std_70q"),
+        (71, "v1_std_80q"),
+        (75, "v1_std_80q"),
+        (80, "v1_std_80q"),
+        (81, "v1_std_90q"),
+        (90, "v1_std_90q"),
+        (91, "v1_std_100q"),
+        (99, "v1_std_100q"),
         (100, "v1_std_100q"),
     ],
 )
-def test_resolve_layout_version_uses_100q_layout_for_large_exams(
+def test_resolve_layout_version_rounds_up_to_the_next_ten(
     total_questions: int,
     expected_layout: str,
 ):
     assert resolve_layout_version(total_questions) == expected_layout
+
+
+@pytest.mark.parametrize(
+    "layout_version",
+    [
+        "v1_std_10q",
+        "v1_std_20q",
+        "v1_std_30q",
+        "v1_std_40q",
+        "v1_std_50q",
+        "v1_std_60q",
+        "v1_std_70q",
+        "v1_std_80q",
+        "v1_std_90q",
+        "v1_std_100q",
+    ],
+)
+def test_render_elements_for_all_supported_layout_versions(layout_version: str):
+    provider = get_layout_provider(layout_version)
+    elements = provider.render(student_code="12345")
+
+    anchors = [e for e in elements if e.type == DrawingElementType.ANCHOR]
+    assert len(anchors) == 4
+
+    bubbles = [e for e in elements if e.type == DrawingElementType.BUBBLE]
+    assert len(bubbles) == 50 + (provider.get_total_questions() * 5)
+
+    filled_bubbles = [e for e in bubbles if e.is_filled and e.digit_col is not None]
+    assert len(filled_bubbles) == 5
+    assert [fb.digit_val for fb in filled_bubbles] == [1, 2, 3, 4, 5]
 
 
 def test_render_elements():
