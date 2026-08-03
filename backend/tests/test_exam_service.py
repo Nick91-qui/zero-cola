@@ -50,6 +50,32 @@ def test_create_exam_with_auto_template(test_db_session):
     assert len(exam.answer_key.items) == 3
 
 
+def test_create_exam_with_auto_template_uses_100q_layout(test_db_session):
+    teacher = User(
+        email="teacher_exam_100@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(teacher)
+    test_db_session.commit()
+
+    service = ExamService(test_db_session)
+    exam_in = ExamCreate(
+        title="Prova 100 questões",
+        description="Avaliação extensa",
+        class_id="301",
+        total_questions=100,
+        max_score=Decimal("10.00"),
+        correct_answers={"1": "A", "100": "B"},
+    )
+    exam = service.create_exam(exam_in, teacher_id=teacher.id)
+
+    assert exam.omr_template is not None
+    assert exam.omr_template.layout_version == "v1_std_100q"
+    assert exam.omr_template.total_questions == 100
+    assert len(exam.answer_key.items) == 2
+
+
 def test_soft_delete_exam_and_template(test_db_session):
     teacher = User(
         email="teacher_del@cola-zero.edu",

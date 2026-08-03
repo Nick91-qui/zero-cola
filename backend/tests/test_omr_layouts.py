@@ -14,6 +14,10 @@ def test_get_layout_provider_success():
     assert provider_50.get_layout_version() == "v1_std_50q"
     assert provider_50.get_total_questions() == 50
 
+    provider_100 = get_layout_provider("v1_std_100q")
+    assert provider_100.get_layout_version() == "v1_std_100q"
+    assert provider_100.get_total_questions() == 100
+
 
 def test_get_layout_provider_not_found():
     with pytest.raises(ValueError):
@@ -75,3 +79,18 @@ def test_detect_mock_image():
         assert res["detected_answers"][str(q)] is None
 
     assert provider.validate(res) is True
+
+
+def test_render_elements_100q():
+    provider = get_layout_provider("v1_std_100q")
+    elements = provider.render(student_code="98765")
+
+    anchors = [e for e in elements if e.type == DrawingElementType.ANCHOR]
+    assert len(anchors) == 4
+
+    bubbles = [e for e in elements if e.type == DrawingElementType.BUBBLE]
+    assert len(bubbles) == 550
+
+    filled_bubbles = [e for e in bubbles if e.is_filled and e.digit_col is not None]
+    assert len(filled_bubbles) == 5
+    assert [fb.digit_val for fb in filled_bubbles] == [9, 8, 7, 6, 5]

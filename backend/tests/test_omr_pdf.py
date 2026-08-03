@@ -24,3 +24,10 @@ def test_generate_omr_pdf_50q():
     assert pdf_bytes is not None
     assert len(pdf_bytes) > 0
     assert pdf_bytes.startswith(b"%PDF")
+
+
+def test_generate_omr_pdf_100q():
+    pdf_bytes = generate_omr_pdf("v1_std_100q", student_code="12345")
+    assert pdf_bytes is not None
+    assert len(pdf_bytes) > 0
+    assert pdf_bytes.startswith(b"%PDF")

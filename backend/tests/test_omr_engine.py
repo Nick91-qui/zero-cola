@@ -4,6 +4,7 @@ import pytest
 
 from app.core.omr_layouts import DrawingElementType, get_layout_provider
 from app.services.omr_engine import OMREngine, OMREngineError
+from app.services.omr_sheet_image import render_sheet_png
 
 
 def test_omr_engine_synthetic_processing():
@@ -97,3 +98,21 @@ def test_omr_engine_missing_anchors():
         OMREngine.process_image(buffer.tobytes(), "v1_std_20q")
 
     assert "Could not detect all 4 anchor marks" in str(exc_info.value)
+
+
+def test_omr_engine_synthetic_processing_100q():
+    sheet_png = render_sheet_png(
+        "v1_std_100q",
+        student_code="54321",
+        answers={"1": "A", "26": "B", "51": "C", "76": "D"},
+    )
+
+    result = OMREngine.process_image(sheet_png, "v1_std_100q")
+
+    assert result["student_code"] == "54321"
+    assert result["detected_answers"]["1"] == "A"
+    assert result["detected_answers"]["26"] == "B"
+    assert result["detected_answers"]["51"] == "C"
+    assert result["detected_answers"]["76"] == "D"
+    for q in (2, 27, 52, 77):
+        assert result["detected_answers"][str(q)] is None

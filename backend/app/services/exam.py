@@ -5,6 +5,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.omr_layouts import resolve_layout_version
 from app.models.attempt import Attempt, AttemptAnswer
 from app.models.class_ import Class, ClassStudent, TeacherClass
 from app.models.enums import ExamStatus
@@ -166,9 +167,7 @@ class ExamService:
             if tmpl is None:
                 raise ValueError(f"OMR Template {omr_template_id} not found.")
         if not omr_template_id and exam_in.correct_answers:
-            layout_ver = exam_in.layout_version or (
-                "v1_std_50q" if exam_in.total_questions > 20 else "v1_std_20q"
-            )
+            layout_ver = exam_in.layout_version or resolve_layout_version(exam_in.total_questions)
             template_in = OMRTemplateCreate(
                 layout_version=layout_ver,
                 total_questions=exam_in.total_questions,

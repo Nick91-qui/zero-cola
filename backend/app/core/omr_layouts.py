@@ -428,11 +428,99 @@ class Standard50QuestionLayout(BaseStandardLayout):
         return elements
 
 
+class Standard100QuestionLayout(BaseStandardLayout):
+    def __init__(self):
+        super().__init__(
+            layout_version="v1_std_100q",
+            total_questions=100,
+            options_per_question=5,
+        )
+
+        # Four columns (1-25, 26-50, 51-75, 76-100)
+        self.col1_origin = (120.0, 420.0)
+        self.col2_origin = (360.0, 420.0)
+        self.col3_origin = (600.0, 420.0)
+        self.col4_origin = (840.0, 420.0)
+
+        self.q_dx = 35.0
+        self.q_dy = 32.0
+
+    def _get_col_and_relative_idx(self, question_num: int) -> Tuple[int, int]:
+        if question_num <= 25:
+            return 1, question_num - 1
+        if question_num <= 50:
+            return 2, question_num - 26
+        if question_num <= 75:
+            return 3, question_num - 51
+        return 4, question_num - 76
+
+    def _get_question_bubble_coords(
+        self, question_num: int, option_idx: int
+    ) -> Tuple[float, float]:
+        col, rel_idx = self._get_col_and_relative_idx(question_num)
+        origins = {
+            1: self.col1_origin,
+            2: self.col2_origin,
+            3: self.col3_origin,
+            4: self.col4_origin,
+        }
+        origin = origins[col]
+        x = origin[0] + option_idx * self.q_dx
+        y = origin[1] + rel_idx * self.q_dy
+        return (x, y)
+
+    def _get_question_label_coords(self, question_num: int) -> Tuple[float, float]:
+        col, rel_idx = self._get_col_and_relative_idx(question_num)
+        origins = {
+            1: self.col1_origin,
+            2: self.col2_origin,
+            3: self.col3_origin,
+            4: self.col4_origin,
+        }
+        origin = origins[col]
+        x = origin[0] - 50.0
+        y = origin[1] + rel_idx * self.q_dy + 3.0
+        return (x, y)
+
+    def render(self, student_code: Optional[str] = None) -> List[DrawingElement]:
+        elements = super().render(student_code)
+
+        options = ["A", "B", "C", "D", "E"]
+        for origin in [self.col1_origin, self.col2_origin, self.col3_origin, self.col4_origin]:
+            header_y = origin[1] - 25.0
+            for idx, opt in enumerate(options):
+                x = origin[0] + idx * self.q_dx
+                elements.append(
+                    DrawingElement(
+                        type=DrawingElementType.TEXT,
+                        coordinates=(x - 3.0, header_y),
+                        text=opt,
+                        font_size=8.0,
+                    )
+                )
+
+        return elements
+
+
 # Registry
 LAYOUT_REGISTRY: Dict[str, type[OMRLayoutProvider]] = {
     "v1_std_20q": Standard20QuestionLayout,
     "v1_std_50q": Standard50QuestionLayout,
+    "v1_std_100q": Standard100QuestionLayout,
 }
+
+
+def resolve_layout_version(total_questions: int) -> str:
+    if total_questions <= 20:
+        return "v1_std_20q"
+    if total_questions <= 50:
+        return "v1_std_50q"
+    if total_questions <= 100:
+        return "v1_std_100q"
+    raise ValueError(
+        "No OMR layout version is available for "
+        f"{total_questions} questions. Supported layouts are 20, 50, and 100 questions."
+    )
 
 
 def get_layout_provider(layout_version: str) -> OMRLayoutProvider:

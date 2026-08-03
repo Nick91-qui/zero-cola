@@ -74,7 +74,7 @@ class ExamBase(BaseModel):
 
 class ExamCreate(ExamBase):
     correct_answers: Optional[Dict[str, str]] = None
-    layout_version: Optional[str] = "v1_std_20q"
+    layout_version: Optional[str] = None
     questions: Optional[List[ExamQuestionCreate]] = None
 
 
