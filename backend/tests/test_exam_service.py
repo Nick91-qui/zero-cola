@@ -76,6 +76,43 @@ def test_create_exam_with_auto_template_uses_100q_layout(test_db_session):
     assert len(exam.answer_key.items) == 2
 
 
+@pytest.mark.parametrize(
+    ("total_questions", "expected_layout_version"),
+    [
+        (32, "v1_std_40q"),
+        (75, "v1_std_80q"),
+    ],
+)
+def test_create_exam_with_auto_template_rounds_up_layout_version(
+    test_db_session,
+    total_questions: int,
+    expected_layout_version: str,
+):
+    teacher = User(
+        email=f"teacher_exam_{total_questions}@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(teacher)
+    test_db_session.commit()
+
+    service = ExamService(test_db_session)
+    exam_in = ExamCreate(
+        title=f"Prova {total_questions} questões",
+        description="Avaliação com layout arredondado",
+        class_id="301",
+        total_questions=total_questions,
+        max_score=Decimal("10.00"),
+        correct_answers={"1": "A", str(total_questions): "B"},
+    )
+    exam = service.create_exam(exam_in, teacher_id=teacher.id)
+
+    assert exam.omr_template is not None
+    assert exam.omr_template.layout_version == expected_layout_version
+    assert exam.omr_template.total_questions == total_questions
+    assert len(exam.answer_key.items) == 2
+
+
 def test_soft_delete_exam_and_template(test_db_session):
     teacher = User(
         email="teacher_del@cola-zero.edu",

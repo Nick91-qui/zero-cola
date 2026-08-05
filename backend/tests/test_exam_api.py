@@ -1,6 +1,12 @@
+import pytest
 from fastapi.testclient import TestClient
 
+from app.api.routes.exams import create_exam
 from app.main import app
+from app.models.enums import UserRole
+from app.models.exam import Exam
+from app.models.user import User
+from app.schemas.exam import ExamCreate
 
 client = TestClient(app)
 
@@ -117,3 +123,49 @@ def test_exam_lifecycle_api(auth_headers):
 
     get_res = client.get(f"/api/v1/exams/{exam_id}", headers=auth_headers)
     assert get_res.status_code == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("total_questions", "expected_layout_version"),
+    [
+        (32, "v1_std_40q"),
+        (75, "v1_std_80q"),
+    ],
+)
+async def test_create_exam_api_rounds_up_omr_layout_version(
+    test_db_session,
+    total_questions: int,
+    expected_layout_version: str,
+):
+    teacher = User(
+        email=f"teacher_exam_api_{total_questions}@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(teacher)
+    test_db_session.commit()
+
+    exam = await create_exam(
+        ExamCreate(
+            title=f"Avaliação com {total_questions} questões",
+            description="Layout OMR arredondado",
+            class_id="TURMA-OMR",
+            total_questions=total_questions,
+            max_score=10.0,
+            correct_answers={
+                "1": "A",
+                str(total_questions): "B",
+            },
+        ),
+        current_user=teacher,
+        db=test_db_session,
+    )
+
+    assert exam.omr_template is not None
+    assert exam.omr_template.layout_version == expected_layout_version
+    assert exam.omr_template.total_questions == total_questions
+
+    stored_exam = test_db_session.query(Exam).filter(Exam.id == exam.id).one()
+    assert stored_exam.omr_template is not None
+    assert stored_exam.omr_template.layout_version == expected_layout_version
