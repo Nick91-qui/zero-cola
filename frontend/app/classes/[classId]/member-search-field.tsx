@@ -10,6 +10,7 @@ interface MemberSearchFieldProps {
   placeholder: string;
   actionLabel: string;
   blockedIds?: string[];
+  onSelectionChange?: (selectedUsers: UserSearchResult[]) => void;
   onSubmit: (selectedIds: string[]) => Promise<void>;
 }
 
@@ -24,6 +25,7 @@ export function MemberSearchField({
   placeholder,
   actionLabel,
   blockedIds = [],
+  onSelectionChange,
   onSubmit,
 }: MemberSearchFieldProps) {
   const [query, setQuery] = useState('');
@@ -83,13 +85,23 @@ export function MemberSearchField({
   }, [blockedSet, query, role, selectedIds]);
 
   const addUser = (user: UserSearchResult) => {
-    setSelected((current) => (current.some((item) => item.id === user.id) ? current : [...current, user]));
+    setSelected((current) => {
+      const nextSelected = current.some((item) => item.id === user.id)
+        ? current
+        : [...current, user];
+      onSelectionChange?.(nextSelected);
+      return nextSelected;
+    });
     setQuery('');
     setResults([]);
   };
 
   const removeUser = (userId: string) => {
-    setSelected((current) => current.filter((item) => item.id !== userId));
+    setSelected((current) => {
+      const nextSelected = current.filter((item) => item.id !== userId);
+      onSelectionChange?.(nextSelected);
+      return nextSelected;
+    });
   };
 
   const handleSubmit = async () => {

@@ -53,6 +53,7 @@ export interface ClassCreatePayload {
   name: string;
   academic_period?: string | null;
   description?: string | null;
+  teacher_id?: string | null;
 }
 
 export interface ClassUpdatePayload {

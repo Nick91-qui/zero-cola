@@ -24,6 +24,7 @@ export default function ClassDetailPage() {
   const params = useParams<{ classId: string }>();
   const classId = params.classId;
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const [classData, setClassData] = useState<ClassDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -209,7 +210,7 @@ export default function ClassDetailPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {classData.is_active && (
+                  {isAdmin && classData.is_active && (
                     <button
                       type="button"
                       onClick={handleArchive}
@@ -236,17 +237,23 @@ export default function ClassDetailPage() {
                     </span>
                   </div>
 
-                  <MemberSearchField
-                    role="teacher"
-                    title="Vincular professor(es)"
-                    helperText="Busque docentes por e-mail para compartilhar o acesso à turma."
-                    placeholder="Ex: professora@cola-zero.edu"
-                    actionLabel="Vincular professores"
-                    blockedIds={classData.teachers
-                      .filter((membership) => membership.is_active)
-                      .map((membership) => membership.teacher_id)}
-                    onSubmit={handleAddTeachers}
-                  />
+                  {isAdmin ? (
+                    <MemberSearchField
+                      role="teacher"
+                      title="Vincular professor(es)"
+                      helperText="Busque docentes por e-mail para compartilhar o acesso à turma."
+                      placeholder="Ex: professora@cola-zero.edu"
+                      actionLabel="Vincular professores"
+                      blockedIds={classData.teachers
+                        .filter((membership) => membership.is_active)
+                        .map((membership) => membership.teacher_id)}
+                      onSubmit={handleAddTeachers}
+                    />
+                  ) : (
+                    <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                      O vínculo de professores é administrado por um usuário administrador.
+                    </p>
+                  )}
 
                   {classData.teachers.length === 0 ? (
                     <p className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
@@ -276,7 +283,7 @@ export default function ClassDetailPage() {
                               {membership.is_active ? 'Ativo' : 'Arquivado'}
                             </span>
                           </div>
-                          {membership.is_active && (
+                          {isAdmin && membership.is_active && (
                             <button
                               type="button"
                               onClick={() => handleRemoveTeacher(membership.teacher_id)}
@@ -307,17 +314,23 @@ export default function ClassDetailPage() {
                     </span>
                   </div>
 
-                  <MemberSearchField
-                    role="student"
-                    title="Vincular estudante(s)"
-                    helperText="Busque estudantes por e-mail ou código para adicionar à turma."
-                    placeholder="Ex: aluno@cola-zero.edu ou 12345"
-                    actionLabel="Vincular estudantes"
-                    blockedIds={classData.memberships
-                      .filter((membership) => membership.is_active)
-                      .map((membership) => membership.student_id)}
-                    onSubmit={handleAddStudents}
-                  />
+                  {isAdmin ? (
+                    <MemberSearchField
+                      role="student"
+                      title="Vincular estudante(s)"
+                      helperText="Busque estudantes por e-mail ou código para adicionar à turma."
+                      placeholder="Ex: aluno@cola-zero.edu ou 12345"
+                      actionLabel="Vincular estudantes"
+                      blockedIds={classData.memberships
+                        .filter((membership) => membership.is_active)
+                        .map((membership) => membership.student_id)}
+                      onSubmit={handleAddStudents}
+                    />
+                  ) : (
+                    <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                      A matrícula de estudantes é administrada por um usuário administrador.
+                    </p>
+                  )}
 
                   {classData.memberships.length === 0 ? (
                     <p className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
@@ -349,7 +362,7 @@ export default function ClassDetailPage() {
                               {membership.is_active ? 'Ativo' : 'Arquivado'}
                             </span>
                           </div>
-                          {membership.is_active && (
+                          {isAdmin && membership.is_active && (
                             <button
                               type="button"
                               onClick={() => handleRemoveStudent(membership.student_id)}

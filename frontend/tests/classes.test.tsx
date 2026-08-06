@@ -21,7 +21,7 @@ vi.mock('@/app/components/ProtectedRoute', () => ({
 
 vi.mock('@/app/hooks/useAuth', () => ({
   useAuth: () => ({
-    user: { email: 'teacher@cola-zero.edu', role: 'teacher' },
+    user: { email: 'admin@cola-zero.edu', role: 'admin' },
     isAuthenticated: true,
     isLoading: false,
     logout: vi.fn(),
@@ -50,6 +50,15 @@ describe('Classes frontend flow', () => {
         updated_at: now,
       },
     ]);
+    vi.spyOn(usersLib, 'searchUsers').mockResolvedValue([
+      {
+        id: 'teacher-1',
+        email: 'teacher@cola-zero.edu',
+        role: 'teacher',
+        student_code: null,
+        is_active: true,
+      },
+    ]);
     const createSpy = vi.spyOn(classesLib, 'createClass').mockResolvedValue({
       id: 'class-2',
       teacher_id: 'teacher-1',
@@ -66,6 +75,14 @@ describe('Classes frontend flow', () => {
     render(<ClassesPage />);
 
     expect(await screen.findByText('2º Ano A')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('searchbox'), {
+      target: { value: 'teacher@cola-zero.edu' },
+    });
+
+    expect(await screen.findByText('teacher@cola-zero.edu')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Selecionar professor' }));
 
     fireEvent.change(screen.getByLabelText('Nome'), {
       target: { value: '3º Ano B' },
@@ -84,6 +101,7 @@ describe('Classes frontend flow', () => {
         name: '3º Ano B',
         academic_period: '2026',
         description: 'Nova turma',
+        teacher_id: 'teacher-1',
       });
       expect(screen.getByText('3º Ano B')).toBeInTheDocument();
     });
