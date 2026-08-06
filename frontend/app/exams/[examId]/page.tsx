@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import {
   archiveExam,
+  exportExamOmrPackage,
   getExam,
   getExamStatistics,
   publishExam,
@@ -39,6 +40,7 @@ export default function ExamDetailStatisticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [downloadingOmr, setDownloadingOmr] = useState(false);
 
   const loadExam = useCallback(async () => {
     setLoading(true);
@@ -79,6 +81,25 @@ export default function ExamDetailStatisticsPage() {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar status da avaliação');
     } finally {
       setBusyAction(null);
+    }
+  };
+
+  const handleDownloadOmrPackage = async () => {
+    setDownloadingOmr(true);
+    setError(null);
+
+    try {
+      const blob = await exportExamOmrPackage(examId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `folhas_omr_${examId}.zip`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao gerar folhas OMR');
+    } finally {
+      setDownloadingOmr(false);
     }
   };
 
@@ -175,6 +196,14 @@ export default function ExamDetailStatisticsPage() {
                       {busyAction === 'archive' ? 'Arquivando...' : 'Arquivar'}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={handleDownloadOmrPackage}
+                    disabled={downloadingOmr}
+                    className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm hover:bg-emerald-100 disabled:text-slate-400"
+                  >
+                    {downloadingOmr ? 'Gerando OMR...' : 'Baixar folhas OMR'}
+                  </button>
                 </div>
               </div>
 

@@ -7,14 +7,24 @@ from reportlab.pdfgen import canvas
 from app.core.omr_layouts import DrawingElementType, get_layout_provider
 
 
-def generate_omr_pdf(layout_version: str, student_code: Optional[str] = None) -> bytes:
+def generate_omr_pdf(
+    layout_version: str,
+    student_code: Optional[str] = None,
+    *,
+    exam_title: Optional[str] = None,
+    student_name: Optional[str] = None,
+) -> bytes:
     """
     Generates a PDF bytes representation of the OMR answer sheet
     using ReportLab. Scales coordinates from the layout's 1000x1414 space
     to standard A4 page size (595.27 x 841.89 points).
     """
     provider = get_layout_provider(layout_version)
-    elements = provider.render(student_code)
+    elements = provider.render(
+        student_code,
+        exam_title=exam_title,
+        student_name=student_name,
+    )
 
     a4_width, a4_height = A4  # 595.27, 841.89
 

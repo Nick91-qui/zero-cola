@@ -1,3 +1,6 @@
+import io
+import json
+import zipfile
 from decimal import Decimal
 from uuid import UUID
 
@@ -284,6 +287,89 @@ def test_create_exam_can_be_assigned_to_multiple_classes(test_db_session):
         class_b.id,
     ]
     assert test_db_session.query(ExamClass).filter(ExamClass.exam_id == exam.id).count() == 2
+
+
+def test_export_exam_omr_package_generates_personalized_sheets(test_db_session):
+    teacher = User(
+        email="teacher_omr_package@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    admin = User(
+        email="admin_omr_package@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.ADMIN,
+    )
+    student_a = User(
+        email="student_a_omr_package@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.STUDENT,
+        student_code="12345",
+    )
+    student_b = User(
+        email="student_b_omr_package@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.STUDENT,
+        student_code="23456",
+    )
+    test_db_session.add_all([teacher, admin, student_a, student_b])
+    test_db_session.commit()
+
+    class_service = ClassService(test_db_session)
+    class_obj = class_service.create_class(
+        current_user=admin,
+        name="Turma OMR",
+        academic_period="2026",
+        teacher_id=teacher.id,
+    )
+    class_service.add_students(
+        class_id=class_obj.id,
+        current_user=admin,
+        student_ids=[student_a.id, student_b.id],
+    )
+
+    service = ExamService(test_db_session)
+    exam = service.create_exam(
+        ExamCreate(
+            title="Prova OMR personalizada",
+            description="Pacote por aluno",
+            total_questions=2,
+            class_ids=[class_obj.id],
+            questions=[
+                ExamQuestionCreate(
+                    display_order=1,
+                    question=QuestionCreate(
+                        statement="Questão 1",
+                        correct_answer="A",
+                    ),
+                ),
+                ExamQuestionCreate(
+                    display_order=2,
+                    question=QuestionCreate(
+                        statement="Questão 2",
+                        correct_answer="B",
+                    ),
+                ),
+            ],
+        ),
+        teacher_id=teacher.id,
+    )
+
+    package_bytes = service.export_exam_omr_package(exam.id, teacher_id=teacher.id)
+
+    with zipfile.ZipFile(io.BytesIO(package_bytes)) as archive:
+        names = archive.namelist()
+        assert "manifest.json" in names
+        assert len([name for name in names if name.endswith(".pdf")]) == 2
+        manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
+        assert manifest["exam_id"] == str(exam.id)
+        assert manifest["exam_title"] == "Prova OMR personalizada"
+        assert manifest["total_students"] == 2
+        assert len(manifest["students"]) == 2
+        assert all(entry["filename"].endswith(".pdf") for entry in manifest["students"])
+        for entry in manifest["students"]:
+            pdf_bytes = archive.read(entry["filename"])
+            assert pdf_bytes.startswith(b"%PDF")
 
 
 def test_publish_exam_projects_workflow_a_snapshot(test_db_session):

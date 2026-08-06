@@ -1,3 +1,6 @@
+import io
+import zipfile
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -7,6 +10,7 @@ from app.models.enums import UserRole
 from app.models.exam import Exam
 from app.models.user import User
 from app.schemas.exam import ExamCreate
+from app.services.class_service import ClassService
 
 client = TestClient(app)
 
@@ -81,6 +85,82 @@ def test_create_and_get_exam_api(auth_headers):
     xlsx_res = client.get(f"/api/v1/exams/{exam_id}/export/xlsx", headers=auth_headers)
     assert xlsx_res.status_code == 200
     assert "spreadsheetml" in xlsx_res.headers["content-type"]
+
+
+def test_export_exam_omr_package_api(auth_headers, test_db_session):
+    teacher = (
+        test_db_session.query(User)
+        .filter(User.email == "teacher_api_global@cola-zero.edu")
+        .one()
+    )
+    admin = User(
+        email="admin_exam_omr_api@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.ADMIN,
+    )
+    student_a = User(
+        email="student_exam_omr_a@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.STUDENT,
+        student_code="34567",
+    )
+    student_b = User(
+        email="student_exam_omr_b@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.STUDENT,
+        student_code="45678",
+    )
+    test_db_session.add_all([admin, student_a, student_b])
+    test_db_session.commit()
+
+    class_service = ClassService(test_db_session)
+    class_obj = class_service.create_class(
+        current_user=admin,
+        name="Turma prova OMR",
+        academic_period="2026",
+        teacher_id=teacher.id,
+    )
+    class_service.add_students(
+        class_id=class_obj.id,
+        current_user=admin,
+        student_ids=[student_a.id, student_b.id],
+    )
+
+    payload = {
+        "title": "Prova OMR personalizada",
+        "description": "Pacote por aluno",
+        "class_ids": [str(class_obj.id)],
+        "total_questions": 2,
+        "questions": [
+            {
+                "display_order": 1,
+                "question": {
+                    "statement": "Questão 1",
+                    "correct_answer": "A",
+                },
+            },
+            {
+                "display_order": 2,
+                "question": {
+                    "statement": "Questão 2",
+                    "correct_answer": "B",
+                },
+            },
+        ],
+    }
+    create_res = client.post("/api/v1/exams", json=payload, headers=auth_headers)
+    assert create_res.status_code == 201, create_res.text
+    exam_id = create_res.json()["id"]
+
+    download_res = client.get(f"/api/v1/exams/{exam_id}/export/omr", headers=auth_headers)
+    assert download_res.status_code == 200, download_res.text
+    assert download_res.headers["content-type"] == "application/zip"
+
+    with zipfile.ZipFile(io.BytesIO(download_res.content)) as archive:
+        names = archive.namelist()
+        assert "manifest.json" in names
+        assert len([name for name in names if name.endswith(".pdf")]) == 2
+        assert archive.read("manifest.json").startswith(b"{")
 
 
 def test_exam_lifecycle_api(auth_headers):

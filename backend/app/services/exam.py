@@ -1,3 +1,7 @@
+import io
+import json
+import re
+import zipfile
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -8,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.omr_layouts import resolve_layout_version
 from app.models.attempt import Attempt, AttemptAnswer
 from app.models.class_ import Class, ClassStudent, TeacherClass
-from app.models.enums import ExamStatus
+from app.models.enums import ExamStatus, UserRole
 from app.models.exam import Exam, ExamClass
 from app.models.user import User
 from app.repositories.attempt import AttemptRepository
@@ -21,6 +25,7 @@ from app.schemas.omr import OMRTemplateCreate
 from app.services.answer_key import AnswerKeyService
 from app.services.audit_log import AuditLogService
 from app.services.export import ExportService
+from app.services.omr_pdf import generate_omr_pdf
 
 
 class ExamService:
@@ -549,3 +554,110 @@ class ExamService:
             attempts=attempts_list,
             question_stats=stats["question_statistics"],
         )
+
+    def export_exam_omr_package(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> bytes:
+        exam = self._require_exam(exam_id, teacher_id=teacher_id)
+        if not exam:
+            raise ValueError(f"Exam {exam_id} not found.")
+
+        active_class_ids = [link.class_id for link in exam.class_assignments if link.is_active]
+        if not active_class_ids:
+            raise ValueError(f"Exam {exam_id} has no active class assignments.")
+
+        roster = self._get_exam_omr_roster(active_class_ids)
+        if not roster:
+            raise ValueError(f"Exam {exam_id} has no eligible students.")
+
+        layout_version = (
+            exam.omr_template.layout_version
+            if exam.omr_template
+            else resolve_layout_version(exam.total_questions)
+        )
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            manifest = []
+            for index, entry in enumerate(roster, start=1):
+                pdf_bytes = generate_omr_pdf(
+                    layout_version,
+                    student_code=entry["student_code"],
+                    exam_title=exam.title,
+                    student_name=entry["student_name"],
+                )
+                filename = self._build_omr_filename(index, entry)
+                archive.writestr(filename, pdf_bytes)
+                manifest.append({**entry, "filename": filename})
+
+            archive.writestr(
+                "manifest.json",
+                json.dumps(
+                    {
+                        "exam_id": str(exam.id),
+                        "exam_title": exam.title,
+                        "layout_version": layout_version,
+                        "total_students": len(manifest),
+                        "students": manifest,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ).encode("utf-8"),
+            )
+
+        buffer.seek(0)
+        return buffer.getvalue()
+
+    def _get_exam_omr_roster(self, active_class_ids: list[UUID]) -> list[dict[str, str]]:
+        rows = (
+            self.db.query(User, Class.name, Class.academic_period)
+            .join(ClassStudent, ClassStudent.student_id == User.id)
+            .join(Class, Class.id == ClassStudent.class_id)
+            .filter(
+                ClassStudent.class_id.in_(active_class_ids),
+                ClassStudent.is_active.is_(True),
+                Class.is_active.is_(True),
+                User.role == UserRole.STUDENT,
+                User.is_active.is_(True),
+                User.anonymized_at.is_(None),
+            )
+            .all()
+        )
+
+        rows = sorted(
+            rows,
+            key=lambda row: (
+                row[1] or "",
+                row[2] or "",
+                row[0].student_code or "",
+                row[0].email or "",
+            ),
+        )
+
+        roster: list[dict[str, str]] = []
+        seen_student_ids: set[UUID] = set()
+        for student, class_name, academic_period in rows:
+            if student.id in seen_student_ids:
+                continue
+            seen_student_ids.add(student.id)
+            roster.append(
+                {
+                    "student_id": str(student.id),
+                    "student_code": student.student_code or "",
+                    "student_name": student.email,
+                    "class_name": class_name,
+                    "academic_period": academic_period or "",
+                }
+            )
+        return roster
+
+    @staticmethod
+    def _build_omr_filename(index: int, entry: dict[str, str]) -> str:
+        parts = [
+            f"{index:03d}",
+            entry["student_code"] or "sem-codigo",
+            entry["student_name"].split("@")[0],
+        ]
+        if entry["class_name"]:
+            parts.append(entry["class_name"])
+        base = "_".join(parts)
+        slug = re.sub(r"[^A-Za-z0-9_-]+", "_", base).strip("_")
+        return f"{slug}.pdf"

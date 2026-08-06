@@ -266,4 +266,85 @@ describe('Teacher exam frontend flow', () => {
       expect(screen.getByText('published')).toBeInTheDocument();
     });
   });
+
+  it('downloads personalized omr sheets for the exam', async () => {
+    const now = new Date().toISOString();
+    const downloadSpy = vi.spyOn(examsLib, 'exportExamOmrPackage').mockResolvedValue(
+      new Blob(['zip-bytes'], { type: 'application/zip' }),
+    );
+    const createObjectUrlSpy = vi.fn(() => 'blob:omr-package');
+    const revokeObjectUrlSpy = vi.fn();
+    Object.defineProperty(window.URL, 'createObjectURL', {
+      value: createObjectUrlSpy,
+      configurable: true,
+    });
+    Object.defineProperty(window.URL, 'revokeObjectURL', {
+      value: revokeObjectUrlSpy,
+      configurable: true,
+    });
+
+    vi.spyOn(examsLib, 'getExam')
+      .mockResolvedValueOnce({
+        id: 'exam-1',
+        title: 'Prova integradora',
+        description: 'Avaliação criada pelo frontend',
+        teacher_id: 'teacher-1',
+        class_id: '2º Ano A',
+        class_ids: ['class-1'],
+        omr_template_id: null,
+        total_questions: 2,
+        total_time_seconds: 900,
+        max_attempts: 2,
+        randomization_enabled: true,
+        max_score: '10.00',
+        status: 'published',
+        is_active: true,
+        deleted_at: null,
+        created_at: now,
+        updated_at: now,
+        questions: [],
+        exam_questions: [],
+      })
+      .mockResolvedValueOnce({
+        id: 'exam-1',
+        title: 'Prova integradora',
+        description: 'Avaliação criada pelo frontend',
+        teacher_id: 'teacher-1',
+        class_id: '2º Ano A',
+        class_ids: ['class-1'],
+        omr_template_id: null,
+        total_questions: 2,
+        total_time_seconds: 900,
+        max_attempts: 2,
+        randomization_enabled: true,
+        max_score: '10.00',
+        status: 'published',
+        is_active: true,
+        deleted_at: null,
+        created_at: now,
+        updated_at: now,
+        questions: [],
+        exam_questions: [],
+      });
+    vi.spyOn(examsLib, 'getExamStatistics').mockResolvedValue({
+      exam_id: 'exam-1',
+      exam_title: 'Prova integradora',
+      total_attempts: 0,
+      class_id: '2º Ano A',
+      average_score: 0,
+      max_score: 10,
+      question_statistics: [],
+    });
+
+    render(<ExamDetailPage />);
+
+    await screen.findByText('Prova integradora');
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar folhas OMR' }));
+
+    await waitFor(() => {
+      expect(downloadSpy).toHaveBeenCalledWith('exam-1');
+      expect(createObjectUrlSpy).toHaveBeenCalled();
+      expect(revokeObjectUrlSpy).toHaveBeenCalled();
+    });
+  });
 });

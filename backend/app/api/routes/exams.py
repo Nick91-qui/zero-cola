@@ -248,3 +248,25 @@ async def export_exam_xlsx(
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/{exam_id}/export/omr")
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def export_exam_omr(
+    exam_id: UUID,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ExamService(db)
+    try:
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        zip_bytes = service.export_exam_omr_package(exam_id, teacher_id=owner_id)
+        return Response(
+            content=zip_bytes,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="folhas_omr_{exam_id}.zip"'
+            },
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

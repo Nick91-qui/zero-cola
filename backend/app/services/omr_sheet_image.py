@@ -11,6 +11,9 @@ from app.core.omr_layouts import DrawingElementType, get_layout_provider
 def render_sheet_png(
     layout_version: str,
     student_code: str | None = None,
+    *,
+    exam_title: str | None = None,
+    student_name: str | None = None,
     answers: dict[str, str] | None = None,
     margin: int = 50,
 ) -> bytes:
@@ -27,7 +30,11 @@ def render_sheet_png(
     img = np.ones((canvas_h, canvas_w, 3), dtype=np.uint8) * 255
 
     provider = get_layout_provider(layout_version)
-    elements = provider.render(student_code)
+    elements = provider.render(
+        student_code,
+        exam_title=exam_title,
+        student_name=student_name,
+    )
 
     for elem in elements:
         x = int(elem.coordinates[0] + margin)

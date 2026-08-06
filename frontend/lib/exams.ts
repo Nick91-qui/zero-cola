@@ -180,6 +180,10 @@ export function exportExamXlsx(examId: string) {
   return apiFetchBlob(`/exams/${examId}/export/xlsx`);
 }
 
+export function exportExamOmrPackage(examId: string) {
+  return apiFetchBlob(`/exams/${examId}/export/omr`);
+}
+
 export function deleteExam(examId: string) {
   return apiFetch<void>(`/exams/${examId}`, {
     method: 'DELETE',

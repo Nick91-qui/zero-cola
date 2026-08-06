@@ -46,7 +46,13 @@ class OMRLayoutProvider(ABC):
         pass
 
     @abstractmethod
-    def render(self, student_code: Optional[str] = None) -> List[DrawingElement]:
+    def render(
+        self,
+        student_code: Optional[str] = None,
+        *,
+        exam_title: Optional[str] = None,
+        student_name: Optional[str] = None,
+    ) -> List[DrawingElement]:
         """
         Generates layout elements to be drawn on the PDF canvas.
         Coordinates are relative to 1000x1414 space.
@@ -126,7 +132,13 @@ class BaseStandardLayout(OMRLayoutProvider):
         """Must be implemented by subclasses to define the question layout geometry."""
         raise NotImplementedError()
 
-    def render(self, student_code: Optional[str] = None) -> List[DrawingElement]:
+    def render(
+        self,
+        student_code: Optional[str] = None,
+        *,
+        exam_title: Optional[str] = None,
+        student_name: Optional[str] = None,
+    ) -> List[DrawingElement]:
         elements: List[DrawingElement] = []
 
         # Add Anchors
@@ -148,7 +160,11 @@ class BaseStandardLayout(OMRLayoutProvider):
             DrawingElement(
                 type=DrawingElementType.TEXT,
                 coordinates=(100.0, 140.0),
-                text="EXAM: _________________________________________",
+                text=(
+                    f"EXAM: {exam_title}"
+                    if exam_title
+                    else "EXAM: _________________________________________"
+                ),
                 font_size=12.0,
             )
         )
@@ -156,7 +172,11 @@ class BaseStandardLayout(OMRLayoutProvider):
             DrawingElement(
                 type=DrawingElementType.TEXT,
                 coordinates=(100.0, 170.0),
-                text="STUDENT: ______________________________________",
+                text=(
+                    f"STUDENT: {student_name}"
+                    if student_name
+                    else "STUDENT: ______________________________________"
+                ),
                 font_size=12.0,
             )
         )
@@ -374,8 +394,18 @@ class ColumnedStandardLayout(BaseStandardLayout):
         y = origin[1] + rel_idx * self.question_dy + 3.0
         return (x, y)
 
-    def render(self, student_code: Optional[str] = None) -> List[DrawingElement]:
-        elements = super().render(student_code)
+    def render(
+        self,
+        student_code: Optional[str] = None,
+        *,
+        exam_title: Optional[str] = None,
+        student_name: Optional[str] = None,
+    ) -> List[DrawingElement]:
+        elements = super().render(
+            student_code,
+            exam_title=exam_title,
+            student_name=student_name,
+        )
 
         # Add question option header letters at the top of each question column.
         options = ["A", "B", "C", "D", "E"]

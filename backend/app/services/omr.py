@@ -87,7 +87,11 @@ class OMRService:
         template = self.get_template(template_id, owner_id=owner_id)
         if not template:
             raise ValueError(f"OMR Template with ID {template_id} not found.")
-        return generate_omr_pdf(template.layout_version, student_code)
+        return generate_omr_pdf(
+            template.layout_version,
+            student_code,
+            exam_title=template.title,
+        )
 
     def get_template_preview_png(
         self,
@@ -103,6 +107,7 @@ class OMRService:
         return render_sheet_png(
             template.layout_version,
             student_code=student_code,
+            exam_title=template.title,
             answers=answers or {},
         )
 
