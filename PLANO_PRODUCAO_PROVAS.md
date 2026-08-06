@@ -1,6 +1,8 @@
 # COLA-ZERO — Plano de Implementação: Produção e Visualização de Provas
 
 > **Single Source of Truth** para o próximo passo funcional do fluxo de avaliações: separar a criação de questões da montagem da prova, permitir a visualização da prova antes da publicação e gerar folhas OMR personalizadas por aluno para impressão.
+>
+> **Estado atual**: este plano está em implementação. O foco prático do momento é a exportação de folhas OMR personalizadas por aluno, com a montagem da prova e a visualização do exame seguindo em paralelo.
 
 ---
 
@@ -100,6 +102,7 @@ O objetivo desta etapa é transformar a produção de provas em um fluxo explíc
 - Mudanças no motor de tentativas online.
 - Processamento OMR em lote com escaneamento multipágina.
 - Abstração de storage em nuvem para uploads OMR.
+- Adaptador MinIO/S3 para uploads OMR, que pode ser introduzido depois da estabilização do MVP.
 
 ---
 

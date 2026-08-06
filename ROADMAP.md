@@ -17,7 +17,7 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 | **Fase 5** | Interface Frontend para Provas Online (`/exams` + `/attempts/[id]`) | ✅ Concluído e validado | P1 |
 | **Fase 6** | Interface Frontend para Analytics & Dashboard (`/dashboard`) | ✅ Concluído no baseline atual | P1 |
 | **Fase 7** | Hardening de Segurança, Auditoria & LGPD | ✅ Concluído e validado | P2 |
-| **Fase 8** | Produção e Visualização de Provas (`Question Bank` → `Exam Builder` → `OMR personalizado`) | ⏳ Futuro | P2 |
+| **Fase 8** | Produção e Visualização de Provas (`Question Bank` → `Exam Builder` → `OMR personalizado`) | 🛠️ Em implementação | P2 |
 | **Fase 9** | Processamento OMR em Lote (PDF multipágina) & Escala | ⏳ Futuro | P3 |
 
 ---
@@ -87,7 +87,7 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 ---
 
 ### Fase 8 — Produção e Visualização de Provas
-- **Status**: futuro.
+- **Status**: em implementação.
 - **Objetivo**: separar a criação de questões da montagem da prova, permitir a visualização da prova antes da publicação e gerar folhas OMR personalizadas por aluno.
 - **Entregas**:
   - consulta visual do Banco de Questões para montagem da prova;
@@ -95,6 +95,7 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
   - pré-visualização da prova sem exposição do gabarito;
   - geração de folhas OMR por aluno com dados preenchidos automaticamente;
   - integração com turmas e matrículas para produzir o lote correto de folhas.
+- **Foco atual**: consolidação da montagem da prova por seleção de questões e da exportação de folhas OMR personalizadas por aluno.
 - **Dependências**: Fases 3, 4, 5 e 7.
 - **DoD**:
   - professor monta uma prova a partir do Banco de Questões;
@@ -109,7 +110,7 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 - **Entregas**:
   - Processamento OMR em lote de PDFs multipágina digitalizados em escâneres alimentadores.
   - Suporte a novos layouts de folhas de respostas (ex: 100 questões, formato Simulado ENEM).
-  - Armazenamento em nuvem (S3/Object Storage) para imagens de OMR.
+  - Abstração de storage OMR compatível com MinIO/Object Storage, preservando o filesystem local como backend de desenvolvimento.
 - **Prioridade**: P3 (Futuro).
 
 ---
@@ -121,3 +122,4 @@ Para qualquer nova funcionalidade ser considerada concluída no COLA-ZERO:
 2. **Testes Automatizados**: Inclusão de testes unitários/integração com 100% de aprovação.
 3. **Documentação**: Atualização dos documentos oficiais relevantes em [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md) ou manuais de módulo.
 4. **Respeito aos Princípios**: Manutenção da entrega de uma questão por vez em provas online e garantia de funcionamento do dashboard com ou sem banco de questões.
+5. **Hardening Pós-MVP**: Migrações de segurança como `Argon2` e outros endurecimentos podem permanecer como débito técnico até a estabilização do MVP, desde que estejam explicitamente documentados.
