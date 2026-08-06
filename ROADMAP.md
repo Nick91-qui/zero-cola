@@ -17,7 +17,8 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 | **Fase 5** | Interface Frontend para Provas Online (`/exams` + `/attempts/[id]`) | ✅ Concluído e validado | P1 |
 | **Fase 6** | Interface Frontend para Analytics & Dashboard (`/dashboard`) | ✅ Concluído no baseline atual | P1 |
 | **Fase 7** | Hardening de Segurança, Auditoria & LGPD | ✅ Concluído e validado | P2 |
-| **Fase 8** | Processamento OMR em Lote (PDF multipágina) & Escala | ⏳ Futuro | P3 |
+| **Fase 8** | Produção e Visualização de Provas (`Question Bank` → `Exam Builder` → `OMR personalizado`) | ⏳ Futuro | P2 |
+| **Fase 9** | Processamento OMR em Lote (PDF multipágina) & Escala | ⏳ Futuro | P3 |
 
 ---
 
@@ -85,7 +86,25 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 
 ---
 
-### Fase 8 — Escala OMR e Funcionalidades Avançadas (Pós-MVP)
+### Fase 8 — Produção e Visualização de Provas
+- **Status**: futuro.
+- **Objetivo**: separar a criação de questões da montagem da prova, permitir a visualização da prova antes da publicação e gerar folhas OMR personalizadas por aluno.
+- **Entregas**:
+  - consulta visual do Banco de Questões para montagem da prova;
+  - montagem da prova por seleção de questões já existentes;
+  - pré-visualização da prova sem exposição do gabarito;
+  - geração de folhas OMR por aluno com dados preenchidos automaticamente;
+  - integração com turmas e matrículas para produzir o lote correto de folhas.
+- **Dependências**: Fases 3, 4, 5 e 7.
+- **DoD**:
+  - professor monta uma prova a partir do Banco de Questões;
+  - professor visualiza a prova antes da publicação;
+  - sistema gera folhas personalizadas para os alunos elegíveis;
+  - Workflow A, Workflow B, online e OMR seguem funcionando.
+
+---
+
+### Fase 9 — Escala OMR e Funcionalidades Avançadas (Pós-MVP)
 - **Objetivo**: Expandir as capacidades operacionais do módulo impresso para grandes redes de ensino.
 - **Entregas**:
   - Processamento OMR em lote de PDFs multipágina digitalizados em escâneres alimentadores.

@@ -72,3 +72,7 @@ graph LR
 - O modelo já é reutilizável no backend atual.
 - O gabarito publicado é a fonte canônica de correção.
 - Alterações posteriores em `Question` não alteram gabaritos publicados.
+
+## 7. Próxima Etapa de Interface
+
+- A consulta visual das questões pelo professor e a seleção de itens para montar uma prova são detalhadas em [PLANO_PRODUCAO_PROVAS.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_PRODUCAO_PROVAS.md).

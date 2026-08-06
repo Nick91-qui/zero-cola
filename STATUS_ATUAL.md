@@ -72,9 +72,13 @@
 1. **Migração de Hashing de Senha**: permanece a troca para `Argon2` como hardening pré-produção.
 2. **Persistência de Uploads OMR**: os arquivos ainda estão no filesystem local; para escala horizontal, o storage precisa de abstração.
 
+## 5. Próximo Passo Planejado
+
+1. **Produção e Visualização de Provas**: o próximo incremento funcional planejado é separar a montagem da prova da criação de questões, permitir a consulta visual do Banco de Questões e gerar folhas OMR personalizadas por aluno. O plano detalhado está em [PLANO_PRODUCAO_PROVAS.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_PRODUCAO_PROVAS.md).
+
 ---
 
-## 5. Histórico de Verificação de Qualidade
+## 6. Histórico de Verificação de Qualidade
 
 - **Backend Pytest**: 111 testes aprovados.
   - Step 8 online attempt API: 2 testes aprovados.

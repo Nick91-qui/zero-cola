@@ -94,3 +94,6 @@ Um exame só transiciona do status `draft` para `published` se:
 
 ## 7. Relação com o Dashboard Pedagógico
 - Como a inteligência pedagógica é calculada a partir do Gabarito e Habilidades, a análise de acertos e relatórios funcionam com total transparência e uniformidade para qualquer avaliação. Consulte [PLANO_DASHBOARD.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_DASHBOARD.md).
+
+## 8. Próxima Evolução Planejada
+- A etapa operacional de montagem visual da prova e geração de folhas OMR personalizadas por aluno está detalhada em [PLANO_PRODUCAO_PROVAS.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_PRODUCAO_PROVAS.md).

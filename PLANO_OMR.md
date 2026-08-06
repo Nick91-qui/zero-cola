@@ -12,6 +12,8 @@
 
 O módulo OMR (Optical Mark Recognition) valida o preenchimento de folhas de respostas físicas comparando os marcadores lidos pela visão computacional contra o **Gabarito (Answer Key)** oficial da avaliação.
 
+> A geração de folhas OMR personalizadas por aluno e a visualização prévia da prova montada são planejadas separadamente em [PLANO_PRODUCAO_PROVAS.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_PRODUCAO_PROVAS.md).
+
 ```mermaid
 graph TD
     Start[Criar Gabarito OMR] --> ModeCheck{Origem do Gabarito}
