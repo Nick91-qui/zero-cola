@@ -46,7 +46,7 @@ def _class_response_payload(db: Session, class_obj):
 
 
 @router.post("/classes", response_model=ClassResponse, status_code=status.HTTP_201_CREATED)
-@require_role(UserRole.TEACHER, UserRole.ADMIN)
+@require_role(UserRole.ADMIN)
 async def create_class(
     class_in: ClassCreate,
     current_user=Depends(get_current_user),
@@ -109,7 +109,7 @@ async def get_class(
 
 
 @router.patch("/classes/{class_id}", response_model=ClassResponse)
-@require_role(UserRole.TEACHER, UserRole.ADMIN)
+@require_role(UserRole.ADMIN)
 async def update_class(
     class_id: UUID,
     class_in: ClassUpdate,
@@ -130,7 +130,7 @@ async def update_class(
 
 
 @router.post("/classes/{class_id}/archive", response_model=ClassResponse)
-@require_role(UserRole.TEACHER, UserRole.ADMIN)
+@require_role(UserRole.ADMIN)
 async def archive_class(
     class_id: UUID,
     current_user=Depends(get_current_user),
@@ -149,7 +149,7 @@ async def archive_class(
     response_model=list[ClassStudentResponse],
     status_code=status.HTTP_201_CREATED,
 )
-@require_role(UserRole.TEACHER, UserRole.ADMIN)
+@require_role(UserRole.ADMIN)
 async def add_students(
     class_id: UUID,
     payload: ClassStudentCreate,
@@ -176,7 +176,7 @@ async def add_students(
     response_model=list[ClassTeacherResponse],
     status_code=status.HTTP_201_CREATED,
 )
-@require_role(UserRole.TEACHER, UserRole.ADMIN)
+@require_role(UserRole.ADMIN)
 async def add_teachers(
     class_id: UUID,
     payload: ClassTeacherCreate,
@@ -199,7 +199,7 @@ async def add_teachers(
 
 
 @router.get("/classes/{class_id}/teachers", response_model=list[ClassTeacherResponse])
-@require_role(UserRole.TEACHER, UserRole.ADMIN)
+@require_role(UserRole.ADMIN)
 async def list_teachers(
     class_id: UUID,
     include_archived: bool = False,
@@ -218,7 +218,7 @@ async def list_teachers(
 
 
 @router.delete("/classes/{class_id}/teachers/{teacher_id}", status_code=status.HTTP_204_NO_CONTENT)
-@require_role(UserRole.TEACHER, UserRole.ADMIN)
+@require_role(UserRole.ADMIN)
 async def remove_teacher(
     class_id: UUID,
     teacher_id: UUID,
@@ -253,7 +253,7 @@ async def list_students(
 
 
 @router.delete("/classes/{class_id}/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
-@require_role(UserRole.TEACHER, UserRole.ADMIN)
+@require_role(UserRole.ADMIN)
 async def remove_student(
     class_id: UUID,
     student_id: UUID,

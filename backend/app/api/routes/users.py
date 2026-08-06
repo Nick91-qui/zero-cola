@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.get("/users/search", response_model=list[UserResponse])
-@require_role(UserRole.TEACHER, UserRole.ADMIN)
+@require_role(UserRole.ADMIN)
 async def search_users(
     q: str = "",
     role: UserRole | None = None,

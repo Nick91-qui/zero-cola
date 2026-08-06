@@ -18,6 +18,11 @@ class ClassService:
     def _default_academic_period() -> str:
         return str(datetime.now(timezone.utc).year)
 
+    @staticmethod
+    def _require_admin(current_user: User) -> None:
+        if current_user.role != UserRole.ADMIN:
+            raise ValueError("Only admins can manage classes and memberships.")
+
     def _teacher_link(self, *, class_id: UUID, teacher_id: UUID) -> TeacherClass | None:
         return (
             self.db.query(TeacherClass)
@@ -59,24 +64,21 @@ class ClassService:
         academic_period: str | None = None,
         teacher_id: UUID | None = None,
     ) -> Class:
-        owner_id = current_user.id
-        if current_user.role == UserRole.ADMIN:
-            if teacher_id is None:
-                raise ValueError("teacher_id is required for admin class creation.")
-            teacher = self.db.query(User).filter(User.id == teacher_id).first()
-            if (
-                teacher is None
-                or teacher.role != UserRole.TEACHER
-                or not teacher.is_active
-                or teacher.anonymized_at is not None
-            ):
-                raise ValueError(f"Teacher {teacher_id} not found.")
-            owner_id = teacher_id
-        elif teacher_id is not None and teacher_id != current_user.id:
-            raise ValueError("Teachers can only create classes for themselves.")
+        self._require_admin(current_user)
+        if teacher_id is None:
+            raise ValueError("teacher_id is required for admin class creation.")
+
+        teacher = self.db.query(User).filter(User.id == teacher_id).first()
+        if (
+            teacher is None
+            or teacher.role != UserRole.TEACHER
+            or not teacher.is_active
+            or teacher.anonymized_at is not None
+        ):
+            raise ValueError(f"Teacher {teacher_id} not found.")
 
         class_obj = Class(
-            teacher_id=owner_id,
+            teacher_id=teacher_id,
             name=name,
             academic_period=academic_period or self._default_academic_period(),
             description=description,
@@ -86,7 +88,7 @@ class ClassService:
         self.db.flush()
         self.db.add(
             TeacherClass(
-                teacher_id=owner_id,
+                teacher_id=teacher_id,
                 class_id=class_obj.id,
                 is_active=True,
             )
@@ -98,7 +100,7 @@ class ClassService:
             resource_id=class_obj.id,
             metadata={
                 "name": name,
-                "teacher_id": str(owner_id),
+                "teacher_id": str(teacher_id),
                 "academic_period": class_obj.academic_period,
             },
         )
@@ -144,6 +146,7 @@ class ClassService:
         name: str | None = None,
         description: str | None = None,
     ) -> Class:
+        self._require_admin(current_user)
         class_obj = self._require_class(class_id, current_user, include_inactive=True)
         if class_obj.archived_at is not None:
             raise ValueError(f"Class {class_id} is archived and cannot be edited.")
@@ -163,6 +166,7 @@ class ClassService:
         return class_obj
 
     def archive_class(self, *, class_id: UUID, current_user: User) -> Class:
+        self._require_admin(current_user)
         class_obj = self._require_class(class_id, current_user, include_inactive=True)
         if not class_obj.is_active and class_obj.archived_at is not None:
             return class_obj
@@ -185,6 +189,7 @@ class ClassService:
         current_user: User,
         student_ids: list[UUID],
     ) -> list[ClassStudent]:
+        self._require_admin(current_user)
         class_obj = self._require_class(class_id, current_user, include_inactive=True)
         if not class_obj.is_active:
             raise ValueError(f"Class {class_id} is archived.")
@@ -284,6 +289,7 @@ class ClassService:
         student_id: UUID,
         current_user: User,
     ) -> None:
+        self._require_admin(current_user)
         class_obj = self._require_class(class_id, current_user, include_inactive=True)
         membership = (
             self.db.query(ClassStudent)
@@ -331,6 +337,7 @@ class ClassService:
         current_user: User,
         teacher_ids: list[UUID],
     ) -> list[TeacherClass]:
+        self._require_admin(current_user)
         class_obj = self._require_class(class_id, current_user, include_inactive=True)
         if not class_obj.is_active:
             raise ValueError(f"Class {class_id} is archived.")
@@ -395,6 +402,7 @@ class ClassService:
         teacher_id: UUID,
         current_user: User,
     ) -> None:
+        self._require_admin(current_user)
         class_obj = self._require_class(class_id, current_user, include_inactive=True)
         teacher_link = (
             self.db.query(TeacherClass)

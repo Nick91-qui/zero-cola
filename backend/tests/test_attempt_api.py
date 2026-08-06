@@ -66,14 +66,20 @@ def _teacher_and_published_exam(test_db_session):
         password_hash="hash",
         role=UserRole.TEACHER,
     )
-    test_db_session.add(teacher)
+    admin = User(
+        email="admin_api_online@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.ADMIN,
+    )
+    test_db_session.add_all([teacher, admin])
     test_db_session.commit()
 
     class_service = ClassService(test_db_session)
     class_obj = class_service.create_class(
-        current_user=teacher,
+        current_user=admin,
         name="Turma API online",
         academic_period="2026",
+        teacher_id=teacher.id,
     )
 
     service = ExamService(test_db_session)
@@ -103,18 +109,18 @@ def _teacher_and_published_exam(test_db_session):
         ),
         teacher_id=teacher.id,
     )
-    return service.publish_exam(exam.id), class_obj, teacher
+    return service.publish_exam(exam.id), class_obj, teacher, admin
 
 
 def test_online_attempt_api_flow_and_confidentiality(override_get_db, test_db_session):
-    exam, class_obj, teacher = _teacher_and_published_exam(test_db_session)
+    exam, class_obj, teacher, admin = _teacher_and_published_exam(test_db_session)
     student_headers = _student_headers(test_db_session)
     student = (
         test_db_session.query(User).filter(User.email == "student_api_online@cola-zero.edu").one()
     )
     ClassService(test_db_session).add_students(
         class_id=class_obj.id,
-        current_user=teacher,
+        current_user=admin,
         student_ids=[student.id],
     )
 
@@ -184,7 +190,7 @@ def test_online_attempt_api_flow_and_confidentiality(override_get_db, test_db_se
 
 
 def test_online_attempt_api_enforces_student_isolation(override_get_db, test_db_session):
-    exam, class_obj, teacher = _teacher_and_published_exam(test_db_session)
+    exam, class_obj, teacher, admin = _teacher_and_published_exam(test_db_session)
     student_headers = _student_headers(
         test_db_session,
         email="student_one@cola-zero.edu",
@@ -195,7 +201,7 @@ def test_online_attempt_api_enforces_student_isolation(override_get_db, test_db_
     )
     ClassService(test_db_session).add_students(
         class_id=class_obj.id,
-        current_user=teacher,
+        current_user=admin,
         student_ids=[student_one.id],
     )
     other_student_headers = _student_headers(

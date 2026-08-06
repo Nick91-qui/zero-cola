@@ -30,15 +30,11 @@ def _login_headers(email: str, password: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def test_teacher_can_search_participants_and_inactive_are_hidden(
+def test_admin_can_search_participants_and_inactive_are_hidden(
     override_get_db,
     test_db_session,
 ):
-    _register_user(
-        email="teacher_searcher@cola-zero.edu",
-        password="teacher-search-pass",
-        role="teacher",
-    )
+    _register_user(email="admin_searcher@cola-zero.edu", password="admin-search-pass", role="admin")
     _register_user(
         email="teacher_target@cola-zero.edu",
         password="teacher-target-pass",
@@ -64,7 +60,7 @@ def test_teacher_can_search_participants_and_inactive_are_hidden(
     hidden_student.is_active = False
     test_db_session.commit()
 
-    headers = _login_headers("teacher_searcher@cola-zero.edu", "teacher-search-pass")
+    headers = _login_headers("admin_searcher@cola-zero.edu", "admin-search-pass")
 
     teacher_search = client.get(
         "/api/v1/users/search",
@@ -99,6 +95,22 @@ def test_student_cannot_access_user_search(override_get_db, test_db_session):
     response = client.get(
         "/api/v1/users/search",
         params={"q": "teacher", "role": "teacher"},
+        headers=headers,
+    )
+    assert response.status_code == 403
+
+
+def test_teacher_cannot_access_user_search(override_get_db, test_db_session):
+    _register_user(
+        email="teacher_reader@cola-zero.edu",
+        password="teacher-reader-pass",
+        role="teacher",
+    )
+    headers = _login_headers("teacher_reader@cola-zero.edu", "teacher-reader-pass")
+
+    response = client.get(
+        "/api/v1/users/search",
+        params={"q": "student", "role": "student"},
         headers=headers,
     )
     assert response.status_code == 403

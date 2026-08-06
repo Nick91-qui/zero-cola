@@ -35,6 +35,17 @@ def _create_teacher_and_student(test_db_session, *, student_code: str = "12345")
     return teacher, student
 
 
+def _create_admin(test_db_session, *, suffix: str) -> User:
+    admin = User(
+        email=f"admin_attempt_{suffix}@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.ADMIN,
+    )
+    test_db_session.add(admin)
+    test_db_session.commit()
+    return admin
+
+
 def _create_class_and_enroll_student(
     test_db_session,
     *,
@@ -43,18 +54,20 @@ def _create_class_and_enroll_student(
     name: str,
     academic_period: str = "2026",
 ):
+    admin = _create_admin(test_db_session, suffix=name.replace(" ", "_").lower())
     class_service = ClassService(test_db_session)
     class_obj = class_service.create_class(
-        current_user=teacher,
+        current_user=admin,
         name=name,
         academic_period=academic_period,
+        teacher_id=teacher.id,
     )
     class_service.add_students(
         class_id=class_obj.id,
-        current_user=teacher,
+        current_user=admin,
         student_ids=[student.id],
     )
-    return class_obj
+    return class_obj, admin
 
 
 def _create_workflow_a_exam(
@@ -146,7 +159,7 @@ def _answer_key_items_for_exam(test_db_session, exam_id):
 
 def test_online_attempt_workflow_a_randomization_and_navigation(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="11111")
-    class_obj = _create_class_and_enroll_student(
+    class_obj, _admin = _create_class_and_enroll_student(
         test_db_session,
         teacher=teacher,
         student=student,
@@ -213,7 +226,7 @@ def test_online_attempt_workflow_a_randomization_and_navigation(test_db_session)
 
 def test_online_attempt_submission_grades_against_answer_key_item(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="22222")
-    class_obj = _create_class_and_enroll_student(
+    class_obj, _admin = _create_class_and_enroll_student(
         test_db_session,
         teacher=teacher,
         student=student,
@@ -262,7 +275,7 @@ def test_online_attempt_respects_max_attempts_and_student_isolation(test_db_sess
     )
     test_db_session.add(other_student)
     test_db_session.commit()
-    class_obj = _create_class_and_enroll_student(
+    class_obj, admin = _create_class_and_enroll_student(
         test_db_session,
         teacher=teacher,
         student=student,
@@ -271,7 +284,7 @@ def test_online_attempt_respects_max_attempts_and_student_isolation(test_db_sess
     class_service = ClassService(test_db_session)
     class_service.add_students(
         class_id=class_obj.id,
-        current_user=teacher,
+        current_user=admin,
         student_ids=[other_student.id],
     )
     exam = _create_workflow_a_exam(
@@ -300,7 +313,7 @@ def test_online_attempt_respects_max_attempts_and_student_isolation(test_db_sess
 
 def test_online_attempt_blocks_draft_and_archived_exams(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="55555")
-    class_obj = _create_class_and_enroll_student(
+    class_obj, _admin = _create_class_and_enroll_student(
         test_db_session,
         teacher=teacher,
         student=student,
@@ -336,7 +349,7 @@ def test_online_attempt_blocks_draft_and_archived_exams(test_db_session):
 
 def test_online_attempt_supports_workflow_b_without_question_bank(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="66666")
-    class_obj = _create_class_and_enroll_student(
+    class_obj, _admin = _create_class_and_enroll_student(
         test_db_session,
         teacher=teacher,
         student=student,
@@ -364,7 +377,7 @@ def test_online_attempt_supports_workflow_b_without_question_bank(test_db_sessio
 
 def test_online_attempt_time_limit_blocks_updates(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="77777")
-    class_obj = _create_class_and_enroll_student(
+    class_obj, _admin = _create_class_and_enroll_student(
         test_db_session,
         teacher=teacher,
         student=student,

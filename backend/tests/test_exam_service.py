@@ -235,19 +235,26 @@ def test_create_exam_can_be_assigned_to_multiple_classes(test_db_session):
         password_hash="hash",
         role=UserRole.TEACHER,
     )
-    test_db_session.add(teacher)
+    admin = User(
+        email="admin_multi_class@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.ADMIN,
+    )
+    test_db_session.add_all([teacher, admin])
     test_db_session.commit()
 
     class_service = ClassService(test_db_session)
     class_a = class_service.create_class(
-        current_user=teacher,
+        current_user=admin,
         name="Turma A multi",
         academic_period="2026",
+        teacher_id=teacher.id,
     )
     class_b = class_service.create_class(
-        current_user=teacher,
+        current_user=admin,
         name="Turma B multi",
         academic_period="2027",
+        teacher_id=teacher.id,
     )
 
     service = ExamService(test_db_session)

@@ -57,14 +57,20 @@ def _create_published_exam(test_db_session):
         password_hash="hash",
         role=UserRole.TEACHER,
     )
-    test_db_session.add(teacher)
+    admin = User(
+        email="admin_isolation@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.ADMIN,
+    )
+    test_db_session.add_all([teacher, admin])
     test_db_session.commit()
 
     class_service = ClassService(test_db_session)
     class_obj = class_service.create_class(
-        current_user=teacher,
+        current_user=admin,
         name="Turma isolamento",
         academic_period="2026",
+        teacher_id=teacher.id,
     )
 
     service = ExamService(test_db_session)
@@ -103,14 +109,20 @@ def _create_draft_exam(test_db_session):
         password_hash="hash",
         role=UserRole.TEACHER,
     )
-    test_db_session.add(teacher)
+    admin = User(
+        email="admin_draft_iso@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.ADMIN,
+    )
+    test_db_session.add_all([teacher, admin])
     test_db_session.commit()
 
     class_service = ClassService(test_db_session)
     class_obj = class_service.create_class(
-        current_user=teacher,
+        current_user=admin,
         name="Turma rascunho",
         academic_period="2026",
+        teacher_id=teacher.id,
     )
 
     service = ExamService(test_db_session)
@@ -137,12 +149,15 @@ def _create_draft_exam(test_db_session):
 def test_student_cannot_see_correct_answer_on_published_exam(override_get_db, test_db_session):
     exam, class_obj, teacher = _create_published_exam(test_db_session)
     headers = _student_headers(test_db_session)
+    admin = (
+        test_db_session.query(User).filter(User.email == "admin_isolation@cola-zero.edu").one()
+    )
     student = (
         test_db_session.query(User).filter(User.email == "student_isolation@cola-zero.edu").one()
     )
     ClassService(test_db_session).add_students(
         class_id=class_obj.id,
-        current_user=teacher,
+        current_user=admin,
         student_ids=[student.id],
     )
 
@@ -161,12 +176,15 @@ def test_student_cannot_see_correct_answer_on_published_exam(override_get_db, te
 def test_student_cannot_access_draft_exam(override_get_db, test_db_session):
     exam, class_obj, teacher = _create_draft_exam(test_db_session)
     headers = _student_headers(test_db_session)
+    admin = (
+        test_db_session.query(User).filter(User.email == "admin_draft_iso@cola-zero.edu").one()
+    )
     student = (
         test_db_session.query(User).filter(User.email == "student_isolation@cola-zero.edu").one()
     )
     ClassService(test_db_session).add_students(
         class_id=class_obj.id,
-        current_user=teacher,
+        current_user=admin,
         student_ids=[student.id],
     )
 
@@ -180,12 +198,15 @@ def test_student_cannot_access_archived_exam(override_get_db, test_db_session):
     service.archive_exam(exam.id)
 
     headers = _student_headers(test_db_session)
+    admin = (
+        test_db_session.query(User).filter(User.email == "admin_isolation@cola-zero.edu").one()
+    )
     student = (
         test_db_session.query(User).filter(User.email == "student_isolation@cola-zero.edu").one()
     )
     ClassService(test_db_session).add_students(
         class_id=class_obj.id,
-        current_user=teacher,
+        current_user=admin,
         student_ids=[student.id],
     )
     response = client.get(f"/api/v1/exams/{exam.id}", headers=headers)
@@ -203,12 +224,15 @@ def test_student_cannot_list_exams(override_get_db, test_db_session):
 def test_student_cannot_access_statistics(override_get_db, test_db_session):
     exam, class_obj, teacher = _create_published_exam(test_db_session)
     headers = _student_headers(test_db_session)
+    admin = (
+        test_db_session.query(User).filter(User.email == "admin_isolation@cola-zero.edu").one()
+    )
     student = (
         test_db_session.query(User).filter(User.email == "student_isolation@cola-zero.edu").one()
     )
     ClassService(test_db_session).add_students(
         class_id=class_obj.id,
-        current_user=teacher,
+        current_user=admin,
         student_ids=[student.id],
     )
 
@@ -219,12 +243,15 @@ def test_student_cannot_access_statistics(override_get_db, test_db_session):
 def test_student_cannot_access_exports(override_get_db, test_db_session):
     exam, class_obj, teacher = _create_published_exam(test_db_session)
     headers = _student_headers(test_db_session)
+    admin = (
+        test_db_session.query(User).filter(User.email == "admin_isolation@cola-zero.edu").one()
+    )
     student = (
         test_db_session.query(User).filter(User.email == "student_isolation@cola-zero.edu").one()
     )
     ClassService(test_db_session).add_students(
         class_id=class_obj.id,
-        current_user=teacher,
+        current_user=admin,
         student_ids=[student.id],
     )
 
