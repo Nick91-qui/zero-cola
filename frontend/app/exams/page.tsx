@@ -123,6 +123,12 @@ export default function ExamsListPage() {
                 + Criar Prova Online
               </Link>
               <Link
+                href="/questions"
+                className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                Banco de Questões
+              </Link>
+              <Link
                 href="/omr/new"
                 className="inline-flex items-center justify-center rounded-md border border-emerald-700 bg-white px-4 py-2.5 text-sm font-medium text-emerald-700 shadow-sm hover:bg-emerald-50"
               >

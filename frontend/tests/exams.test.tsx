@@ -5,7 +5,7 @@ import NewExamPage from '../app/exams/new/page';
 import ExamDetailPage from '../app/exams/[examId]/page';
 import * as examsLib from '@/lib/exams';
 import * as classesLib from '@/lib/classes';
-import * as skillsLib from '@/lib/skills';
+import * as questionsLib from '@/lib/questions';
 
 const routerPush = vi.fn();
 
@@ -50,14 +50,25 @@ describe('Teacher exam frontend flow', () => {
         updated_at: new Date().toISOString(),
       },
     ]);
-    vi.spyOn(skillsLib, 'listSkills').mockResolvedValue([
+    vi.spyOn(questionsLib, 'listQuestions').mockResolvedValue([
       {
-        id: 'skill-1',
-        code: 'EF08MA01',
-        description: 'Resolver equações',
+        id: 'question-1',
+        statement: 'Quanto é 2 + 2?',
+        type: 'multiple_choice',
+        options: { A: '3', B: '4', C: '5' },
+        correct_answer: 'B',
+        explanation: null,
+        image_url: null,
         subject: 'Matemática',
-        grade_level: '8',
-        curriculum: 'BNCC',
+        difficulty: 'easy',
+        tags: ['aritmética'],
+        parent_id: null,
+        version: 1,
+        is_active: true,
+        created_by: 'teacher-1',
+        skills: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       },
     ]);
     const createExamSpy = vi.spyOn(examsLib, 'createExam').mockResolvedValue({
@@ -101,29 +112,8 @@ describe('Teacher exam frontend flow', () => {
     });
     fireEvent.click(screen.getByLabelText('Randomizar ordem das questões por tentativa online'));
     fireEvent.click(screen.getByRole('checkbox', { name: /2º Ano A/ }));
-
-    fireEvent.change(screen.getByPlaceholderText('Digite o enunciado da questão.'), {
-      target: { value: 'Quanto é 2 + 2?' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Texto da alternativa A'), {
-      target: { value: '3' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Texto da alternativa B'), {
-      target: { value: '4' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Texto da alternativa C'), {
-      target: { value: '5' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Texto da alternativa D'), {
-      target: { value: '' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Texto da alternativa E'), {
-      target: { value: '' },
-    });
-    fireEvent.change(screen.getByLabelText('Gabarito correto'), {
-      target: { value: 'B' },
-    });
-    fireEvent.click(screen.getByRole('checkbox', { name: /EF08MA01/ }));
+    await screen.findByText('Quanto é 2 + 2?');
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Criar avaliação' }));
 
@@ -139,16 +129,7 @@ describe('Teacher exam frontend flow', () => {
           questions: [
             expect.objectContaining({
               display_order: 1,
-              question: expect.objectContaining({
-                statement: 'Quanto é 2 + 2?',
-                correct_answer: 'B',
-                options: expect.objectContaining({
-                  A: '3',
-                  B: '4',
-                  C: '5',
-                }),
-                skill_ids: ['skill-1'],
-              }),
+              question_id: 'question-1',
             }),
           ],
         }),
