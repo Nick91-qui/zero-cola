@@ -375,6 +375,58 @@ def test_online_attempt_supports_workflow_b_without_question_bank(test_db_sessio
     assert result.attempt.answers[0].question_id is None
 
 
+def test_list_available_exams_for_student_only_returns_startable_exams(test_db_session):
+    teacher, student = _create_teacher_and_student(test_db_session, student_code="77766")
+    class_obj, admin = _create_class_and_enroll_student(
+        test_db_session,
+        teacher=teacher,
+        student=student,
+        name="Turma visível",
+    )
+    other_class = ClassService(test_db_session).create_class(
+        current_user=admin,
+        name="Turma oculta",
+        academic_period="2026",
+        teacher_id=teacher.id,
+    )
+
+    published_exam = _create_workflow_a_exam(test_db_session, teacher, class_ids=[class_obj.id])
+    _create_workflow_a_exam(test_db_session, teacher, class_ids=[other_class.id])
+    exhausted_exam = _create_workflow_a_exam(
+        test_db_session,
+        teacher,
+        class_ids=[class_obj.id],
+        max_attempts=1,
+    )
+    exhausted_service = AttemptService(test_db_session)
+    exhausted_session = exhausted_service.start_online_attempt(exhausted_exam.id, student)
+    exhausted_service.submit_attempt(exhausted_session.attempt.id, student)
+
+    draft_exam_service = ExamService(test_db_session)
+    draft_exam = draft_exam_service.create_exam(
+        ExamCreate(
+            title="Rascunho sem publicação",
+            total_questions=1,
+            class_ids=[class_obj.id],
+            questions=[
+                ExamQuestionCreate(
+                    display_order=1,
+                    question=QuestionCreate(statement="Questão rascunho", correct_answer="A"),
+                )
+            ],
+        ),
+        teacher_id=teacher.id,
+    )
+    assert draft_exam.status == ExamStatus.DRAFT.value
+
+    service = AttemptService(test_db_session)
+    available_exams = service.list_available_exams(student)
+
+    assert [exam.id for exam in available_exams] == [published_exam.id]
+    assert available_exams[0].title == published_exam.title
+    assert available_exams[0].total_questions == published_exam.total_questions
+
+
 def test_online_attempt_time_limit_blocks_updates(test_db_session):
     teacher, student = _create_teacher_and_student(test_db_session, student_code="77777")
     class_obj, _admin = _create_class_and_enroll_student(

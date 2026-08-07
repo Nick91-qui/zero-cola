@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.core.omr_layouts import resolve_layout_version
+from app.models.answer_key import AnswerKey, AnswerKeyItem
 from app.models.attempt import Attempt, AttemptAnswer
 from app.models.class_ import Class, ClassStudent, TeacherClass
 from app.models.enums import ExamStatus, UserRole
@@ -308,6 +309,26 @@ class ExamService:
         self, teacher_id: Optional[UUID] = None, class_id: Optional[str] = None
     ) -> List[Exam]:
         return self.exam_repo.get_all(teacher_id=teacher_id, class_id=class_id)
+
+    def list_available_exams_for_student(self, student_id: UUID) -> List[Exam]:
+        query = (
+            self.db.query(Exam)
+            .join(ExamClass, ExamClass.exam_id == Exam.id)
+            .join(Class, Class.id == ExamClass.class_id)
+            .join(ClassStudent, ClassStudent.class_id == Class.id)
+            .join(AnswerKey, AnswerKey.exam_id == Exam.id)
+            .join(AnswerKeyItem, AnswerKeyItem.answer_key_id == AnswerKey.id)
+        )
+        query = query.filter(
+            Exam.is_active.is_(True),
+            Exam.status == ExamStatus.PUBLISHED.value,
+            ExamClass.is_active.is_(True),
+            Class.is_active.is_(True),
+            ClassStudent.student_id == student_id,
+            ClassStudent.is_active.is_(True),
+            AnswerKey.is_published.is_(True),
+        )
+        return query.distinct().order_by(Exam.created_at.desc()).all()
 
     def update_exam(
         self,

@@ -78,8 +78,26 @@ export interface AttemptResult {
   grade: Grade | null;
 }
 
+export interface AvailableExam {
+  id: string;
+  title: string;
+  description: string | null;
+  class_ids: string[];
+  total_questions: number;
+  total_time_seconds: number | null;
+  max_attempts: number;
+  randomization_enabled: boolean;
+  max_score: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface StartAttemptPayload {
   exam_id: string;
+}
+
+export function listAvailableExams() {
+  return apiFetch<AvailableExam[]>('/attempts/available-exams');
 }
 
 export function startOnlineAttempt(examId: string) {

@@ -189,6 +189,87 @@ def test_online_attempt_api_flow_and_confidentiality(override_get_db, test_db_se
     assert result_response.json()["grade"]["source_type"] == GradeSourceType.ONLINE.value
 
 
+def test_student_can_list_available_exams_for_attempt_start(override_get_db, test_db_session):
+    exam, class_obj, teacher, admin = _teacher_and_published_exam(test_db_session)
+    student_headers = _student_headers(test_db_session, email="student_list@cola-zero.edu")
+    student = test_db_session.query(User).filter(User.email == "student_list@cola-zero.edu").one()
+    ClassService(test_db_session).add_students(
+        class_id=class_obj.id,
+        current_user=admin,
+        student_ids=[student.id],
+    )
+
+    other_teacher = User(
+        email="teacher_list_other@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(other_teacher)
+    test_db_session.commit()
+    other_admin = User(
+        email="admin_list_other@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.ADMIN,
+    )
+    test_db_session.add(other_admin)
+    test_db_session.commit()
+
+    other_class = ClassService(test_db_session).create_class(
+        current_user=other_admin,
+        name="Turma oculta api",
+        academic_period="2026",
+        teacher_id=other_teacher.id,
+    )
+    service = ExamService(test_db_session)
+    other_exam = service.create_exam(
+        ExamCreate(
+            title="Prova fora da turma",
+            total_questions=1,
+            class_ids=[other_class.id],
+            questions=[
+                ExamQuestionCreate(
+                    display_order=1,
+                    question=QuestionCreate(
+                        statement="Questão externa",
+                        options={"A": "A", "B": "B"},
+                        correct_answer="A",
+                    ),
+                )
+            ],
+        ),
+        teacher_id=other_teacher.id,
+    )
+    service.publish_exam(other_exam.id)
+
+    draft_exam = service.create_exam(
+        ExamCreate(
+            title="Prova em rascunho",
+            total_questions=1,
+            class_ids=[class_obj.id],
+            questions=[
+                ExamQuestionCreate(
+                    display_order=1,
+                    question=QuestionCreate(
+                        statement="Questão draft",
+                        options={"A": "A", "B": "B"},
+                        correct_answer="A",
+                    ),
+                )
+            ],
+        ),
+        teacher_id=teacher.id,
+    )
+    assert draft_exam.status == "draft"
+
+    response = client.get("/api/v1/attempts/available-exams", headers=student_headers)
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert [item["id"] for item in payload] == [str(exam.id)]
+    assert payload[0]["title"] == exam.title
+    assert payload[0]["class_ids"] == [str(class_obj.id)]
+    assert all(item["id"] != str(other_exam.id) for item in payload)
+
+
 def test_online_attempt_api_enforces_student_isolation(override_get_db, test_db_session):
     exam, class_obj, teacher, admin = _teacher_and_published_exam(test_db_session)
     student_headers = _student_headers(

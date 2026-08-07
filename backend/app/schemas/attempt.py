@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Any, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.exam import ExamResponse
 from app.schemas.omr import GradeResponse
@@ -134,6 +134,22 @@ class OnlineAttemptStartRequest(BaseModel):
 
 class OnlineAttemptAnswerInput(BaseModel):
     selected_option: Optional[str] = None
+
+
+class StudentAvailableExamResponse(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str] = None
+    class_ids: list[UUID] = Field(default_factory=list)
+    total_questions: int
+    total_time_seconds: Optional[int] = None
+    max_attempts: int
+    randomization_enabled: bool
+    max_score: Decimal
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OnlineAttemptResultResponse(BaseModel):

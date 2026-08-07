@@ -35,9 +35,25 @@ describe('Online attempt frontend flow', () => {
   beforeEach(() => {
     routerPush.mockReset();
     vi.restoreAllMocks();
+    vi.spyOn(attemptsLib, 'listAvailableExams').mockResolvedValue([]);
   });
 
-  it('starts an online attempt from the student landing page', async () => {
+  it('starts an online attempt from the available exams list', async () => {
+    vi.spyOn(attemptsLib, 'listAvailableExams').mockResolvedValue([
+      {
+        id: 'exam-123',
+        title: 'Avaliação Online',
+        description: 'Descrição',
+        class_ids: ['301'],
+        total_questions: 2,
+        total_time_seconds: 300,
+        max_attempts: 1,
+        randomization_enabled: false,
+        max_score: '10.00',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]);
     vi.spyOn(attemptsLib, 'startOnlineAttempt').mockResolvedValue({
       attempt: {
         id: 'attempt-1',
@@ -61,9 +77,41 @@ describe('Online attempt frontend flow', () => {
 
     render(<StartAttemptPage />);
 
-    expect(screen.getByDisplayValue('exam-123')).toBeInTheDocument();
+    expect(await screen.findByText('Avaliação Online')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Iniciar tentativa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar prova' }));
+
+    await waitFor(() => {
+      expect(attemptsLib.startOnlineAttempt).toHaveBeenCalledWith('exam-123');
+      expect(routerPush).toHaveBeenCalledWith('/attempts/attempt-1');
+    });
+  });
+
+  it('still allows starting an online attempt by exam id', async () => {
+    vi.spyOn(attemptsLib, 'startOnlineAttempt').mockResolvedValue({
+      attempt: {
+        id: 'attempt-1',
+        exam_id: 'exam-123',
+        student_id: 'student-1',
+        student_code: '12345',
+        omr_scan_id: null,
+        attempt_number: 1,
+        source: 'ONLINE',
+        status: 'in_progress',
+        total_questions: 2,
+        started_at: new Date().toISOString(),
+        completed_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        answers: [],
+      },
+      current_question: null,
+      total_questions: 2,
+    });
+
+    render(<StartAttemptPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar por ID' }));
 
     await waitFor(() => {
       expect(attemptsLib.startOnlineAttempt).toHaveBeenCalledWith('exam-123');
@@ -219,6 +267,11 @@ describe('Online attempt frontend flow', () => {
       expect(attemptsLib.nextAttemptQuestion).toHaveBeenCalledWith('attempt-1', 1);
       expect(screen.getByText('Segunda questão')).toBeInTheDocument();
     });
+
+    expect(screen.getByRole('button', { name: /Outra opção/ })).not.toHaveClass(
+      'border-emerald-600',
+      'bg-emerald-50',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: '← Anterior' }));
 

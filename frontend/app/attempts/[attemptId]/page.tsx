@@ -50,6 +50,8 @@ export default function AttemptPage() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const currentQuestion = session?.current_question ?? null;
+
   useEffect(() => {
     let active = true;
 
@@ -109,7 +111,10 @@ export default function AttemptPage() {
     };
   }, [attemptId]);
 
-  const currentQuestion = session?.current_question ?? null;
+  useEffect(() => {
+    setSelectedOption(currentQuestion?.selected_option ?? null);
+  }, [currentQuestion?.question_number, currentQuestion?.selected_option]);
+
   const questionOptions = currentQuestion?.options
     ? Object.entries(currentQuestion.options).sort(([a], [b]) => a.localeCompare(b))
     : [];
@@ -124,7 +129,7 @@ export default function AttemptPage() {
     try {
       const updated = await saveAttemptAnswer(attemptId, currentQuestion.question_number, option);
       setSession(updated);
-      setSelectedOption(updated.current_question?.selected_option ?? option);
+      setSelectedOption(updated.current_question?.selected_option ?? null);
     } catch (selectError) {
       setSelectedOption(previousSelection);
       setError(normalizeError(selectError));

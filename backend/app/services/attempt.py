@@ -24,6 +24,7 @@ from app.schemas.attempt import (
     OnlineAttemptSessionResponse,
     StudentAttemptAnswerResponse,
     StudentAttemptResponse,
+    StudentAvailableExamResponse,
 )
 from app.services.answer_key import AnswerKeyService
 from app.services.exam import ExamService
@@ -113,6 +114,35 @@ class AttemptService:
         self.db.commit()
         self.db.refresh(attempt)
         return self._build_session_response(attempt)
+
+    def list_available_exams(self, student: User) -> list[StudentAvailableExamResponse]:
+        exams = self.exam_service.list_available_exams_for_student(student.id)
+        available_exams: list[StudentAvailableExamResponse] = []
+
+        for exam in exams:
+            active_attempt = self.attempt_repo.get_latest_for_student_exam_source(
+                exam.id,
+                student.id,
+                GradeSourceType.ONLINE.value,
+            )
+            if active_attempt and active_attempt.status in {
+                AttemptStatus.NOT_STARTED.value,
+                AttemptStatus.IN_PROGRESS.value,
+                AttemptStatus.SUBMITTED.value,
+            }:
+                available_exams.append(StudentAvailableExamResponse.model_validate(exam))
+                continue
+
+            graded_attempts = self.attempt_repo.count_for_student_exam_source(
+                exam.id,
+                student.id,
+                GradeSourceType.ONLINE.value,
+                statuses=[AttemptStatus.GRADED.value],
+            )
+            if graded_attempts < exam.max_attempts:
+                available_exams.append(StudentAvailableExamResponse.model_validate(exam))
+
+        return available_exams
 
     def get_current_question(
         self,
@@ -337,7 +367,9 @@ class AttemptService:
         if available_exam is None:
             raise ValueError(f"Exam {exam_id} must be published to start an online attempt.")
         if available_exam.answer_key is None or not available_exam.answer_key.is_published:
-            raise ValueError(f"Exam {exam_id} must have a published AnswerKey.")
+            raise ValueError(
+                f"Exam {exam_id} must be published and have a published AnswerKey."
+            )
         return available_exam
 
     def _ensure_attempt_in_progress(self, attempt: Attempt) -> None:

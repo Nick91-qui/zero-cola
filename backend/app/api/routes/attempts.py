@@ -11,6 +11,7 @@ from app.schemas.attempt import (
     OnlineAttemptResultResponse,
     OnlineAttemptSessionResponse,
     OnlineAttemptStartRequest,
+    StudentAvailableExamResponse,
 )
 from app.services.attempt import AttemptService
 
@@ -25,6 +26,16 @@ def _map_attempt_error(exc: Exception) -> HTTPException:
     if "not found" in lowered:
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+@router.get("/available-exams", response_model=list[StudentAvailableExamResponse])
+@require_role(UserRole.STUDENT)
+async def list_available_exams(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = AttemptService(db)
+    return service.list_available_exams(current_user)
 
 
 @router.post(
