@@ -25,20 +25,20 @@ A documentação do COLA-ZERO é organizada com base no princípio de **Fonte Ú
 
 | Documento | Assunto / Responsabilidade |
 |-----------|----------------------------|
-| [README.md](file:///var/home/nmoreira/Projetos/cola-zero/README.md) | Visão geral do projeto, guia de instalação, execução e índice da documentação. |
-| [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md) | **Fonte da Verdade Arquitetural**: Modelo de domínio centrado no Gabarito, modelo de dados relacional (PostgreSQL), interações entre componentes e decisões de design. |
-| [TARGET_DOMAIN_MODEL.md](file:///var/home/nmoreira/Projetos/cola-zero/TARGET_DOMAIN_MODEL.md) | Especificação aprovada do modelo de domínio alvo e das etapas de implementação principais. |
-| [STATUS_ATUAL.md](file:///var/home/nmoreira/Projetos/cola-zero/STATUS_ATUAL.md) | **Status do Projeto**: Funcionalidades já implementadas, relatórios de testes, limitações conhecidas e débitos técnicos. |
-| [ROADMAP.md](file:///var/home/nmoreira/Projetos/cola-zero/ROADMAP.md) | **Roadmap e Planejamento**: Fases futuras de desenvolvimento, prioridades, dependências e Definition of Done (DoD). |
-| [PLANO_AVALIACOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_AVALIACOES.md) | Especificação funcional do sistema de avaliações centrado no Gabarito, ciclo de vida de provas, fluxos de trabalho (Workflow A e B), tentativas online e consolidação de notas. |
-| [PLANO_BANCO_QUESTOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_BANCO_QUESTOES.md) | Especificação do Banco de Questões como produtor opcional de Gabaritos, versionamento imutável e habilidades SEDU/BNCC. |
-| [PLANO_PRODUCAO_PROVAS.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_PRODUCAO_PROVAS.md) | Plano de implementação para montagem de provas a partir do Banco de Questões, visualização prévia e geração de folhas OMR personalizadas por aluno. |
-| [PLANO_OMR.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_OMR.md) | Pipeline de Leitura Óptica de Cartão-Resposta (OMR) validado contra o Gabarito. |
-| [PLANO_DASHBOARD.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_DASHBOARD.md) | Analytics pedagógico baseado no Gabarito, desempenho por habilidade SEDU/BNCC, relatórios executivos e exportações (PDF/XLSX). |
-| [PLANO_ANTI_COLA.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_ANTI_COLA.md) | Monitoramento de integridade em provas online, eventos de segurança de tela (`security_events`), auditoria, consentimento e LGPD. |
-| [PLANO_MODELO_ACADEMICO.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_MODELO_ACADEMICO.md) | Modelo acadêmico de turmas, matrículas, professores e atribuição multi-turma de exames. |
-| [AGENTS.md](file:///var/home/nmoreira/Projetos/cola-zero/AGENTS.md) | Convenções de código, padrões do repositório, fluxo de trabalho e instruções para agentes de IA. |
-| [docs/archive/](file:///var/home/nmoreira/Projetos/cola-zero/docs/archive/) | Arquivo histórico de planejamentos técnicos anteriores e backlog inicial. |
+| [README.md](README.md) | Visão geral do projeto, guia de instalação, execução e índice da documentação. |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | **Fonte da Verdade Arquitetural**: Modelo de domínio centrado no Gabarito, modelo de dados relacional (PostgreSQL), interações entre componentes e decisões de design. |
+| [TARGET_DOMAIN_MODEL.md](TARGET_DOMAIN_MODEL.md) | Especificação aprovada do modelo de domínio alvo e das etapas de implementação principais. |
+| [STATUS_ATUAL.md](STATUS_ATUAL.md) | **Status do Projeto**: Funcionalidades já implementadas, relatórios de testes, limitações conhecidas e débitos técnicos. |
+| [ROADMAP.md](ROADMAP.md) | **Roadmap e Planejamento**: Fases futuras de desenvolvimento, prioridades, dependências e Definition of Done (DoD). |
+| [PLANO_AVALIACOES.md](PLANO_AVALIACOES.md) | Especificação funcional do sistema de avaliações centrado no Gabarito, ciclo de vida de provas, fluxos de trabalho (Workflow A e B), tentativas online e consolidação de notas. |
+| [PLANO_BANCO_QUESTOES.md](PLANO_BANCO_QUESTOES.md) | Especificação do Banco de Questões como produtor opcional de Gabaritos, versionamento imutável e habilidades SEDU/BNCC. |
+| [PLANO_PRODUCAO_PROVAS.md](PLANO_PRODUCAO_PROVAS.md) | Plano de implementação para montagem de provas a partir do Banco de Questões, visualização prévia e geração de folhas OMR personalizadas por aluno. |
+| [PLANO_OMR.md](PLANO_OMR.md) | Pipeline de Leitura Óptica de Cartão-Resposta (OMR) validado contra o Gabarito. |
+| [PLANO_DASHBOARD.md](PLANO_DASHBOARD.md) | Analytics pedagógico baseado no Gabarito, desempenho por habilidade SEDU/BNCC, relatórios executivos e exportações (PDF/XLSX). |
+| [PLANO_ANTI_COLA.md](PLANO_ANTI_COLA.md) | Monitoramento de integridade em provas online, eventos de segurança de tela (`security_events`), auditoria, consentimento e LGPD. |
+| [PLANO_MODELO_ACADEMICO.md](PLANO_MODELO_ACADEMICO.md) | Modelo acadêmico de turmas, matrículas, professores e atribuição multi-turma de exames. |
+| [AGENTS.md](AGENTS.md) | Convenções de código, padrões do repositório, fluxo de trabalho e instruções para agentes de IA. |
+| [docs/archive/](docs/archive/) | Arquivo histórico de planejamentos técnicos anteriores e backlog inicial. |
 
 ---
 

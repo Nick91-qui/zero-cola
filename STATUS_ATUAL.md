@@ -75,7 +75,7 @@
 
 ## 5. Próximo Passo Planejado
 
-1. **Produção e Visualização de Provas**: o próximo incremento funcional planejado e atualmente em implementação é separar a montagem da prova da criação de questões, permitir a consulta visual do Banco de Questões e gerar folhas OMR personalizadas por aluno. O plano detalhado está em [PLANO_PRODUCAO_PROVAS.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_PRODUCAO_PROVAS.md).
+1. **Produção e Visualização de Provas**: o próximo incremento funcional planejado e atualmente em implementação é separar a montagem da prova da criação de questões, permitir a consulta visual do Banco de Questões e gerar folhas OMR personalizadas por aluno. O plano detalhado está em [PLANO_PRODUCAO_PROVAS.md](PLANO_PRODUCAO_PROVAS.md).
 
 ---
 

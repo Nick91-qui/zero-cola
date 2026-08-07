@@ -167,8 +167,8 @@ O schema relacional atual mantém o COLA-ZERO centrado em `AnswerKey` e em vínc
 
 ## 6. Documentos de Planejamento Específicos
 
-- [PLANO_AVALIACOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_AVALIACOES.md) — Especificação funcional baseada em Gabarito.
-- [PLANO_BANCO_QUESTOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_BANCO_QUESTOES.md) — Especificação do produtor opcional de Gabaritos.
-- [PLANO_OMR.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_OMR.md) — Leitura óptica de cartões-resposta validados contra o Gabarito.
-- [PLANO_DASHBOARD.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_DASHBOARD.md) — Analytics pedagógico operando diretamente sobre o Gabarito e Habilidades.
-- [PLANO_ANTI_COLA.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_ANTI_COLA.md) — Monitoramento de integridade online e conformidade LGPD.
+- [PLANO_AVALIACOES.md](PLANO_AVALIACOES.md) — Especificação funcional baseada em Gabarito.
+- [PLANO_BANCO_QUESTOES.md](PLANO_BANCO_QUESTOES.md) — Especificação do produtor opcional de Gabaritos.
+- [PLANO_OMR.md](PLANO_OMR.md) — Leitura óptica de cartões-resposta validados contra o Gabarito.
+- [PLANO_DASHBOARD.md](PLANO_DASHBOARD.md) — Analytics pedagógico operando diretamente sobre o Gabarito e Habilidades.
+- [PLANO_ANTI_COLA.md](PLANO_ANTI_COLA.md) — Monitoramento de integridade online e conformidade LGPD.

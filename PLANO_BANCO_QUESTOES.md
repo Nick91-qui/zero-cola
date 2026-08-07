@@ -75,4 +75,4 @@ graph LR
 
 ## 7. Próxima Etapa de Interface
 
-- A consulta visual das questões pelo professor e a seleção de itens para montar uma prova são detalhadas em [PLANO_PRODUCAO_PROVAS.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_PRODUCAO_PROVAS.md).
+- A consulta visual das questões pelo professor e a seleção de itens para montar uma prova são detalhadas em [PLANO_PRODUCAO_PROVAS.md](PLANO_PRODUCAO_PROVAS.md).

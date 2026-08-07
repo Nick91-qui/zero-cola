@@ -8,7 +8,7 @@ Guidelines, conventions, and instructions for AI agents working on the COLA-ZERO
 
 This document specifies repository standards, coding conventions, documentation rules, and execution workflows for AI agents.
 
-Architectural principles, domain model details, database schemas, and design decisions are specified in [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md). Agents MUST consult [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md) before making database, structural, or API contract changes.
+Architectural principles, domain model details, database schemas, and design decisions are specified in [ARCHITECTURE.md](ARCHITECTURE.md). Agents MUST consult [ARCHITECTURE.md](ARCHITECTURE.md) before making database, structural, or API contract changes.
 
 ---
 
@@ -17,7 +17,7 @@ Architectural principles, domain model details, database schemas, and design dec
 1. **Keep It Simple**: Prefer clean, simple implementations over complex abstractions or premature optimizations.
 2. **Security First**: Every endpoint and feature must enforce authentication and role-based authorization (RBAC).
 3. **Privacy & LGPD by Design**: Minimize data collection. Explicitly inform users of any online monitoring.
-4. **Answer Key Centrality**: Maintain the core domain model centered on `Answer Key + Attempt Engine` *(Gabarito + Motor de Tentativas/Avaliação)*. Treat the Question Bank as an optional producer of Answer Keys, not as the core of the assessment model. Refer to [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md) for full domain flows.
+4. **Answer Key Centrality**: Maintain the core domain model centered on `Answer Key + Attempt Engine` *(Gabarito + Motor de Tentativas/Avaliação)*. Treat the Question Bank as an optional producer of Answer Keys, not as the core of the assessment model. Refer to [ARCHITECTURE.md](ARCHITECTURE.md) for full domain flows.
 
 ---
 
@@ -57,15 +57,15 @@ Architectural principles, domain model details, database schemas, and design dec
 ## 5. Documentation Conventions
 
 1. **Single Source of Truth**: Each topic has exactly ONE authoritative document. Do not duplicate information across markdown files.
-   - System Architecture, Data Model, Database Schema & Design Decisions -> [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md)
-   - Current Project Status & Implemented Features -> [STATUS_ATUAL.md](file:///var/home/nmoreira/Projetos/cola-zero/STATUS_ATUAL.md)
-   - Future Phases & Priorities -> [ROADMAP.md](file:///var/home/nmoreira/Projetos/cola-zero/ROADMAP.md)
-   - OMR Printed Exams -> [PLANO_OMR.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_OMR.md)
-   - Assessment System & Attempts -> [PLANO_AVALIACOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_AVALIACOES.md)
-   - Question Bank (Optional Producer) -> [PLANO_BANCO_QUESTOES.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_BANCO_QUESTOES.md)
-   - Pedagogical Analytics & Dashboard -> [PLANO_DASHBOARD.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_DASHBOARD.md)
-   - Online Integrity & LGPD -> [PLANO_ANTI_COLA.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_ANTI_COLA.md)
-2. **Internal Links**: Always use markdown file links (e.g. `[ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md)`) when referencing other documents.
+   - System Architecture, Data Model, Database Schema & Design Decisions -> [ARCHITECTURE.md](ARCHITECTURE.md)
+   - Current Project Status & Implemented Features -> [STATUS_ATUAL.md](STATUS_ATUAL.md)
+   - Future Phases & Priorities -> [ROADMAP.md](ROADMAP.md)
+   - OMR Printed Exams -> [PLANO_OMR.md](PLANO_OMR.md)
+   - Assessment System & Attempts -> [PLANO_AVALIACOES.md](PLANO_AVALIACOES.md)
+   - Question Bank (Optional Producer) -> [PLANO_BANCO_QUESTOES.md](PLANO_BANCO_QUESTOES.md)
+   - Pedagogical Analytics & Dashboard -> [PLANO_DASHBOARD.md](PLANO_DASHBOARD.md)
+   - Online Integrity & LGPD -> [PLANO_ANTI_COLA.md](PLANO_ANTI_COLA.md)
+2. **Internal Links**: Always use markdown file links (e.g. `[ARCHITECTURE.md](ARCHITECTURE.md)`) when referencing other documents.
 3. **Preserve Valid Data**: When updating documentation, update the relevant single source of truth without erasing valid historical information.
 
 ---

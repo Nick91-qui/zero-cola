@@ -120,6 +120,6 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 Para qualquer nova funcionalidade ser considerada concluída no COLA-ZERO:
 1. **Sem Duplicação**: Nenhuma duplicação de regra de negócio ou modelo de dados.
 2. **Testes Automatizados**: Inclusão de testes unitários/integração com 100% de aprovação.
-3. **Documentação**: Atualização dos documentos oficiais relevantes em [ARCHITECTURE.md](file:///var/home/nmoreira/Projetos/cola-zero/ARCHITECTURE.md) ou manuais de módulo.
+3. **Documentação**: Atualização dos documentos oficiais relevantes em [ARCHITECTURE.md](ARCHITECTURE.md) ou manuais de módulo.
 4. **Respeito aos Princípios**: Manutenção da entrega de uma questão por vez em provas online e garantia de funcionamento do dashboard com ou sem banco de questões.
 5. **Hardening Pós-MVP**: Migrações de segurança como `Argon2` e outros endurecimentos podem permanecer como débito técnico até a estabilização do MVP, desde que estejam explicitamente documentados.

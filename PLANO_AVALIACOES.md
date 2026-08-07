@@ -83,7 +83,7 @@ Um exame só transiciona do status `draft` para `published` se:
 
 ## 5. Avaliações Impressas e OMR
 - As folhas de resposta OMR são impressas e lidas contra o Gabarito da avaliação.
-- Consulte [PLANO_OMR.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_OMR.md) para detalhes do pipeline visual OpenCV.
+- Consulte [PLANO_OMR.md](PLANO_OMR.md) para detalhes do pipeline visual OpenCV.
 
 ---
 
@@ -93,7 +93,7 @@ Um exame só transiciona do status `draft` para `published` se:
 ---
 
 ## 7. Relação com o Dashboard Pedagógico
-- Como a inteligência pedagógica é calculada a partir do Gabarito e Habilidades, a análise de acertos e relatórios funcionam com total transparência e uniformidade para qualquer avaliação. Consulte [PLANO_DASHBOARD.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_DASHBOARD.md).
+- Como a inteligência pedagógica é calculada a partir do Gabarito e Habilidades, a análise de acertos e relatórios funcionam com total transparência e uniformidade para qualquer avaliação. Consulte [PLANO_DASHBOARD.md](PLANO_DASHBOARD.md).
 
 ## 8. Próxima Evolução Planejada
-- A etapa operacional de montagem visual da prova e geração de folhas OMR personalizadas por aluno está detalhada em [PLANO_PRODUCAO_PROVAS.md](file:///var/home/nmoreira/Projetos/cola-zero/PLANO_PRODUCAO_PROVAS.md).
+- A etapa operacional de montagem visual da prova e geração de folhas OMR personalizadas por aluno está detalhada em [PLANO_PRODUCAO_PROVAS.md](PLANO_PRODUCAO_PROVAS.md).

@@ -45,6 +45,7 @@ logs/
 # IDE / Editor
 .vscode/
 .idea/
+.obsidian/
 *.swp
 *.swo
 .DS_Store
@@ -62,5 +63,4 @@ logs/
 backend/uploads/scans/*
 !backend/uploads/scans/.gitkeep
 uploads/
-
 
