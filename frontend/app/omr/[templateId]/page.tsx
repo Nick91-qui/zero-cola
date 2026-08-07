@@ -10,6 +10,7 @@ import {
   getTemplate,
   OMRTemplate,
   uploadScan,
+  uploadScanBatch,
 } from '@/lib/omr';
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -29,8 +30,15 @@ export default function OmrTemplateDetailPage() {
   const [template, setTemplate] = useState<OMRTemplate | null>(null);
   const [studentCode, setStudentCode] = useState('10234');
   const [file, setFile] = useState<File | null>(null);
+  const [batchFile, setBatchFile] = useState<File | null>(null);
+  const [batchResult, setBatchResult] = useState<{
+    source_filename: string;
+    total_pages: number;
+    scans: { id: string; student_code: string | null; status: string }[];
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -91,6 +99,24 @@ export default function OmrTemplateDetailPage() {
       setError(err instanceof Error ? err.message : 'Falha no upload');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleUploadBatch = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    if (!batchFile) {
+      setError('Selecione um arquivo PDF ou imagem para processamento em lote');
+      return;
+    }
+    setBatchBusy(true);
+    try {
+      const result = await uploadScanBatch(templateId, batchFile);
+      setBatchResult(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha no upload em lote');
+    } finally {
+      setBatchBusy(false);
     }
   };
 
@@ -186,6 +212,51 @@ export default function OmrTemplateDetailPage() {
                     {busy ? 'Processando imagem...' : 'Enviar e Corrigir'}
                   </button>
                 </form>
+              </section>
+
+              <section className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-slate-900">
+                  3. Processar lote PDF multipágina
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Envie um PDF com uma página por aluno ou uma imagem única para gerar um scan por página.
+                </p>
+                <form onSubmit={handleUploadBatch} className="mt-4 space-y-4">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Arquivo PDF ou imagem
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                      onChange={(e) => setBatchFile(e.target.files?.[0] || null)}
+                      className="mt-1.5 block w-full text-sm text-slate-600 file:mr-4 file:rounded-md file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={batchBusy || !batchFile}
+                    className="rounded-md border border-emerald-700 bg-emerald-50 px-5 py-2.5 text-sm font-medium text-emerald-800 shadow-sm hover:bg-emerald-100 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    {batchBusy ? 'Processando lote...' : 'Enviar PDF / Lote'}
+                  </button>
+                </form>
+
+                {batchResult && (
+                  <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                    <p className="font-semibold">
+                      {batchResult.total_pages} página(s) processada(s) em {batchResult.source_filename}
+                    </p>
+                    <ul className="mt-2 space-y-1 text-xs">
+                      {batchResult.scans.map((scan, index) => (
+                        <li key={scan.id}>
+                          Página {index + 1}: {scan.student_code || 'sem código'} · {scan.status}{' '}
+                          <Link href={`/omr/scans/${scan.id}`} className="font-semibold underline">
+                            abrir scan
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </section>
             </>
           )}

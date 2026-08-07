@@ -31,6 +31,13 @@ export interface OMRScan {
   updated_at: string;
 }
 
+export interface OMRBatchUploadResponse {
+  omr_template_id: string;
+  source_filename: string;
+  total_pages: number;
+  scans: OMRScan[];
+}
+
 export interface Grade {
   id: string;
   student_id: string;
@@ -87,6 +94,16 @@ export async function uploadScan(templateId: string, file: File) {
   form.append('omr_template_id', templateId);
   form.append('file', file);
   return apiFetch<OMRScan>('/omr/scans/upload', {
+    method: 'POST',
+    body: form,
+  });
+}
+
+export async function uploadScanBatch(templateId: string, file: File) {
+  const form = new FormData();
+  form.append('omr_template_id', templateId);
+  form.append('file', file);
+  return apiFetch<OMRBatchUploadResponse>('/omr/scans/upload-batch', {
     method: 'POST',
     body: form,
   });

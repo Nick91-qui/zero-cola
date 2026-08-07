@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.enums import GradeSourceType, OMRScanStatus, UserRole
 from app.models.exam import Exam
 from app.models.grade import Grade
@@ -24,14 +25,28 @@ from app.services.exam import ExamService
 from app.services.omr_engine import OMREngine
 from app.services.omr_pdf import generate_omr_pdf
 from app.services.omr_sheet_image import render_sheet_png
-from app.services.omr_storage import OMRScanStorage
+from app.services.omr_storage import OMRStorageBackend, build_omr_storage_backend
 
 
 class OMRService:
-    def __init__(self, db: Session, upload_dir: str = "uploads/scans"):
+    def __init__(
+        self,
+        db: Session,
+        upload_dir: str = "uploads/scans",
+        scan_storage: OMRStorageBackend | None = None,
+    ):
         self.db = db
         self.upload_dir = upload_dir
-        self.scan_storage = OMRScanStorage(upload_dir)
+        self.scan_storage = scan_storage or build_omr_storage_backend(
+            backend=settings.omr_storage_backend,
+            local_dir=upload_dir or settings.omr_storage_local_dir,
+            minio_endpoint=settings.omr_storage_minio_endpoint,
+            minio_access_key=settings.omr_storage_minio_access_key,
+            minio_secret_key=settings.omr_storage_minio_secret_key,
+            minio_bucket=settings.omr_storage_minio_bucket,
+            minio_secure=settings.omr_storage_minio_secure,
+            minio_public_base_url=settings.omr_storage_minio_public_base_url,
+        )
         self.template_repo = OMRTemplateRepository(db)
         self.scan_repo = OMRScanRepository(db)
         self.grade_repo = GradeRepository(db)
