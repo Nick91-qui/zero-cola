@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import { useAuth } from '@/app/hooks/useAuth';
-import { Exam, exportExamPdf, exportExamXlsx, listExams } from '@/lib/exams';
+import { Exam, exportExamPdf, exportExamXlsx, listExams, publishExam } from '@/lib/exams';
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -24,6 +24,7 @@ export default function ExamsListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -75,6 +76,19 @@ export default function ExamsListPage() {
       alert(err instanceof Error ? err.message : 'Falha ao exportar XLSX');
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handlePublish = async (examId: string) => {
+    setPublishingId(examId);
+    try {
+      await publishExam(examId);
+      const data = await listExams(classFilter);
+      setExams(data);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Falha ao publicar avaliação');
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -207,6 +221,16 @@ export default function ExamsListPage() {
                     >
                       Estatísticas por Questão →
                     </Link>
+                    {exam.status === 'draft' && (
+                      <button
+                        type="button"
+                        disabled={publishingId === exam.id}
+                        onClick={() => void handlePublish(exam.id)}
+                        className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:bg-slate-300"
+                      >
+                        {publishingId === exam.id ? 'Publicando...' : 'Publicar'}
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={downloadingId === exam.id}

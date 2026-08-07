@@ -132,7 +132,111 @@ describe('Question bank frontend flow', () => {
           skill_ids: ['skill-1'],
         }),
       );
-      expect(screen.getByText('Quanto é 2 + 3?')).toBeInTheDocument();
+    expect(screen.getByText('Quanto é 2 + 3?')).toBeInTheDocument();
+    });
+  });
+
+  it('can create a new skill inline and use it in a question', async () => {
+    vi.spyOn(questionsLib, 'listQuestions').mockResolvedValue([]);
+    vi.spyOn(skillsLib, 'listSkills').mockResolvedValue([]);
+    const createSkillSpy = vi.spyOn(skillsLib, 'createSkill').mockResolvedValue({
+      id: 'skill-1',
+      code: 'EF05MA01',
+      description: 'Resolver adições simples',
+      subject: 'Matemática',
+      grade_level: '5º ano',
+      curriculum: 'BNCC',
+    });
+    const createQuestionSpy = vi.spyOn(questionsLib, 'createQuestion').mockResolvedValue({
+      id: 'question-1',
+      statement: 'Quanto é 2 + 2?',
+      type: 'multiple_choice',
+      options: { A: '3', B: '4' },
+      correct_answer: 'B',
+      explanation: null,
+      image_url: null,
+      subject: 'Matemática',
+      difficulty: 'easy',
+      tags: ['aritmética'],
+      parent_id: null,
+      version: 1,
+      is_active: true,
+      created_by: 'teacher-1',
+      skills: [
+        {
+          id: 'skill-1',
+          code: 'EF05MA01',
+          description: 'Resolver adições simples',
+          subject: 'Matemática',
+          grade_level: '5º ano',
+          curriculum: 'BNCC',
+        },
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    render(<QuestionsPage />);
+
+    await screen.findByText('Questões reutilizáveis');
+
+    fireEvent.change(screen.getByLabelText('Código'), {
+      target: { value: 'EF05MA01' },
+    });
+    fireEvent.change(screen.getByLabelText('Descrição'), {
+      target: { value: 'Resolver adições simples' },
+    });
+    fireEvent.change(screen.getByLabelText('Área da habilidade'), {
+      target: { value: 'Matemática' },
+    });
+    fireEvent.change(screen.getByLabelText('Etapa/ano'), {
+      target: { value: '5º ano' },
+    });
+    fireEvent.change(screen.getByLabelText('Currículo da habilidade'), {
+      target: { value: 'BNCC' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar habilidade' }));
+
+    await waitFor(() => {
+      expect(createSkillSpy).toHaveBeenCalledWith({
+        code: 'EF05MA01',
+        description: 'Resolver adições simples',
+        subject: 'Matemática',
+        grade_level: '5º ano',
+        curriculum: 'BNCC',
+      });
+      expect(screen.getByRole('checkbox', { name: /EF05MA01/ })).toBeChecked();
+    });
+
+    fireEvent.change(screen.getByLabelText('Enunciado'), {
+      target: { value: 'Quanto é 2 + 2?' },
+    });
+    fireEvent.change(screen.getByLabelText('Matéria'), {
+      target: { value: 'Matemática' },
+    });
+    fireEvent.change(screen.getByLabelText('Dificuldade'), {
+      target: { value: 'easy' },
+    });
+    fireEvent.change(screen.getByLabelText('Tags'), {
+      target: { value: 'aritmética' },
+    });
+    fireEvent.change(screen.getByLabelText('Gabarito correto'), {
+      target: { value: 'B' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Texto da alternativa A'), {
+      target: { value: '3' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Texto da alternativa B'), {
+      target: { value: '4' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar questão' }));
+
+    await waitFor(() => {
+      expect(createQuestionSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skill_ids: ['skill-1'],
+        }),
+      );
     });
   });
 

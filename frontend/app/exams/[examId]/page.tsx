@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
+import { listClasses, type ClassSummary } from '@/lib/classes';
 import {
   archiveExam,
   exportExamOmrPackage,
@@ -11,6 +12,7 @@ import {
   getExam,
   getExamStatistics,
   publishExam,
+  updateExam,
   returnExamToDraft,
   type ExamDetail,
   type ExamStatistics,
@@ -38,9 +40,12 @@ export default function ExamDetailStatisticsPage() {
 
   const [exam, setExam] = useState<ExamDetail | null>(null);
   const [stats, setStats] = useState<ExamStatistics | null>(null);
+  const [classes, setClasses] = useState<ClassSummary[]>([]);
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [savingClasses, setSavingClasses] = useState(false);
   const [downloadingOmr, setDownloadingOmr] = useState(false);
   const [downloadingPreview, setDownloadingPreview] = useState(false);
 
@@ -49,12 +54,15 @@ export default function ExamDetailStatisticsPage() {
     setError(null);
 
     try {
-      const [examData, statsData] = await Promise.all([
+      const [examData, statsData, classData] = await Promise.all([
         getExam(examId),
         getExamStatistics(examId),
+        listClasses().catch(() => []),
       ]);
       setExam(examData);
       setStats(statsData);
+      setClasses(classData);
+      setSelectedClassIds(examData.class_ids ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao carregar avaliação');
     } finally {
@@ -83,6 +91,27 @@ export default function ExamDetailStatisticsPage() {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar status da avaliação');
     } finally {
       setBusyAction(null);
+    }
+  };
+
+  const handleToggleClass = (classId: string) => {
+    setSelectedClassIds((current) =>
+      current.includes(classId) ? current.filter((id) => id !== classId) : [...current, classId],
+    );
+  };
+
+  const handleSaveClasses = async () => {
+    setSavingClasses(true);
+    setError(null);
+
+    try {
+      const updated = await updateExam(examId, { class_ids: selectedClassIds });
+      setExam((current) => (current ? { ...current, ...updated } : updated));
+      await loadExam();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao atualizar turmas da avaliação');
+    } finally {
+      setSavingClasses(false);
     }
   };
 
@@ -235,6 +264,61 @@ export default function ExamDetailStatisticsPage() {
                   </button>
                 </div>
               </div>
+
+              <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Turmas vinculadas</h2>
+                    <p className="text-sm text-slate-600">
+                      Ajuste as turmas que podem acessar esta avaliação. A publicação continua separada da atribuição.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveClasses()}
+                    disabled={savingClasses}
+                    className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600 disabled:bg-slate-300"
+                  >
+                    {savingClasses ? 'Salvando...' : 'Salvar turmas'}
+                  </button>
+                </div>
+
+                {classes.length === 0 ? (
+                  <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                    Nenhuma turma disponível para associação.
+                  </p>
+                ) : (
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    {classes.map((classItem) => {
+                      const checked = selectedClassIds.includes(classItem.id);
+                      return (
+                        <label
+                          key={classItem.id}
+                          className={[
+                            'flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition',
+                            checked
+                              ? 'border-emerald-500 bg-emerald-50'
+                              : 'border-slate-200 bg-white hover:border-emerald-300',
+                          ].join(' ')}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => handleToggleClass(classItem.id)}
+                            className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span>
+                            <span className="block font-semibold text-slate-900">{classItem.name}</span>
+                            <span className="block text-xs text-slate-500">
+                              {classItem.academic_period || 'Sem período'} · {classItem.student_count} aluno(s)
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
 
               <section
                 className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"

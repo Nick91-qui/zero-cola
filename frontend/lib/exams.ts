@@ -65,6 +65,18 @@ export interface ExamCreatePayload {
   questions?: ExamQuestionInput[];
 }
 
+export interface ExamUpdatePayload {
+  title?: string;
+  description?: string | null;
+  class_id?: string | null;
+  class_ids?: string[];
+  total_time_seconds?: number | null;
+  max_attempts?: number;
+  randomization_enabled?: boolean;
+  max_score?: string | number;
+  is_active?: boolean;
+}
+
 export interface Exam {
   id: string;
   title: string;
@@ -146,6 +158,13 @@ export function getExamSummary(examId: string) {
 export function createExam(payload: ExamCreatePayload) {
   return apiFetch<Exam>(`/exams`, {
     method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateExam(examId: string, payload: ExamUpdatePayload) {
+  return apiFetch<Exam>(`/exams/${examId}`, {
+    method: 'PATCH',
     body: JSON.stringify(payload),
   });
 }

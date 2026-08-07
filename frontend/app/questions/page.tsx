@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import { useAuth } from '@/app/hooks/useAuth';
-import { listSkills, type SkillSummary } from '@/lib/skills';
+import { createSkill, listSkills, type SkillSummary } from '@/lib/skills';
 import { createQuestion, listQuestions } from '@/lib/questions';
 import type { Question } from '@/lib/exams';
 
@@ -47,6 +47,12 @@ export default function QuestionsPage() {
   const [correctAnswer, setCorrectAnswer] = useState('A');
   const [options, setOptions] = useState<Record<string, string>>(createEmptyOptions());
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [newSkillCode, setNewSkillCode] = useState('');
+  const [newSkillDescription, setNewSkillDescription] = useState('');
+  const [newSkillSubject, setNewSkillSubject] = useState('');
+  const [newSkillGradeLevel, setNewSkillGradeLevel] = useState('');
+  const [newSkillCurriculum, setNewSkillCurriculum] = useState('BNCC');
+  const [creatingSkill, setCreatingSkill] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasNextPage = questions.length === QUESTION_PAGE_SIZE;
 
@@ -151,6 +157,40 @@ export default function QuestionsPage() {
       setError(err instanceof Error ? err.message : 'Falha ao criar questão');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateSkill = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+
+    const code = newSkillCode.trim();
+    const description = newSkillDescription.trim();
+    if (!code || !description) {
+      setError('Informe o código e a descrição da habilidade.');
+      return;
+    }
+
+    setCreatingSkill(true);
+    try {
+      const created = await createSkill({
+        code,
+        description,
+        subject: newSkillSubject.trim() || null,
+        grade_level: newSkillGradeLevel.trim() || null,
+        curriculum: newSkillCurriculum.trim() || 'BNCC',
+      });
+      setSkills((current) => [...current, created].sort((a, b) => a.code.localeCompare(b.code)));
+      setSelectedSkillIds((current) => (current.includes(created.id) ? current : [...current, created.id]));
+      setNewSkillCode('');
+      setNewSkillDescription('');
+      setNewSkillSubject('');
+      setNewSkillGradeLevel('');
+      setNewSkillCurriculum('BNCC');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao criar habilidade');
+    } finally {
+      setCreatingSkill(false);
     }
   };
 
@@ -388,6 +428,84 @@ export default function QuestionsPage() {
                     placeholder="Ex: frações, adição"
                   />
                 </label>
+
+                <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">Cadastrar habilidade</h3>
+                      <p className="text-xs text-slate-500">
+                        Crie uma habilidade nova e ela já poderá ser vinculada à questão.
+                      </p>
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      {skills.length > 0
+                        ? `${skills.length} habilidade(s) disponíveis`
+                        : 'Nenhuma habilidade cadastrada'}
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleCreateSkill} className="mt-4 grid gap-3 md:grid-cols-2">
+                    <label className="block text-xs font-medium text-slate-600">
+                      Código
+                      <input
+                        type="text"
+                        value={newSkillCode}
+                        onChange={(event) => setNewSkillCode(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                        placeholder="Ex: EF05MA01"
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      Descrição
+                      <input
+                        type="text"
+                        value={newSkillDescription}
+                        onChange={(event) => setNewSkillDescription(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                        placeholder="Resolver adições simples"
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      Área da habilidade
+                      <input
+                        type="text"
+                        value={newSkillSubject}
+                        onChange={(event) => setNewSkillSubject(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                        placeholder="Ex: Matemática"
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      Etapa/ano
+                      <input
+                        type="text"
+                        value={newSkillGradeLevel}
+                        onChange={(event) => setNewSkillGradeLevel(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                        placeholder="Ex: 5º ano"
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600 md:col-span-2">
+                      Currículo da habilidade
+                      <input
+                        type="text"
+                        value={newSkillCurriculum}
+                        onChange={(event) => setNewSkillCurriculum(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                        placeholder="BNCC"
+                      />
+                    </label>
+                    <div className="md:col-span-2">
+                      <button
+                        type="submit"
+                        disabled={creatingSkill}
+                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-300"
+                      >
+                        {creatingSkill ? 'Criando...' : 'Criar habilidade'}
+                      </button>
+                    </div>
+                  </form>
+                </section>
 
                 <label className="block text-sm font-medium text-slate-700">
                   Gabarito correto
