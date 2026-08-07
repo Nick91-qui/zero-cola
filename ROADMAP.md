@@ -17,7 +17,7 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 | **Fase 5** | Interface Frontend para Provas Online (`/exams` + `/attempts/[id]`) | ✅ Concluído e validado | P1 |
 | **Fase 6** | Interface Frontend para Analytics & Dashboard (`/dashboard`) | ✅ Concluído no baseline atual | P1 |
 | **Fase 7** | Hardening de Segurança, Auditoria & LGPD | ✅ Concluído e validado | P2 |
-| **Fase 8** | Produção e Visualização de Provas (`Question Bank` → `Exam Builder` → `OMR personalizado`) | 🛠️ Em implementação (pré-visualização entregue) | P2 |
+| **Fase 8** | Produção e Visualização de Provas (`Question Bank` → `Exam Builder` → `OMR personalizado`) | ✅ Concluído e validado | P2 |
 | **Fase 9** | Processamento OMR em Lote (PDF multipágina) & Escala | ⏳ Futuro | P3 |
 
 ---
@@ -87,7 +87,7 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 ---
 
 ### Fase 8 — Produção e Visualização de Provas
-- **Status**: em implementação, com a pré-visualização da prova já entregue.
+- **Status**: concluída e validada.
 - **Objetivo**: separar a criação de questões da montagem da prova, permitir a visualização da prova antes da publicação e gerar folhas OMR personalizadas por aluno.
 - **Entregas**:
   - consulta visual do Banco de Questões para montagem da prova;

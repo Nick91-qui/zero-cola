@@ -6,7 +6,7 @@
 
 ## 1. Resumo Executivo do Status
 
-- **Status Geral**: os módulos backend centrais do COLA-ZERO estão implementados e validados, incluindo autenticação/RBAC, OMR, AnswerKey/Attempt Engine, Question Bank, Workflow A, Workflow B, classes, auditoria, consentimentos e LGPD básica. A Fase 8 de produção e visualização de provas está em implementação, com a pré-visualização da prova já entregue no backend/frontend.
+- **Status Geral**: os módulos backend centrais do COLA-ZERO estão implementados e validados, incluindo autenticação/RBAC, OMR, AnswerKey/Attempt Engine, Question Bank, Workflow A, Workflow B, classes, auditoria, consentimentos e LGPD básica. A Fase 8 de produção e visualização de provas está concluída e validada, com a pré-visualização da prova, a montagem por seleção de questões e a exportação de folhas OMR personalizadas já disponíveis no backend/frontend.
 - **Frontend**: já existem as telas principais para autenticação, painel, avaliações, tentativas online e OMR; a camada visual de administração para classes, auditoria e LGPD é mais enxuta e ainda pode evoluir.
 - **Suíte de Testes Automatizados**: a validação consolidada mais recente registrou **111 testes de backend aprovados** e **8 testes Vitest de frontend aprovados**.
 - **Infraestrutura**: o ambiente continua containerizado com Docker e Docker Compose (`postgres`, `backend`, `frontend`).
@@ -75,7 +75,7 @@
 
 ## 5. Próximo Passo Planejado
 
-1. **Produção e Visualização de Provas**: o próximo incremento funcional planejado e atualmente em implementação é separar a montagem da prova da criação de questões, permitir a consulta visual do Banco de Questões e gerar folhas OMR personalizadas por aluno. O plano detalhado está em [PLANO_PRODUCAO_PROVAS.md](PLANO_PRODUCAO_PROVAS.md).
+1. **Produção e Visualização de Provas**: esta etapa foi concluída e validada. O professor já pode consultar o Banco de Questões, montar provas por seleção de questões, visualizar a prova antes de publicar e gerar folhas OMR personalizadas por aluno. O plano detalhado está em [PLANO_PRODUCAO_PROVAS.md](PLANO_PRODUCAO_PROVAS.md).
 
 ---
 
