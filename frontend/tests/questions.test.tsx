@@ -135,4 +135,88 @@ describe('Question bank frontend flow', () => {
       expect(screen.getByText('Quanto é 2 + 3?')).toBeInTheDocument();
     });
   });
+
+  it('loads question bank pages through backend filters and pagination', async () => {
+    const questionData = Array.from({ length: 8 }, (_, index) => ({
+      id: `question-${index + 1}`,
+      statement: `Questão ${index + 1}`,
+      type: 'multiple_choice',
+      options: { A: '1', B: '2' },
+      correct_answer: 'B',
+      explanation: null,
+      image_url: null,
+      subject: index % 2 === 0 ? 'Matemática' : 'História',
+      difficulty: index % 2 === 0 ? 'easy' : 'medium',
+      tags: ['aritmética'],
+      parent_id: null,
+      version: 1,
+      is_active: index !== 7,
+      created_by: 'teacher-1',
+      skills: [
+        {
+          id: 'skill-1',
+          code: 'EF05MA01',
+          description: 'Resolver adições simples',
+          subject: 'Matemática',
+          grade_level: '5',
+          curriculum: 'BNCC',
+        },
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    const listSpy = vi.spyOn(questionsLib, 'listQuestions').mockResolvedValue(questionData);
+    vi.spyOn(skillsLib, 'listSkills').mockResolvedValue([
+      {
+        id: 'skill-1',
+        code: 'EF05MA01',
+        description: 'Resolver adições simples',
+        subject: 'Matemática',
+        grade_level: '5',
+        curriculum: 'BNCC',
+      },
+    ]);
+
+    render(<QuestionsPage />);
+
+    await screen.findByText('Questões reutilizáveis');
+    expect(listSpy).toHaveBeenCalledWith({
+      q: undefined,
+      skill_id: undefined,
+      include_inactive: false,
+      skip: 0,
+      limit: 8,
+    });
+
+    fireEvent.change(screen.getByLabelText('Buscar por texto'), {
+      target: { value: 'frações' },
+    });
+    fireEvent.change(screen.getByLabelText('Habilidade'), {
+      target: { value: 'skill-1' },
+    });
+    fireEvent.click(screen.getByLabelText('Incluir inativas'));
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenLastCalledWith({
+        q: 'frações',
+        skill_id: 'skill-1',
+        include_inactive: true,
+        skip: 0,
+        limit: 8,
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima' }));
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenLastCalledWith({
+        q: 'frações',
+        skill_id: 'skill-1',
+        include_inactive: true,
+        skip: 8,
+        limit: 8,
+      });
+    });
+  });
 });

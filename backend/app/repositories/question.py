@@ -1,6 +1,8 @@
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy import String as SAString
+from sqlalchemy import cast, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.question import Question
@@ -40,7 +42,18 @@ class QuestionRepository:
             query = query.filter(Question.is_active.is_(True))
         if query_text.strip():
             like = f"%{query_text.strip()}%"
-            query = query.filter(Question.statement.ilike(like))
+            query = (
+                query.outerjoin(Question.skills).filter(
+                    or_(
+                        Question.statement.ilike(like),
+                        Question.subject.ilike(like),
+                        Question.difficulty.ilike(like),
+                        cast(Question.tags, SAString).ilike(like),
+                        Skill.code.ilike(like),
+                        Skill.description.ilike(like),
+                    )
+                )
+            )
         if skill_id is not None:
             query = query.join(Question.skills).filter(Skill.id == skill_id)
         return query.distinct().order_by(Question.created_at.desc()).offset(skip).limit(limit).all()

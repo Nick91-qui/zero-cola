@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import { useAuth } from '@/app/hooks/useAuth';
 import { listSkills, type SkillSummary } from '@/lib/skills';
@@ -9,6 +9,7 @@ import { createQuestion, listQuestions } from '@/lib/questions';
 import type { Question } from '@/lib/exams';
 
 const OPTION_KEYS = ['A', 'B', 'C', 'D', 'E'] as const;
+const QUESTION_PAGE_SIZE = 8;
 
 function createEmptyOptions() {
   return {
@@ -36,6 +37,9 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedSkillId, setSelectedSkillId] = useState('');
+  const [includeInactive, setIncludeInactive] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [statement, setStatement] = useState('');
   const [subject, setSubject] = useState('');
   const [difficulty, setDifficulty] = useState('');
@@ -44,23 +48,7 @@ export default function QuestionsPage() {
   const [options, setOptions] = useState<Record<string, string>>(createEmptyOptions());
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  const filteredQuestions = useMemo(() => {
-    const normalizedQuery = search.trim().toLowerCase();
-    if (!normalizedQuery) return questions;
-    return questions.filter((question) => {
-      const haystack = [
-        question.statement,
-        question.subject ?? '',
-        question.difficulty ?? '',
-        question.tags?.join(' ') ?? '',
-        question.skills.map((skill) => `${skill.code} ${skill.description}`).join(' '),
-      ]
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(normalizedQuery);
-    });
-  }, [questions, search]);
+  const hasNextPage = questions.length === QUESTION_PAGE_SIZE;
 
   useEffect(() => {
     let active = true;
@@ -90,6 +78,29 @@ export default function QuestionsPage() {
       active = false;
     };
   }, []);
+
+  const loadQuestions = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const questionData = await listQuestions({
+        q: search.trim() || undefined,
+        skill_id: selectedSkillId || undefined,
+        include_inactive: includeInactive,
+        skip: (currentPage - 1) * QUESTION_PAGE_SIZE,
+        limit: QUESTION_PAGE_SIZE,
+      });
+      setQuestions(questionData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao carregar questões');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, includeInactive, search, selectedSkillId]);
+
+  useEffect(() => {
+    void loadQuestions();
+  }, [loadQuestions]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -128,7 +139,7 @@ export default function QuestionsPage() {
             .filter(Boolean) || null,
         skill_ids: selectedSkillIds.length > 0 ? selectedSkillIds : undefined,
       });
-      setQuestions((current) => [created, ...current]);
+      setQuestions((current) => [created, ...current].slice(0, QUESTION_PAGE_SIZE));
       setStatement('');
       setSubject('');
       setDifficulty('');
@@ -197,27 +208,65 @@ export default function QuestionsPage() {
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Acervo de questões</h2>
                   <p className="mt-1 text-sm text-slate-600">
-                    {loading ? 'Carregando questões...' : `${filteredQuestions.length} questão(ões) visível(is)`}
+                    {loading ? 'Carregando questões...' : `${questions.length} questão(ões) nesta página`}
                   </p>
                 </div>
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Buscar por enunciado, habilidade ou tema"
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 sm:max-w-sm"
-                />
+                <div className="flex w-full flex-col gap-3 sm:max-w-3xl sm:flex-row sm:items-end">
+                  <label className="block flex-1 text-sm font-medium text-slate-700">
+                    Buscar por texto
+                    <input
+                      type="search"
+                      value={search}
+                      onChange={(event) => {
+                        setSearch(event.target.value);
+                        setCurrentPage(1);
+                      }}
+                      placeholder="Enunciado, disciplina, habilidade, tag"
+                      className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                    />
+                  </label>
+                  <label className="block min-w-48 text-sm font-medium text-slate-700">
+                    Habilidade
+                    <select
+                      value={selectedSkillId}
+                      onChange={(event) => {
+                        setSelectedSkillId(event.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                    >
+                      <option value="">Todas</option>
+                      {skills.map((skill) => (
+                        <option key={skill.id} value={skill.id}>
+                          {skill.code}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={includeInactive}
+                      onChange={(event) => {
+                        setIncludeInactive(event.target.checked);
+                        setCurrentPage(1);
+                      }}
+                      className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    Incluir inativas
+                  </label>
+                </div>
               </div>
 
               {loading ? (
                 <p className="py-12 text-center text-sm text-slate-500">Carregando questões...</p>
-              ) : filteredQuestions.length === 0 ? (
+              ) : questions.length === 0 ? (
                 <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
                   <p className="text-sm text-slate-500">Nenhuma questão encontrada.</p>
                 </div>
               ) : (
                 <div className="mt-6 grid gap-4">
-                  {filteredQuestions.map((question) => (
+                  {questions.map((question) => (
                     <article
                       key={question.id}
                       className="rounded-xl border border-slate-200 bg-slate-50 p-5"
@@ -262,6 +311,30 @@ export default function QuestionsPage() {
                   ))}
                 </div>
               )}
+
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                <p className="text-xs text-slate-500">
+                  Página {currentPage} · {questions.length} registro(s) carregado(s)
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={currentPage === 1 || loading}
+                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => page + 1)}
+                    disabled={!hasNextPage || loading}
+                    className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 disabled:opacity-50"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              </div>
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
