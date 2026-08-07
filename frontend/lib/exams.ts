@@ -176,6 +176,10 @@ export function exportExamPdf(examId: string) {
   return apiFetchBlob(`/exams/${examId}/export/pdf`);
 }
 
+export function exportExamPreviewPdf(examId: string) {
+  return apiFetchBlob(`/exams/${examId}/preview/pdf`);
+}
+
 export function exportExamXlsx(examId: string) {
   return apiFetchBlob(`/exams/${examId}/export/xlsx`);
 }

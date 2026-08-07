@@ -1,9 +1,10 @@
 from io import BytesIO
 from typing import Any, Dict, List
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
@@ -61,7 +62,10 @@ class ExportService:
         story.append(Paragraph(f"Relatório de Avaliação: {exam_title}", title_style))
         story.append(
             Paragraph(
-                f"Turma: {class_id or 'Geral'} | Professor: {teacher_name} | Questões: {total_questions} | Nota Máxima: {max_score}",
+                (
+                    f"Turma: {class_id or 'Geral'} | Professor: {teacher_name} | "
+                    f"Questões: {total_questions} | Nota Máxima: {max_score}"
+                ),
                 subtitle_style,
             )
         )
@@ -165,6 +169,129 @@ class ExportService:
         return pdf_data
 
     @staticmethod
+    def generate_exam_preview_pdf(
+        exam_title: str,
+        class_id: str,
+        teacher_name: str,
+        total_questions: int,
+        exam_questions: List[Dict[str, Any]],
+    ) -> bytes:
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
+            bottomMargin=36,
+            pageCompression=0,
+        )
+        story = []
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            "PreviewTitleStyle",
+            parent=styles["Heading1"],
+            fontSize=18,
+            leading=22,
+            textColor=colors.HexColor("#1e293b"),
+            alignment=1,
+            spaceAfter=12,
+        )
+        subtitle_style = ParagraphStyle(
+            "PreviewSubTitleStyle",
+            parent=styles["Normal"],
+            fontSize=10,
+            leading=14,
+            textColor=colors.HexColor("#475569"),
+            alignment=1,
+            spaceAfter=16,
+        )
+        question_style = ParagraphStyle(
+            "PreviewQuestionStyle",
+            parent=styles["Heading2"],
+            fontSize=13,
+            leading=16,
+            textColor=colors.HexColor("#0f172a"),
+            spaceBefore=10,
+            spaceAfter=6,
+        )
+        body_style = ParagraphStyle(
+            "PreviewBodyStyle",
+            parent=styles["Normal"],
+            fontSize=10,
+            leading=14,
+            textColor=colors.HexColor("#334155"),
+            spaceAfter=4,
+        )
+
+        story.append(Paragraph(f"Pré-visualização da Prova: {escape(exam_title)}", title_style))
+        story.append(
+            Paragraph(
+                (
+                    f"Turma: {escape(class_id or 'Geral')} | Professor: {escape(teacher_name)} | "
+                    f"Questões: {total_questions}"
+                ),
+                subtitle_style,
+            )
+        )
+        story.append(
+            Paragraph(
+                "Esta visualização não expõe gabarito e serve apenas para revisão da composição.",
+                subtitle_style,
+            )
+        )
+
+        if not exam_questions:
+            story.append(
+                Paragraph(
+                    "Nenhuma questão vinculada à avaliação.",
+                    body_style,
+                )
+            )
+        else:
+            for index, item in enumerate(exam_questions, start=1):
+                statement = escape(str(item.get("statement") or ""))
+                weight = item.get("weight")
+                options = item.get("options") or {}
+                skills = item.get("skills") or []
+
+                story.append(
+                    Paragraph(
+                        f"Questão {index} | Peso {weight if weight is not None else '1.00'}",
+                        question_style,
+                    )
+                )
+                story.append(Paragraph(statement, body_style))
+
+                if options:
+                    for option_key, option_value in sorted(options.items()):
+                        story.append(
+                            Paragraph(
+                                f"<b>{escape(str(option_key))}.</b> {escape(str(option_value))}",
+                                body_style,
+                            )
+                        )
+                else:
+                    story.append(
+                        Paragraph("Sem alternativas cadastradas.", body_style)
+                    )
+
+                if skills:
+                    skill_codes = ", ".join(
+                        escape(str(skill.get("code") or skill.get("id") or ""))
+                        for skill in skills
+                    )
+                    story.append(Paragraph(f"Habilidades: {skill_codes}", body_style))
+
+                story.append(Spacer(1, 8))
+
+        doc.build(story)
+        pdf_data = buffer.getvalue()
+        buffer.close()
+        return pdf_data
+
+    @staticmethod
     def generate_exam_xlsx_report(
         exam_title: str,
         class_id: str,
@@ -195,7 +322,14 @@ class ExportService:
         ws1.append(["Total de Questões:", total_questions, "Nota Máxima:", max_score])
         ws1.append([])
 
-        header_row = ["Código do Aluno", "Nome do Aluno", "Acertos", "Erros", "Precisão (%)", "Nota Final"]
+        header_row = [
+            "Código do Aluno",
+            "Nome do Aluno",
+            "Acertos",
+            "Erros",
+            "Precisão (%)",
+            "Nota Final",
+        ]
         ws1.append(header_row)
 
         for att in attempts:
@@ -214,7 +348,17 @@ class ExportService:
         ws2 = wb.create_sheet(title="Estatísticas por Questão")
         ws2.append(["Análise Pedagógica por Questão — " + exam_title])
         ws2.append([])
-        ws2.append(["Questão", "Alternativa Correta", "Total Respostas", "Nº Acertos", "Nº Erros", "Precisão (%)", "Taxa Erro (%)"])
+        ws2.append(
+            [
+                "Questão",
+                "Alternativa Correta",
+                "Total Respostas",
+                "Nº Acertos",
+                "Nº Erros",
+                "Precisão (%)",
+                "Taxa Erro (%)",
+            ]
+        )
 
         for qs in question_stats:
             ws2.append(
@@ -275,7 +419,10 @@ class ExportService:
         story.append(Paragraph(f"Boletim Individual — {student_name}", title_style))
         story.append(
             Paragraph(
-                f"Código: {student_code or '-'} | Avaliação: {exam_title} | Data: {attempt.get('completed_at', '-')}",
+                (
+                    f"Código: {student_code or '-'} | Avaliação: {exam_title} | "
+                    f"Data: {attempt.get('completed_at', '-')}"
+                ),
                 sub_style,
             )
         )

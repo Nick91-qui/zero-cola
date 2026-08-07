@@ -228,6 +228,30 @@ async def export_exam_pdf(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+@router.get("/{exam_id}/preview/pdf")
+@require_role(UserRole.TEACHER, UserRole.ADMIN)
+async def preview_exam_pdf(
+    exam_id: UUID,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ExamService(db)
+    try:
+        owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+        pdf_bytes = service.export_exam_preview_pdf(exam_id, teacher_id=owner_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="previsualizacao_avaliacao_{exam_id}.pdf"'
+                )
+            },
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
 @router.get("/{exam_id}/export/xlsx")
 @require_role(UserRole.TEACHER, UserRole.ADMIN)
 async def export_exam_xlsx(

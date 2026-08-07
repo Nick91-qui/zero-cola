@@ -163,6 +163,43 @@ def test_export_exam_omr_package_api(auth_headers, test_db_session):
         assert archive.read("manifest.json").startswith(b"{")
 
 
+def test_exam_preview_pdf_api_hides_answer_key(auth_headers):
+    payload = {
+        "title": "Avaliação com preview",
+        "description": "Pré-visualização sem gabarito",
+        "class_id": "TURMA-303",
+        "total_questions": 2,
+        "questions": [
+            {
+                "display_order": 1,
+                "question": {
+                    "statement": "Questao 1",
+                    "options": {"A": "3", "B": "4"},
+                    "correct_answer": "B",
+                },
+            },
+            {
+                "display_order": 2,
+                "question": {
+                    "statement": "Questao 2",
+                    "options": {"A": "5", "B": "6"},
+                    "correct_answer": "A",
+                },
+            },
+        ],
+    }
+
+    response = client.post("/api/v1/exams", json=payload, headers=auth_headers)
+    assert response.status_code == 201
+    exam_id = response.json()["id"]
+
+    preview_res = client.get(f"/api/v1/exams/{exam_id}/preview/pdf", headers=auth_headers)
+    assert preview_res.status_code == 200
+    assert preview_res.headers["content-type"] == "application/pdf"
+    assert preview_res.content.startswith(b"%PDF")
+    assert b"Gabarito" not in preview_res.content
+
+
 def test_exam_lifecycle_api(auth_headers):
     payload = {
         "title": "Avaliação de Química - 2º Bimestre",

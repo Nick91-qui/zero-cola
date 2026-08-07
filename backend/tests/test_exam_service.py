@@ -372,6 +372,41 @@ def test_export_exam_omr_package_generates_personalized_sheets(test_db_session):
             assert pdf_bytes.startswith(b"%PDF")
 
 
+def test_export_exam_preview_pdf_hides_answer_key(test_db_session):
+    teacher = User(
+        email="teacher_preview@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(teacher)
+    test_db_session.commit()
+
+    service = ExamService(test_db_session)
+    exam = service.create_exam(
+        ExamCreate(
+            title="Pré-visualização de prova",
+            total_questions=2,
+            questions=[
+                ExamQuestionCreate(
+                    display_order=1,
+                    question=QuestionCreate(
+                        statement="Questao 1",
+                        options={"A": "3", "B": "4"},
+                        correct_answer="B",
+                    ),
+                )
+            ],
+        ),
+        teacher_id=teacher.id,
+    )
+
+    preview_bytes = service.export_exam_preview_pdf(exam.id, teacher_id=teacher.id)
+
+    assert preview_bytes.startswith(b"%PDF")
+    assert b"Gabarito" not in preview_bytes
+    assert b"Questao 1" in preview_bytes
+
+
 def test_publish_exam_projects_workflow_a_snapshot(test_db_session):
     teacher = User(
         email="teacher_publish@cola-zero.edu",

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import NewExamPage from '../app/exams/new/page';
 import ExamDetailPage from '../app/exams/[examId]/page';
@@ -340,6 +340,134 @@ describe('Teacher exam frontend flow', () => {
 
     await screen.findByText('Prova integradora');
     fireEvent.click(screen.getByRole('button', { name: 'Baixar folhas OMR' }));
+
+    await waitFor(() => {
+      expect(downloadSpy).toHaveBeenCalledWith('exam-1');
+      expect(createObjectUrlSpy).toHaveBeenCalled();
+      expect(revokeObjectUrlSpy).toHaveBeenCalled();
+    });
+  });
+
+  it('downloads a preview without exposing the answer key', async () => {
+    const now = new Date().toISOString();
+    const downloadSpy = vi.spyOn(examsLib, 'exportExamPreviewPdf').mockResolvedValue(
+      new Blob(['preview-bytes'], { type: 'application/pdf' }),
+    );
+    const createObjectUrlSpy = vi.fn(() => 'blob:preview');
+    const revokeObjectUrlSpy = vi.fn();
+    Object.defineProperty(window.URL, 'createObjectURL', {
+      value: createObjectUrlSpy,
+      configurable: true,
+    });
+    Object.defineProperty(window.URL, 'revokeObjectURL', {
+      value: revokeObjectUrlSpy,
+      configurable: true,
+    });
+
+    vi.spyOn(examsLib, 'getExam')
+      .mockResolvedValueOnce({
+        id: 'exam-1',
+        title: 'Prova integradora',
+        description: 'Avaliação criada pelo frontend',
+        teacher_id: 'teacher-1',
+        class_id: '2º Ano A',
+        class_ids: ['class-1'],
+        omr_template_id: null,
+        total_questions: 2,
+        total_time_seconds: 900,
+        max_attempts: 2,
+        randomization_enabled: true,
+        max_score: '10.00',
+        status: 'draft',
+        is_active: true,
+        deleted_at: null,
+        created_at: now,
+        updated_at: now,
+        questions: [
+          {
+            id: 'question-1',
+            statement: 'Questao 1',
+            type: 'multiple_choice',
+            options: { A: '3', B: '4' },
+            correct_answer: 'B',
+            explanation: null,
+            image_url: null,
+            subject: null,
+            difficulty: null,
+            tags: null,
+            skills: [],
+            created_at: now,
+            updated_at: now,
+          },
+        ],
+        exam_questions: [
+          {
+            id: 'exam-question-1',
+            exam_id: 'exam-1',
+            question_id: 'question-1',
+            display_order: 1,
+            weight: '1.00',
+            question: {
+              id: 'question-1',
+              statement: 'Questao 1',
+              type: 'multiple_choice',
+              options: { A: '3', B: '4' },
+              correct_answer: 'B',
+              explanation: null,
+              image_url: null,
+              subject: null,
+              difficulty: null,
+              tags: null,
+              skills: [],
+              created_at: now,
+              updated_at: now,
+            },
+            created_at: now,
+            updated_at: now,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        id: 'exam-1',
+        title: 'Prova integradora',
+        description: 'Avaliação criada pelo frontend',
+        teacher_id: 'teacher-1',
+        class_id: '2º Ano A',
+        class_ids: ['class-1'],
+        omr_template_id: null,
+        total_questions: 2,
+        total_time_seconds: 900,
+        max_attempts: 2,
+        randomization_enabled: true,
+        max_score: '10.00',
+        status: 'draft',
+        is_active: true,
+        deleted_at: null,
+        created_at: now,
+        updated_at: now,
+        questions: [],
+        exam_questions: [],
+      });
+    vi.spyOn(examsLib, 'getExamStatistics').mockResolvedValue({
+      exam_id: 'exam-1',
+      exam_title: 'Prova integradora',
+      total_attempts: 0,
+      class_id: '2º Ano A',
+      average_score: 0,
+      max_score: 10,
+      question_statistics: [],
+    });
+
+    render(<ExamDetailPage />);
+
+    await screen.findByText('Prova integradora');
+    const previewSection = screen.getByTestId('exam-preview-section');
+    expect(within(previewSection).getByText('Questao 1')).toBeInTheDocument();
+    expect(within(previewSection).getByText('A.')).toBeInTheDocument();
+    expect(within(previewSection).getByText('B.')).toBeInTheDocument();
+    expect(within(previewSection).queryByText('Gabarito')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pré-visualizar prova' }));
 
     await waitFor(() => {
       expect(downloadSpy).toHaveBeenCalledWith('exam-1');

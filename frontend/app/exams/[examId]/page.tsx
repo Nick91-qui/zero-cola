@@ -7,6 +7,7 @@ import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import {
   archiveExam,
   exportExamOmrPackage,
+  exportExamPreviewPdf,
   getExam,
   getExamStatistics,
   publishExam,
@@ -41,6 +42,7 @@ export default function ExamDetailStatisticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [downloadingOmr, setDownloadingOmr] = useState(false);
+  const [downloadingPreview, setDownloadingPreview] = useState(false);
 
   const loadExam = useCallback(async () => {
     setLoading(true);
@@ -100,6 +102,25 @@ export default function ExamDetailStatisticsPage() {
       setError(err instanceof Error ? err.message : 'Falha ao gerar folhas OMR');
     } finally {
       setDownloadingOmr(false);
+    }
+  };
+
+  const handleDownloadPreview = async () => {
+    setDownloadingPreview(true);
+    setError(null);
+
+    try {
+      const blob = await exportExamPreviewPdf(examId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `previsualizacao_${examId}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao gerar pré-visualização');
+    } finally {
+      setDownloadingPreview(false);
     }
   };
 
@@ -166,6 +187,14 @@ export default function ExamDetailStatisticsPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPreview}
+                    disabled={downloadingPreview}
+                    className="rounded-md border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 shadow-sm hover:bg-sky-100 disabled:text-slate-400"
+                  >
+                    {downloadingPreview ? 'Gerando preview...' : 'Pré-visualizar prova'}
+                  </button>
                   {exam.status === 'draft' && (
                     <button
                       type="button"
@@ -207,16 +236,19 @@ export default function ExamDetailStatisticsPage() {
                 </div>
               </div>
 
-              <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section
+                className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                data-testid="exam-preview-section"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Questões da avaliação</h2>
+                    <h2 className="text-lg font-semibold text-slate-900">Pré-visualização da prova</h2>
                     <p className="text-sm text-slate-600">
-                      Composição que será usada para answer key, tentativa online e análise pedagógica.
+                      Exibição da composição sem gabarito para revisão antes da publicação.
                     </p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    {exam.exam_questions.length} item(ns)
+                    {exam.exam_questions.length} questão(ões)
                   </span>
                 </div>
 
@@ -245,22 +277,31 @@ export default function ExamDetailStatisticsPage() {
                             </div>
                           </div>
 
-                          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
                             <div className="rounded-lg bg-white p-3 text-sm text-slate-700 shadow-sm">
                               <span className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                                Proveniência
+                                Alternativas
                               </span>
-                              <span className="mt-1 block break-all font-medium text-slate-900">
-                                {item.question_id}
-                              </span>
-                            </div>
-                            <div className="rounded-lg bg-white p-3 text-sm text-slate-700 shadow-sm">
-                              <span className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                                Gabarito
-                              </span>
-                              <span className="mt-1 block font-bold text-emerald-700">
-                                {String(item.question.correct_answer)}
-                              </span>
+                              <div className="mt-2 space-y-2">
+                                {item.question.options &&
+                                Object.keys(item.question.options).length > 0 ? (
+                                  Object.entries(item.question.options)
+                                    .sort(([left], [right]) => left.localeCompare(right))
+                                    .map(([label, value]) => (
+                                      <div
+                                        key={label}
+                                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                                      >
+                                        <span className="font-semibold text-slate-900">{label}.</span>{' '}
+                                        {value}
+                                      </div>
+                                    ))
+                                ) : (
+                                  <div className="rounded-md border border-dashed border-slate-300 bg-white px-3 py-2 text-sm text-slate-500">
+                                    Sem alternativas cadastradas.
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <div className="rounded-lg bg-white p-3 text-sm text-slate-700 shadow-sm">
                               <span className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">

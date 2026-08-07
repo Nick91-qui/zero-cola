@@ -512,6 +512,46 @@ class ExamService:
             question_stats=stats["question_statistics"],
         )
 
+    def export_exam_preview_pdf(
+        self,
+        exam_id: UUID,
+        teacher_id: Optional[UUID] = None,
+    ) -> bytes:
+        exam = self._require_exam(exam_id, teacher_id=teacher_id)
+        if not exam:
+            raise ValueError(f"Exam {exam_id} not found.")
+
+        teacher = self.db.query(User).filter(User.id == exam.teacher_id).first()
+        teacher_name = teacher.email if teacher else "Professor"
+        exam_questions = [
+            {
+                "item_number": item.display_order,
+                "weight": float(item.weight),
+                "statement": item.question.statement if item.question else None,
+                "options": item.question.options if item.question else None,
+                "skills": [
+                    {
+                        "id": skill.id,
+                        "code": skill.code,
+                        "description": skill.description,
+                        "subject": skill.subject,
+                        "grade_level": skill.grade_level,
+                        "curriculum": skill.curriculum,
+                    }
+                    for skill in (item.question.skills if item.question else [])
+                ],
+            }
+            for item in sorted(exam.exam_questions, key=lambda question: question.display_order)
+        ]
+
+        return ExportService.generate_exam_preview_pdf(
+            exam_title=exam.title,
+            class_id=exam.class_id or "Geral",
+            teacher_name=teacher_name,
+            total_questions=exam.total_questions,
+            exam_questions=exam_questions,
+        )
+
     def export_exam_xlsx(self, exam_id: UUID, teacher_id: Optional[UUID] = None) -> bytes:
         exam = self._require_exam(exam_id, teacher_id=teacher_id)
         if not exam:
