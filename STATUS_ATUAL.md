@@ -6,7 +6,7 @@
 
 ## 1. Resumo Executivo do Status
 
-- **Status Geral**: os módulos backend centrais do COLA-ZERO estão implementados e validados, incluindo autenticação/RBAC, OMR, AnswerKey/Attempt Engine, Question Bank, Workflow A, Workflow B, classes, auditoria, consentimentos e LGPD básica. A Fase 8 de produção e visualização de provas está em implementação.
+- **Status Geral**: os módulos backend centrais do COLA-ZERO estão implementados e validados, incluindo autenticação/RBAC, OMR, AnswerKey/Attempt Engine, Question Bank, Workflow A, Workflow B, classes, auditoria, consentimentos e LGPD básica. A Fase 8 de produção e visualização de provas está em implementação, com a pré-visualização da prova já entregue no backend/frontend.
 - **Frontend**: já existem as telas principais para autenticação, painel, avaliações, tentativas online e OMR; a camada visual de administração para classes, auditoria e LGPD é mais enxuta e ainda pode evoluir.
 - **Suíte de Testes Automatizados**: a validação consolidada mais recente registrou **111 testes de backend aprovados** e **8 testes Vitest de frontend aprovados**.
 - **Infraestrutura**: o ambiente continua containerizado com Docker e Docker Compose (`postgres`, `backend`, `frontend`).
@@ -64,7 +64,7 @@
 3. **Calibração de Iluminação OMR**: imagens muito degradadas podem exigir revisão manual.
 4. **Frontend Administrativo de Step 9**: a camada visual para classes, auditoria, consentimentos, eventos de segurança e LGPD ainda pode ser expandida.
 5. **Anti-Cheating Analítico**: a base de eventos existe, mas a análise pedagógica de suspeitas continua como funcionalidade futura.
-6. **Produção OMR Personalizada**: a geração de folhas por aluno e por turma está em implementação e ainda precisa de validação final de fluxo e UX.
+6. **Produção OMR Personalizada**: a geração de folhas por aluno e por turma está em implementação; a pré-visualização da prova já está disponível e ainda falta consolidar o fluxo completo de produção/UX.
 
 ---
 

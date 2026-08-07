@@ -2,7 +2,7 @@
 
 > **Single Source of Truth** para o próximo passo funcional do fluxo de avaliações: separar a criação de questões da montagem da prova, permitir a visualização da prova antes da publicação e gerar folhas OMR personalizadas por aluno para impressão.
 >
-> **Estado atual**: este plano está em implementação. O foco prático do momento é a exportação de folhas OMR personalizadas por aluno, com a montagem da prova e a visualização do exame seguindo em paralelo.
+> **Estado atual**: este plano está em implementação. A pré-visualização da prova já está disponível no backend e no frontend; o foco prático do momento é consolidar a exportação de folhas OMR personalizadas por aluno e fechar os ajustes finais de UX do fluxo de montagem.
 
 ---
 
@@ -32,9 +32,9 @@ O objetivo desta etapa é transformar a produção de provas em um fluxo explíc
 - A publicação deve continuar materializando o `AnswerKey` a partir das questões selecionadas.
 
 ### 2.3 Visualização da Prova
-- O professor deve conseguir visualizar a prova montada antes da publicação.
-- A visualização não deve expor a resposta correta para o estudante.
-- A tela de visualização deve destacar a composição da prova, quantidade de questões, pesos e habilidades.
+- A pré-visualização da prova montada já está implementada.
+- A visualização não expõe a resposta correta para o estudante.
+- A tela de visualização destaca a composição da prova, quantidade de questões, pesos e habilidades.
 
 ### 2.4 Geração de Folhas OMR Personalizadas
 - O sistema deve gerar uma folha de resposta por aluno elegível.
@@ -65,10 +65,10 @@ O objetivo desta etapa é transformar a produção de provas em um fluxo explíc
 - [ ] Criar testes para a montagem da prova por seleção de questões.
 
 ### 3.3 Visualização da prova
-- [ ] Exibir pré-visualização da prova montada.
-- [ ] Exibir resumo da composição da prova sem revelar gabarito.
-- [ ] Permitir revisão da prova antes da publicação.
-- [ ] Criar testes de confidencialidade para a pré-visualização.
+- [x] Exibir pré-visualização da prova montada.
+- [x] Exibir resumo da composição da prova sem revelar gabarito.
+- [x] Permitir revisão da prova antes da publicação.
+- [x] Criar testes de confidencialidade para a pré-visualização.
 
 ### 3.4 Geração de OMR personalizado
 - [ ] Resolver os alunos elegíveis a partir das turmas vinculadas à prova.
