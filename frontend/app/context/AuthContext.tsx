@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useCallback, useEffect, useState } from 'react';
 
 export interface User {
   id: string;
@@ -12,18 +12,10 @@ export interface User {
 
 export interface AuthContextType {
   user: User | null;
-  accessToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (
-    email: string,
-    password: string,
-    role?: string,
-    studentCode?: string | null,
-  ) => Promise<void>;
-  refreshToken: () => Promise<void>;
   error: string | null;
 }
 
@@ -31,180 +23,105 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [refreshTokenValue, setRefreshTokenValue] = useState<string | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
-  // Try to restore session from sessionStorage on mount
   useEffect(() => {
-    const storedToken = sessionStorage.getItem('accessToken');
-    const storedRefreshToken = sessionStorage.getItem('refreshToken');
-    const storedUser = sessionStorage.getItem('user');
+    let active = true;
 
-    if (storedToken && storedUser) {
-      setAccessToken(storedToken);
-      setRefreshTokenValue(storedRefreshToken);
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+    const restoreSession = async () => {
+      try {
+        const response = await fetch(`${API_URL}/auth/me`, {
+          credentials: 'include',
+        });
 
-  const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
-    setError(null);
+        if (!response.ok) {
+          if (active) {
+            setUser(null);
+          }
+          return;
+        }
 
-    try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include', // Include cookies
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Login failed');
+        const data = await response.json();
+        if (active) {
+          setUser(data);
+        }
+      } catch {
+        if (active) {
+          setUser(null);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
+    };
 
-      const data = await response.json();
-      setAccessToken(data.access_token);
-      setRefreshTokenValue(data.refresh_token);
-      setUser(data.user);
+    void restoreSession();
 
-      // Store in sessionStorage (not localStorage for security)
-      sessionStorage.setItem('accessToken', data.access_token);
-      sessionStorage.setItem('refreshToken', data.refresh_token);
-      sessionStorage.setItem('user', JSON.stringify(data.user));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Login failed';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
+    return () => {
+      active = false;
+    };
   }, [API_URL]);
 
-  const logout = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Call backend logout endpoint (optional, for audit purposes)
-      if (accessToken) {
-        await fetch(`${API_URL}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          credentials: 'include',
-        }).catch(() => {
-          // Ignore errors on logout - still clear local state
-        });
-      }
-    } finally {
-      setAccessToken(null);
-      setRefreshTokenValue(null);
-      setUser(null);
-      sessionStorage.removeItem('accessToken');
-      sessionStorage.removeItem('refreshToken');
-      sessionStorage.removeItem('user');
-      setIsLoading(false);
-    }
-  }, [accessToken, API_URL]);
-
-  const register = useCallback(
-    async (
-      email: string,
-      password: string,
-      role: string = 'student',
-      studentCode: string | null = null,
-    ) => {
+  const login = useCallback(
+    async (email: string, password: string) => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const body: Record<string, string> = { email, password, role };
-        if (role === 'student' && studentCode) {
-          body.student_code = studentCode;
-        }
-
-        const response = await fetch(`${API_URL}/auth/register`, {
+        const response = await fetch(`${API_URL}/auth/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify({ email, password }),
           credentials: 'include',
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          const detail = errorData.detail;
-          const message =
-            typeof detail === 'string'
-              ? detail
-              : Array.isArray(detail)
-                ? detail.map((item: { msg?: string }) => item.msg).join('; ')
-                : 'Registration failed';
-          throw new Error(message);
+          throw new Error(errorData.detail || 'Login failed');
         }
 
-        // After registration, automatically log in
-        await login(email, password);
+        const data = await response.json();
+        setUser(data.user ?? data);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Registration failed';
+        const message = err instanceof Error ? err.message : 'Login failed';
         setError(message);
         throw err;
       } finally {
         setIsLoading(false);
       }
     },
-    [login, API_URL]
+    [API_URL],
   );
 
-  const refreshToken = useCallback(async () => {
-    if (!refreshTokenValue) {
-      setError('No refresh token available');
-      return;
-    }
+  const logout = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/auth/refresh`, {
+      await fetch(`${API_URL}/auth/logout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refresh_token: refreshTokenValue }),
         credentials: 'include',
+      }).catch(() => {
+        // Ignore errors on logout - still clear local state
       });
-
-      if (!response.ok) {
-        throw new Error('Token refresh failed');
-      }
-
-      const data = await response.json();
-      setAccessToken(data.access_token);
-      sessionStorage.setItem('accessToken', data.access_token);
-    } catch (err) {
-      setError('Session expired. Please login again.');
-      await logout();
-      throw err;
+    } finally {
+      setUser(null);
+      setIsLoading(false);
     }
-  }, [refreshTokenValue, API_URL, logout]);
+  }, [API_URL]);
 
   const value: AuthContextType = {
     user,
-    accessToken,
     isLoading,
-    isAuthenticated: !!user && !!accessToken,
+    isAuthenticated: !!user,
     login,
     logout,
-    register,
-    refreshToken,
     error,
   };
 

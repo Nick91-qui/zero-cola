@@ -85,15 +85,15 @@ export default function DashboardPage() {
 
             {user?.role === 'admin' && (
               <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
-                <h3 className="text-lg font-bold text-slate-900">Cadastro de usuários</h3>
+                <h3 className="text-lg font-bold text-slate-900">Administração</h3>
                 <p className="mt-2 text-sm text-slate-600">
-                  Crie professores e alunos e vincule as turmas diretamente na área administrativa.
+                  Acesse usuários, turmas e auditoria em um ponto único.
                 </p>
                 <Link
-                  href="/admin/users"
+                  href="/admin"
                   className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600"
                 >
-                  Abrir cadastro
+                  Abrir administração
                 </Link>
               </div>
             )}
