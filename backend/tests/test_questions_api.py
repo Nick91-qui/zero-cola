@@ -3,12 +3,12 @@ import asyncio
 import pytest
 from fastapi import HTTPException
 
-from app.api.routes.questions import create_question, get_question, list_questions
+from app.api.routes.questions import create_question, deactivate_question, get_question, list_questions, update_question
 from app.models.enums import UserRole
 from app.models.question import Question
 from app.models.skill import Skill
 from app.models.user import User
-from app.schemas.exam import QuestionCreate
+from app.schemas.exam import QuestionCreate, QuestionUpdate
 
 
 def test_teacher_can_create_and_list_questions(test_db_session):
@@ -185,3 +185,76 @@ def test_teacher_can_filter_question_bank_by_text_skill_status_and_pagination(te
     )
     assert len(page) == 1
     assert page[0]["id"] == question_b["id"]
+
+
+def test_teacher_can_version_and_deactivate_questions(test_db_session):
+    teacher = User(
+        email="teacher_questions_versioning@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    test_db_session.add(teacher)
+    test_db_session.commit()
+
+    created = asyncio.run(
+        create_question(
+            question_in=QuestionCreate(
+                statement="Questão original",
+                type="multiple_choice",
+                options={"A": "1", "B": "2"},
+                correct_answer="A",
+                subject="História",
+                difficulty="medium",
+                tags=["origem"],
+            ),
+            current_user=teacher,
+            db=test_db_session,
+        )
+    )
+
+    updated = asyncio.run(
+        update_question(
+            question_id=created["id"],
+            question_in=QuestionUpdate(
+                statement="Questão revisada",
+                correct_answer="B",
+                tags=["origem", "revisada"],
+            ),
+            current_user=teacher,
+            db=test_db_session,
+        )
+    )
+
+    assert updated["id"] != created["id"]
+    assert updated["parent_id"] == created["id"]
+    assert updated["version"] == created["version"] + 1
+    assert updated["statement"] == "Questão revisada"
+    assert updated["correct_answer"] == "B"
+    assert updated["is_active"] is True
+
+    original = test_db_session.get(Question, created["id"])
+    assert original is not None
+    assert original.is_active is False
+
+    deactivated = asyncio.run(
+        deactivate_question(
+            question_id=updated["id"],
+            current_user=teacher,
+            db=test_db_session,
+        )
+    )
+    assert deactivated["id"] == updated["id"]
+    assert deactivated["is_active"] is False
+
+    inactive_list = asyncio.run(
+        list_questions(
+            q="",
+            skill_id=None,
+            include_inactive=False,
+            skip=0,
+            limit=100,
+            current_user=teacher,
+            db=test_db_session,
+        )
+    )
+    assert inactive_list == []

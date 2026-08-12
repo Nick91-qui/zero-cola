@@ -14,6 +14,19 @@ export interface QuestionCreatePayload {
   skill_ids?: string[] | null;
 }
 
+export interface QuestionUpdatePayload {
+  statement?: string;
+  type?: string;
+  options?: Record<string, string> | null;
+  correct_answer?: string | Record<string, string>;
+  explanation?: string | null;
+  image_url?: string | null;
+  subject?: string | null;
+  difficulty?: string | null;
+  tags?: string[] | null;
+  skill_ids?: string[] | null;
+}
+
 export interface QuestionListParams {
   q?: string;
   skill_id?: string;
@@ -41,5 +54,18 @@ export function createQuestion(payload: QuestionCreatePayload) {
   return apiFetch<Question>('/questions', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export function updateQuestion(questionId: string, payload: QuestionUpdatePayload) {
+  return apiFetch<Question>(`/questions/${questionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deactivateQuestion(questionId: string) {
+  return apiFetch<Question>(`/questions/${questionId}`, {
+    method: 'DELETE',
   });
 }

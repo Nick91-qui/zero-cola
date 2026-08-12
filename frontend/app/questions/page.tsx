@@ -160,8 +160,7 @@ export default function QuestionsPage() {
     }
   };
 
-  const handleCreateSkill = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleCreateSkill = async () => {
     setError(null);
 
     const code = newSkillCode.trim();
@@ -342,9 +341,15 @@ export default function QuestionsPage() {
                             </span>
                           </p>
                         </div>
-                        <div className="text-right text-xs text-slate-500">
+                        <div className="flex flex-col items-end gap-2 text-right text-xs text-slate-500">
                           <div>Versão {question.version ?? 1}</div>
                           <div>ID {question.id}</div>
+                          <Link
+                            href={`/questions/${question.id}`}
+                            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Editar / Versionar
+                          </Link>
                         </div>
                       </div>
                     </article>
@@ -444,7 +449,7 @@ export default function QuestionsPage() {
                     </span>
                   </div>
 
-                  <form onSubmit={handleCreateSkill} className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <label className="block text-xs font-medium text-slate-600">
                       Código
                       <input
@@ -497,14 +502,15 @@ export default function QuestionsPage() {
                     </label>
                     <div className="md:col-span-2">
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={() => void handleCreateSkill()}
                         disabled={creatingSkill}
                         className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-300"
                       >
                         {creatingSkill ? 'Criando...' : 'Criar habilidade'}
                       </button>
                     </div>
-                  </form>
+                  </div>
                 </section>
 
                 <label className="block text-sm font-medium text-slate-700">

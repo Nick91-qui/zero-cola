@@ -31,6 +31,7 @@ from app.schemas.exam import (
     QuestionCreate,
     QuestionResponse,
     QuestionStatistic,
+    QuestionUpdate,
 )
 from app.schemas.omr import (
     GradeCreate,
@@ -65,6 +66,7 @@ __all__ = [
     "ExamQuestionResponse",
     "QuestionCreate",
     "QuestionResponse",
+    "QuestionUpdate",
     "QuestionStatistic",
     "ExamStatisticsResponse",
     "AttemptResponse",

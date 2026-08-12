@@ -25,6 +25,19 @@ class QuestionCreate(QuestionBase):
     skill_ids: Optional[List[UUID]] = None
 
 
+class QuestionUpdate(BaseModel):
+    statement: Optional[str] = None
+    type: Optional[str] = None
+    options: Optional[dict[str, Any]] = None
+    correct_answer: Optional[dict[str, Any] | str] = None
+    explanation: Optional[str] = None
+    image_url: Optional[str] = None
+    subject: Optional[str] = None
+    difficulty: Optional[str] = None
+    tags: Optional[list[str]] = None
+    skill_ids: Optional[List[UUID]] = None
+
+
 class QuestionResponse(QuestionBase):
     id: UUID
     parent_id: Optional[UUID] = None

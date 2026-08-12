@@ -56,6 +56,49 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+              <h3 className="text-lg font-bold text-slate-900">Privacidade</h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Consulte a política pública, exporte seus dados e acompanhe consentimentos.
+              </p>
+              <Link
+                href="/privacy"
+                className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Abrir privacidade
+              </Link>
+            </div>
+
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+              <h3 className="text-lg font-bold text-slate-900">Consentimentos</h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Gerencie o consentimento de monitoramento antes das provas online.
+              </p>
+              <Link
+                href="/consents"
+                className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600"
+              >
+                Ver consentimentos
+              </Link>
+            </div>
+
+            {user?.role === 'admin' && (
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+                <h3 className="text-lg font-bold text-slate-900">Auditoria</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  Acompanhe eventos sensíveis, logs administrativos e sinais de segurança.
+                </p>
+                <Link
+                  href="/admin/audit"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+                >
+                  Abrir auditoria
+                </Link>
+              </div>
+            )}
+          </div>
+
           {user?.role === 'student' && (
             <div className="grid grid-cols-1 gap-6">
               <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
