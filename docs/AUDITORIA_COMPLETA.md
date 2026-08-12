@@ -50,7 +50,7 @@ O backend cobre os pilares centrais do COLA-ZERO:
 
 O frontend já expõe as principais jornadas de uso para professor, estudante e administrador, com páginas reais para:
 
-- login e cadastro;
+- login, sessão por cookie HttpOnly e criação administrativa de usuários;
 - dashboard;
 - turmas;
 - questões;
@@ -70,8 +70,8 @@ O principal ponto de atenção da auditoria é este:
 
 Implementado e testado:
 
-- cadastro de usuários;
 - login;
+- criação administrativa de usuários em `/admin/users`;
 - refresh token;
 - endpoint `me`;
 - atualização de perfil;
@@ -247,15 +247,15 @@ Implementado:
 
 - página inicial com redirecionamento;
 - login;
-- cadastro;
+- área administrativa de cadastro de usuários;
 - proteção de rota;
-- contexto de autenticação.
+- contexto de autenticação com sessão por cookie HttpOnly.
 
 Arquivos principais:
 
 - [frontend/app/page.tsx](../frontend/app/page.tsx)
 - [frontend/app/auth/login/page.tsx](../frontend/app/auth/login/page.tsx)
-- [frontend/app/auth/register/page.tsx](../frontend/app/auth/register/page.tsx)
+- [frontend/app/admin/users/page.tsx](../frontend/app/admin/users/page.tsx)
 - [frontend/app/components/ProtectedRoute.tsx](../frontend/app/components/ProtectedRoute.tsx)
 
 ### 5.2 Dashboard

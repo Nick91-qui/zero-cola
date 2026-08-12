@@ -16,7 +16,8 @@
 ## 2. Funcionalidades Implementadas e Validadas
 
 ### 2.1 Milestone 1 — Autenticação e Gestão de Identidade (RBAC) ✅
-- Cadastro e login com perfis `STUDENT`, `TEACHER` e `ADMIN`.
+- Login com perfis `STUDENT`, `TEACHER` e `ADMIN`.
+- Criação administrativa de contas de professor e aluno restrita à tela `/admin/users`.
 - `student_code` numérico de 5 dígitos para estudantes.
 - JWT Access Token e Refresh Token em cookies HttpOnly.
 - Hashing seguro de senha com `bcrypt`.
@@ -49,7 +50,7 @@
 - Política de privacidade, exportação de dados e anonimização suave implementadas.
 
 ### 2.6 Frontend Atual ✅
-- `/auth/login` e `/auth/register`
+- `/auth/login` e `/admin/users`
 - `/dashboard`
 - `/exams`, `/exams/new`, `/exams/[examId]`
 - `/attempts/start`, `/attempts/[attemptId]`
