@@ -85,6 +85,21 @@ export default function DashboardPage() {
 
             {user?.role === 'admin' && (
               <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+                <h3 className="text-lg font-bold text-slate-900">Cadastro de usuários</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  Crie professores e alunos e vincule as turmas diretamente na área administrativa.
+                </p>
+                <Link
+                  href="/auth/register"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600"
+                >
+                  Abrir cadastro
+                </Link>
+              </div>
+            )}
+
+            {user?.role === 'admin' && (
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
                 <h3 className="text-lg font-bold text-slate-900">Auditoria</h3>
                 <p className="mt-2 text-sm text-slate-600">
                   Acompanhe eventos sensíveis, logs administrativos e sinais de segurança.

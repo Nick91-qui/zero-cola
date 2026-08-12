@@ -8,6 +8,13 @@ export interface UserSearchResult {
   is_active: boolean;
 }
 
+export interface AdminUserCreatePayload {
+  email: string;
+  password: string;
+  role: 'student' | 'teacher';
+  student_code?: string | null;
+}
+
 export interface UserSearchParams {
   q: string;
   role?: 'student' | 'teacher' | 'admin';
@@ -22,4 +29,11 @@ export function searchUsers(params: UserSearchParams) {
   }
   search.set('limit', String(params.limit ?? 10));
   return apiFetch<UserSearchResult[]>(`/users/search?${search.toString()}`);
+}
+
+export function createUser(payload: AdminUserCreatePayload) {
+  return apiFetch<UserSearchResult>('/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
