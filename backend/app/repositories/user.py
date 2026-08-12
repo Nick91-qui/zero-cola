@@ -38,6 +38,42 @@ class UserRepository:
     def get_all(self, skip: int = 0, limit: int = 100) -> list[User]:
         return self.db.query(User).offset(skip).limit(limit).all()
 
+    def list_users(
+        self,
+        *,
+        query: str = "",
+        role: UserRole | None = None,
+        include_inactive: bool = True,
+        limit: int = 100,
+        skip: int = 0,
+    ) -> list[User]:
+        normalized = query.strip()
+        safe_limit = max(1, min(limit, 100))
+        safe_skip = max(0, skip)
+
+        user_query = self.db.query(User)
+        if not include_inactive:
+            user_query = user_query.filter(
+                User.is_active.is_(True),
+                User.anonymized_at.is_(None),
+            )
+        if role is not None:
+            user_query = user_query.filter(User.role == role)
+
+        if normalized:
+            pattern = f"%{normalized}%"
+            filters = [User.email.ilike(pattern)]
+            if normalized.isdigit():
+                filters.append(User.student_code.ilike(pattern))
+            user_query = user_query.filter(or_(*filters))
+
+        return (
+            user_query.order_by(User.role.asc(), User.email.asc())
+            .offset(safe_skip)
+            .limit(safe_limit)
+            .all()
+        )
+
     def search(
         self,
         *,

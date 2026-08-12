@@ -1,35 +1,45 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import get_current_user
 from app.db.session import get_db
-from app.schemas import UserCreate, UserLogin, UserResponse, UserUpdate
+from app.schemas import UserLogin, UserResponse, UserUpdate
 from app.services.audit_log import AuditLogService
 from app.services.auth import AuthService
 
 router = APIRouter()
 
+ACCESS_TOKEN_MAX_AGE = 15 * 60
+REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60
+COOKIE_SECURE = settings.app_env.lower() == "production"
 
-@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=dict)
-async def register(user_in: UserCreate, db: Session = Depends(get_db)):
-    """Register a new user."""
-    service = AuthService(db)
-    try:
-        user = service.register_user(user_in)
-        AuditLogService(db).record(
-            event_type="auth.register",
-            metadata={"email": user_in.email, "role": user_in.role.value},
-        )
-        db.commit()
-        return user
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="lax",
+        max_age=ACCESS_TOKEN_MAX_AGE,
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="lax",
+        max_age=REFRESH_TOKEN_MAX_AGE,
+        path="/",
+    )
 
 
 @router.post("/login", response_model=dict)
-async def login(data: UserLogin, db: Session = Depends(get_db)):
+async def login(data: UserLogin, response: Response, db: Session = Depends(get_db)):
     """Authenticate user and return tokens."""
     service = AuthService(db)
     auth = service.authenticate_user(data)
@@ -43,6 +53,7 @@ async def login(data: UserLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+    _set_auth_cookies(response, auth["access_token"], auth["refresh_token"])
     AuditLogService(db).record(
         event_type="auth.login_success",
         user_id=UUID(auth["user"]["id"]),
@@ -53,9 +64,14 @@ async def login(data: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.post("/refresh", response_model=dict)
-async def refresh(body: dict, db: Session = Depends(get_db)):
+async def refresh(
+    body: dict,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
     """Refresh access token using refresh token."""
-    token = body.get("refresh_token")
+    token = body.get("refresh_token") or request.cookies.get("refresh_token")
     if not token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -68,14 +84,25 @@ async def refresh(body: dict, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
         )
+    response.set_cookie(
+        key="access_token",
+        value=new["access_token"],
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="lax",
+        max_age=ACCESS_TOKEN_MAX_AGE,
+        path="/",
+    )
     return new
 
 
 @router.post("/logout")
-async def logout(current_user=Depends(get_current_user)):
+async def logout(response: Response, current_user=Depends(get_current_user)):
     """Logout user (client-side token deletion)."""
     # Logged as a sensitive action for audit purposes.
     # The current authenticated user is already validated by the dependency.
+    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="refresh_token", path="/")
     return {"message": "Logged out successfully"}
 
 

@@ -196,7 +196,10 @@ class PrivacyService:
             ],
         }
 
-    def anonymize_user(self, *, user_id: UUID) -> User:
+    def anonymize_user(self, *, user_id: UUID | str) -> User:
+        if isinstance(user_id, str):
+            user_id = UUID(user_id)
+
         user = self.db.query(User).filter(User.id == user_id).first()
         if user is None:
             raise ValueError(f"User {user_id} not found.")
@@ -204,7 +207,7 @@ class PrivacyService:
         if user.anonymized_at is not None:
             return user
 
-        anonymized_email = f"anonymized-{user.id.hex[:12]}@invalid.local"
+        anonymized_email = f"anonymized-{user.id.hex[:12]}@example.com"
         random_password = uuid4().hex
         user.email = anonymized_email
         user.password_hash = bcrypt.hashpw(random_password.encode(), bcrypt.gensalt()).decode()

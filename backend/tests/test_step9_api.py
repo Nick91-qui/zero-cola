@@ -11,31 +11,37 @@ from app.models.exam import Exam
 from app.models.user import User
 from app.schemas.exam import ExamCreate, ExamQuestionCreate, QuestionCreate
 from app.services.exam import ExamService
+from tests.helpers import create_user
 
 client = TestClient(app)
 
 
-def _register_user(*, email: str, password: str, role: UserRole, student_code: str | None = None):
-    payload = {
-        "email": email,
-        "password": password,
-        "role": role.value,
-    }
-    if student_code is not None:
-        payload["student_code"] = student_code
-    response = client.post("/api/v1/auth/register", json=payload)
-    assert response.status_code == 201, response.text
-    return response.json()
+def _register_user(
+    test_db_session,
+    *,
+    email: str,
+    password: str,
+    role: UserRole,
+    student_code: str | None = None,
+):
+    return create_user(
+        test_db_session,
+        email=email,
+        password=password,
+        role=role,
+        student_code=student_code,
+    )
 
 
 def _login_user(email: str, password: str) -> dict[str, str]:
     response = client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200, response.text
+    client.cookies.clear()
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
 def _create_teacher_user(test_db_session, email: str, password: str) -> tuple[User, dict[str, str]]:
-    _register_user(email=email, password=password, role=UserRole.TEACHER)
+    _register_user(test_db_session, email=email, password=password, role=UserRole.TEACHER)
     user = test_db_session.query(User).filter(User.email == email).one()
     return user, _login_user(email, password)
 
@@ -48,6 +54,7 @@ def _create_student_user(
     student_code: str,
 ) -> tuple[User, dict[str, str]]:
     _register_user(
+        test_db_session,
         email=email,
         password=password,
         role=UserRole.STUDENT,
@@ -58,7 +65,7 @@ def _create_student_user(
 
 
 def _create_admin_user(test_db_session, email: str, password: str) -> tuple[User, dict[str, str]]:
-    _register_user(email=email, password=password, role=UserRole.ADMIN)
+    _register_user(test_db_session, email=email, password=password, role=UserRole.ADMIN)
     user = test_db_session.query(User).filter(User.email == email).one()
     return user, _login_user(email, password)
 

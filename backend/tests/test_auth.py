@@ -3,8 +3,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.enums import UserRole
-from app.repositories.user import UserRepository
-from app.services.auth import AuthService
+from tests.helpers import create_user
 
 client = TestClient(app)
 
@@ -23,44 +22,27 @@ def test_user_data():
 @pytest.fixture
 def create_test_user(test_db_session, test_user_data):
     """Create a test user."""
-    service = AuthService(test_db_session)
-    user_create = type(
-        "UserCreate",
-        (),
-        {
-            "email": test_user_data["email"],
-            "password": test_user_data["password"],
-            "role": UserRole.STUDENT,
-            "student_code": test_user_data["student_code"],
+    return create_user(
+        test_db_session,
+        email=test_user_data["email"],
+        password=test_user_data["password"],
+        role=UserRole.STUDENT,
+        student_code=test_user_data["student_code"],
+    )
+
+
+def test_public_registration_endpoint_is_disabled():
+    """Public registration must remain disabled."""
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "blocked@example.com",
+            "password": "securepass123",
+            "role": "student",
+            "student_code": "12345",
         },
-    )()
-    password_hash = service.hash_password(test_user_data["password"])
-
-    repo = UserRepository(test_db_session)
-    user = repo.create(user_create, password_hash)
-    return user
-
-
-def test_register_user_success(override_get_db, test_db_session, test_user_data):
-    """Test successful user registration."""
-    response = client.post("/api/v1/auth/register", json=test_user_data)
-    assert response.status_code == 201
-    data = response.json()
-    assert data["email"] == test_user_data["email"]
-    assert data["role"] == "student"
-    assert "id" in data
-
-
-def test_register_user_duplicate_email(
-    override_get_db,
-    test_db_session,
-    test_user_data,
-    create_test_user,
-):
-    """Test registration fails with duplicate email."""
-    response = client.post("/api/v1/auth/register", json=test_user_data)
-    assert response.status_code == 400
-    assert "already registered" in response.json()["detail"]
+    )
+    assert response.status_code == 404
 
 
 def test_login_success(override_get_db, test_db_session, test_user_data, create_test_user):
@@ -75,6 +57,7 @@ def test_login_success(override_get_db, test_db_session, test_user_data, create_
     assert "access_token" in data
     assert "refresh_token" in data
     assert data["token_type"] == "bearer"
+    client.cookies.clear()
 
 
 def test_login_wrong_password(override_get_db, test_db_session, test_user_data, create_test_user):
@@ -101,6 +84,7 @@ def test_refresh_token(override_get_db, test_db_session, test_user_data, create_
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
+    client.cookies.clear()
 
 
 def test_get_current_user(override_get_db, test_db_session, test_user_data, create_test_user):
@@ -117,34 +101,13 @@ def test_get_current_user(override_get_db, test_db_session, test_user_data, crea
     assert response.status_code == 200
     data = response.json()
     assert data["email"] == test_user_data["email"]
+    client.cookies.clear()
 
 
 def test_get_current_user_no_token(override_get_db):
     """Test get current user fails without token."""
     response = client.get("/api/v1/auth/me")
     assert response.status_code == 401
-
-
-def test_register_student_requires_student_code(override_get_db):
-    response = client.post(
-        "/api/v1/auth/register",
-        json={"email": "nocode@example.com", "password": "securepass123", "role": "student"},
-    )
-    assert response.status_code == 422
-
-
-def test_register_student_with_code(override_get_db):
-    response = client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": "coded@example.com",
-            "password": "securepass123",
-            "role": "student",
-            "student_code": "54321",
-        },
-    )
-    assert response.status_code == 201
-    assert response.json()["student_code"] == "54321"
 
 
 def test_patch_me_student_code(override_get_db, test_db_session, test_user_data, create_test_user):
@@ -156,3 +119,18 @@ def test_patch_me_student_code(override_get_db, test_db_session, test_user_data,
     response = client.patch("/api/v1/auth/me", json={"student_code": "99999"}, headers=headers)
     assert response.status_code == 200
     assert response.json()["student_code"] == "99999"
+    client.cookies.clear()
+
+
+def test_get_current_user_works_with_cookie_session(override_get_db, test_db_session, test_user_data, create_test_user):
+    cookie_client = TestClient(app)
+    login_response = cookie_client.post(
+        "/api/v1/auth/login",
+        json={"email": test_user_data["email"], "password": test_user_data["password"]},
+    )
+    assert login_response.status_code == 200
+
+    response = cookie_client.get("/api/v1/auth/me")
+    assert response.status_code == 200
+    assert response.json()["email"] == test_user_data["email"]
+    cookie_client.cookies.clear()
