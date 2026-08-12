@@ -8,7 +8,7 @@ import { createUser } from '@/lib/users';
 
 type AdminUserRole = 'student' | 'teacher';
 
-export default function RegisterPage() {
+export default function AdminUsersPage() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

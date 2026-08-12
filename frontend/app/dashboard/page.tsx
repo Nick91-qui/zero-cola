@@ -90,7 +90,7 @@ export default function DashboardPage() {
                   Crie professores e alunos e vincule as turmas diretamente na área administrativa.
                 </p>
                 <Link
-                  href="/auth/register"
+                  href="/admin/users"
                   className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600"
                 >
                   Abrir cadastro
