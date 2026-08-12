@@ -187,6 +187,86 @@ def test_teacher_can_filter_question_bank_by_text_skill_status_and_pagination(te
     assert page[0]["id"] == question_b["id"]
 
 
+def test_question_bank_is_scoped_to_owner_for_teachers_but_not_admins(test_db_session):
+    owner = User(
+        email="teacher_owner_questions@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    outsider = User(
+        email="teacher_outsider_questions@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.TEACHER,
+    )
+    admin = User(
+        email="admin_questions@cola-zero.edu",
+        password_hash="hash",
+        role=UserRole.ADMIN,
+    )
+    test_db_session.add_all([owner, outsider, admin])
+    test_db_session.commit()
+
+    created = asyncio.run(
+        create_question(
+            question_in=QuestionCreate(
+                statement="Questão privada do professor",
+                type="multiple_choice",
+                options={"A": "1", "B": "2"},
+                correct_answer="A",
+                subject="História",
+                difficulty="easy",
+            ),
+            current_user=owner,
+            db=test_db_session,
+        )
+    )
+
+    outsider_list = asyncio.run(
+        list_questions(
+            q="",
+            skill_id=None,
+            include_inactive=False,
+            skip=0,
+            limit=100,
+            current_user=outsider,
+            db=test_db_session,
+        )
+    )
+    assert outsider_list == []
+
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(
+            get_question(
+                question_id=created["id"],
+                current_user=outsider,
+                db=test_db_session,
+            )
+        )
+    assert exc_info.value.status_code == 404
+
+    admin_list = asyncio.run(
+        list_questions(
+            q="",
+            skill_id=None,
+            include_inactive=False,
+            skip=0,
+            limit=100,
+            current_user=admin,
+            db=test_db_session,
+        )
+    )
+    assert [item["id"] for item in admin_list] == [created["id"]]
+
+    admin_detail = asyncio.run(
+        get_question(
+            question_id=created["id"],
+            current_user=admin,
+            db=test_db_session,
+        )
+    )
+    assert admin_detail["id"] == created["id"]
+
+
 def test_teacher_can_version_and_deactivate_questions(test_db_session):
     teacher = User(
         email="teacher_questions_versioning@cola-zero.edu",

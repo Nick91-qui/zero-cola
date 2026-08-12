@@ -24,10 +24,12 @@ async def list_questions(
     db: Session = Depends(get_db),
 ):
     repo = QuestionRepository(db)
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
     questions = repo.get_all(
         query_text=q,
         skill_id=skill_id,
         include_inactive=include_inactive,
+        owner_id=owner_id,
         skip=skip,
         limit=limit,
     )
@@ -42,7 +44,8 @@ async def get_question(
     db: Session = Depends(get_db),
 ):
     repo = QuestionRepository(db)
-    question = repo.get_by_id(question_id)
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+    question = repo.get_by_id(question_id, owner_id=owner_id)
     if question is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -75,7 +78,8 @@ async def update_question(
     db: Session = Depends(get_db),
 ):
     repo = QuestionRepository(db)
-    question = repo.get_by_id(question_id, include_inactive=True)
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+    question = repo.get_by_id(question_id, include_inactive=True, owner_id=owner_id)
     if question is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -100,7 +104,8 @@ async def deactivate_question(
     db: Session = Depends(get_db),
 ):
     repo = QuestionRepository(db)
-    question = repo.get_by_id(question_id, include_inactive=True)
+    owner_id = current_user.id if current_user.role == UserRole.TEACHER else None
+    question = repo.get_by_id(question_id, include_inactive=True, owner_id=owner_id)
     if question is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

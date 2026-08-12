@@ -29,12 +29,15 @@ class QuestionRepository:
         self,
         question_id: str | UUID,
         include_inactive: bool = False,
+        owner_id: UUID | None = None,
     ) -> Optional[Question]:
         if isinstance(question_id, str):
             question_id = UUID(question_id)
         query = self.db.query(Question).options(joinedload(Question.skills)).filter(
             Question.id == question_id
         )
+        if owner_id is not None:
+            query = query.filter(Question.created_by == owner_id)
         if not include_inactive:
             query = query.filter(Question.is_active.is_(True))
         return query.first()
@@ -45,10 +48,13 @@ class QuestionRepository:
         query_text: str = "",
         skill_id: UUID | None = None,
         include_inactive: bool = False,
+        owner_id: UUID | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[Question]:
         query = self.db.query(Question).options(joinedload(Question.skills))
+        if owner_id is not None:
+            query = query.filter(Question.created_by == owner_id)
         if not include_inactive:
             query = query.filter(Question.is_active.is_(True))
         if query_text.strip():
