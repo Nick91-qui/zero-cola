@@ -65,17 +65,16 @@ class ClassService:
         teacher_id: UUID | None = None,
     ) -> Class:
         self._require_admin(current_user)
-        if teacher_id is None:
-            raise ValueError("teacher_id is required for admin class creation.")
-
-        teacher = self.db.query(User).filter(User.id == teacher_id).first()
-        if (
-            teacher is None
-            or teacher.role != UserRole.TEACHER
-            or not teacher.is_active
-            or teacher.anonymized_at is not None
-        ):
-            raise ValueError(f"Teacher {teacher_id} not found.")
+        teacher = None
+        if teacher_id is not None:
+            teacher = self.db.query(User).filter(User.id == teacher_id).first()
+            if (
+                teacher is None
+                or teacher.role != UserRole.TEACHER
+                or not teacher.is_active
+                or teacher.anonymized_at is not None
+            ):
+                raise ValueError(f"Teacher {teacher_id} not found.")
 
         class_obj = Class(
             teacher_id=teacher_id,
@@ -86,13 +85,14 @@ class ClassService:
         )
         self.db.add(class_obj)
         self.db.flush()
-        self.db.add(
-            TeacherClass(
-                teacher_id=teacher_id,
-                class_id=class_obj.id,
-                is_active=True,
+        if teacher is not None:
+            self.db.add(
+                TeacherClass(
+                    teacher_id=teacher_id,
+                    class_id=class_obj.id,
+                    is_active=True,
+                )
             )
-        )
         self.audit_log_service.record(
             event_type="class.create",
             user_id=current_user.id,
@@ -100,7 +100,7 @@ class ClassService:
             resource_id=class_obj.id,
             metadata={
                 "name": name,
-                "teacher_id": str(teacher_id),
+                "teacher_id": str(teacher_id) if teacher_id is not None else None,
                 "academic_period": class_obj.academic_period,
             },
         )
@@ -378,6 +378,9 @@ class ClassService:
                 teacher_link.is_active = True
                 teacher_link.archived_at = None
 
+            if class_obj.teacher_id is None:
+                class_obj.teacher_id = teacher_id
+
             teacher_links.append(teacher_link)
             self.audit_log_service.record(
                 event_type="class_teacher.add",
@@ -414,19 +417,20 @@ class ClassService:
         )
         if teacher_link is None:
             raise ValueError(f"Teacher link {class_id}/{teacher_id} not found.")
-        if teacher_link.is_active:
-            active_links = (
+        teacher_link.is_active = False
+        teacher_link.archived_at = datetime.now(timezone.utc)
+        if class_obj.teacher_id == teacher_id:
+            replacement = (
                 self.db.query(TeacherClass)
                 .filter(
                     TeacherClass.class_id == class_obj.id,
                     TeacherClass.is_active.is_(True),
+                    TeacherClass.teacher_id != teacher_id,
                 )
-                .count()
+                .order_by(TeacherClass.created_at.asc())
+                .first()
             )
-            if active_links <= 1:
-                raise ValueError("A class must keep at least one active teacher.")
-        teacher_link.is_active = False
-        teacher_link.archived_at = datetime.now(timezone.utc)
+            class_obj.teacher_id = replacement.teacher_id if replacement else None
         self.audit_log_service.record(
             event_type="class_teacher.remove",
             user_id=current_user.id,

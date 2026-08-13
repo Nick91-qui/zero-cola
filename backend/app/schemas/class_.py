@@ -46,7 +46,7 @@ class ClassStudentResponse(BaseModel):
 
 class ClassResponse(ClassBase):
     id: UUID
-    teacher_id: UUID
+    teacher_id: UUID | None
     is_active: bool
     archived_at: Optional[datetime] = None
     student_count: int = 0

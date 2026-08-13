@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.attempt import Attempt
+from app.models.class_ import Class
 from app.models.consent import Consent
 from app.models.enums import AttemptStatus, UserRole
 from app.models.exam import Exam
@@ -343,6 +345,71 @@ def test_teachers_can_share_a_class_and_operate_on_it(override_get_db, test_db_s
     student_classes = client.get("/api/v1/me/classes", headers=student_headers)
     assert student_classes.status_code == 200
     assert [item["id"] for item in student_classes.json()] == [class_id]
+
+
+def test_class_can_start_without_teacher_and_receive_one_later(override_get_db, test_db_session):
+    teacher, teacher_headers = _create_teacher_user(
+        test_db_session,
+        "teacher_empty_class@cola-zero.edu",
+        "teacher-empty-class-pass",
+    )
+    _admin, admin_headers = _create_admin_user(
+        test_db_session,
+        "admin_empty_class@cola-zero.edu",
+        "admin-empty-class-pass",
+    )
+
+    class_res = client.post(
+        "/api/v1/classes",
+        json={
+            "name": "Turma sem professor",
+            "description": "criada vazia para receber vínculos depois",
+        },
+        headers=admin_headers,
+    )
+    assert class_res.status_code == 201, class_res.text
+    class_payload = class_res.json()
+    assert class_payload["teacher_id"] is None
+
+    test_db_session.expire_all()
+    class_obj = test_db_session.query(Class).filter(Class.id == UUID(class_payload["id"])).one()
+    assert class_obj.teacher_id is None
+
+    teacher_before_share = client.get(f"/api/v1/classes/{class_payload['id']}", headers=teacher_headers)
+    assert teacher_before_share.status_code == 404
+
+    share_res = client.post(
+        f"/api/v1/classes/{class_payload['id']}/teachers",
+        json={"teacher_ids": [str(teacher.id)]},
+        headers=admin_headers,
+    )
+    assert share_res.status_code == 201, share_res.text
+    assert share_res.json()[0]["teacher_id"] == str(teacher.id)
+
+    test_db_session.expire_all()
+    class_obj = test_db_session.query(Class).filter(Class.id == UUID(class_payload["id"])).one()
+    assert class_obj.teacher_id == teacher.id
+
+    teacher_list = client.get("/api/v1/classes", headers=teacher_headers)
+    assert teacher_list.status_code == 200
+    assert [item["id"] for item in teacher_list.json()] == [class_payload["id"]]
+
+    teacher_detail = client.get(f"/api/v1/classes/{class_payload['id']}", headers=teacher_headers)
+    assert teacher_detail.status_code == 200
+    assert teacher_detail.json()["teacher_id"] == str(teacher.id)
+
+    remove_res = client.delete(
+        f"/api/v1/classes/{class_payload['id']}/teachers/{teacher.id}",
+        headers=admin_headers,
+    )
+    assert remove_res.status_code == 204
+
+    test_db_session.expire_all()
+    class_obj = test_db_session.query(Class).filter(Class.id == UUID(class_payload["id"])).one()
+    assert class_obj.teacher_id is None
+
+    teacher_after_remove = client.get(f"/api/v1/classes/{class_payload['id']}", headers=teacher_headers)
+    assert teacher_after_remove.status_code == 404
 
 
 def test_audit_logs_consents_and_monitoring_security_events(override_get_db, test_db_session):

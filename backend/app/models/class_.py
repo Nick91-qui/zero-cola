@@ -17,9 +17,9 @@ class Class(BaseModel):
         Index("ix_classes_is_active", "is_active"),
     )
 
-    teacher_id: Mapped[UUID] = mapped_column(
+    teacher_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     academic_period: Mapped[str] = mapped_column(String(20), nullable=False)
