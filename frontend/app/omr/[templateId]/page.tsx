@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import {
   downloadTemplatePdf,
   downloadTemplatePreview,
@@ -121,43 +120,41 @@ export default function OmrTemplateDetailPage() {
   };
 
   return (
-    <ProtectedRoute requiredRoles={['teacher', 'admin']}>
-      <div className="min-h-screen bg-slate-50">
-        <main className="mx-auto max-w-3xl px-4 py-10">
-          <Link href="/omr" className="text-sm font-medium text-emerald-700 hover:underline">
-            ← Voltar para Gabaritos
-          </Link>
+    <div className="space-y-8">
+      <Link href="/omr" className="text-sm font-medium text-emerald-700 hover:underline">
+        ← Voltar para Gabaritos
+      </Link>
 
-          {!template ? (
-            <p className="mt-6 text-sm text-slate-500">{error || 'Carregando gabarito...'}</p>
-          ) : (
-            <>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold text-slate-900">
-                    {template.title || `Gabarito OMR ${template.layout_version}`}
-                  </h1>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {template.total_questions} questões · Layout: {template.layout_version}
-                  </p>
-                </div>
-                {template.exam_id && (
-                  <Link
-                    href={`/exams/${template.exam_id}`}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-200"
-                  >
-                    Ver Avaliação & Relatórios →
-                  </Link>
-                )}
-              </div>
+      {!template ? (
+        <p className="text-sm text-slate-500">{error || 'Carregando gabarito...'}</p>
+      ) : (
+        <>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">
+                {template.title || `Gabarito OMR ${template.layout_version}`}
+              </h1>
+              <p className="mt-1 text-sm text-slate-600">
+                {template.total_questions} questões · Layout: {template.layout_version}
+              </p>
+            </div>
+            {template.exam_id && (
+              <Link
+                href={`/exams/${template.exam_id}`}
+                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-200"
+              >
+                Ver Avaliação & Relatórios →
+              </Link>
+            )}
+          </div>
 
-              {error && (
-                <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
-              <section className="mt-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-base font-semibold text-slate-900">1. Gerar folha de resposta</h2>
                 <p className="mt-1 text-xs text-slate-500">
                   Gere o PDF pronto para impressão com QR code e código do aluno.
@@ -190,9 +187,9 @@ export default function OmrTemplateDetailPage() {
                     Baixar Preview PNG
                   </button>
                 </div>
-              </section>
+          </section>
 
-              <section className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-base font-semibold text-slate-900">2. Enviar imagem e corrigir (OMR)</h2>
                 <p className="mt-1 text-xs text-slate-500">
                   Faça o upload do cartão-resposta (JPG ou PNG) preenchido pelo aluno.
@@ -212,9 +209,9 @@ export default function OmrTemplateDetailPage() {
                     {busy ? 'Processando imagem...' : 'Enviar e Corrigir'}
                   </button>
                 </form>
-              </section>
+          </section>
 
-              <section className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-base font-semibold text-slate-900">
                   3. Processar lote PDF multipágina
                 </h2>
@@ -257,11 +254,9 @@ export default function OmrTemplateDetailPage() {
                     </ul>
                   </div>
                 )}
-              </section>
-            </>
-          )}
-        </main>
-      </div>
-    </ProtectedRoute>
+          </section>
+        </>
+      )}
+    </div>
   );
 }

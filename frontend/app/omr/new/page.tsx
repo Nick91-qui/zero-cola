@@ -3,7 +3,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import { createTemplate } from '@/lib/omr';
 
 const OPTIONS = ['A', 'B', 'C', 'D', 'E'] as const;
@@ -62,100 +61,96 @@ export default function NewOmrTemplatePage() {
   };
 
   return (
-    <ProtectedRoute requiredRoles={['teacher', 'admin']}>
-      <div className="min-h-screen bg-slate-50">
-        <main className="mx-auto max-w-4xl px-4 py-10">
-          <Link href="/omr" className="text-sm text-emerald-700 hover:underline font-medium">
-            ← Voltar para Gabaritos
-          </Link>
-          <h1 className="mt-4 text-3xl font-bold text-slate-900">Novo Gabarito OMR</h1>
-          <p className="mt-1 text-slate-600">
-            Informe o título da avaliação, selecione a estrutura de questões e defina o gabarito.
-          </p>
-
-          {error && (
-            <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-            <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-900 mb-4">Informações Principais</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Título / Nome do Gabarito <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Ex: Prova de Química – Ligações Químicas – 2ª Série A"
-                    className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Modelo de Folha (Layout)</label>
-                  <select
-                    value={layoutVersion}
-                    onChange={(e) => handleLayoutChange(e.target.value)}
-                    className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  >
-                    <option value="v1_std_20q">v1_std_20q (20 questões - Folha Padrão)</option>
-                    <option value="v1_std_50q">v1_std_50q (50 questões - Folha Expandida)</option>
-                  </select>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-900">Chave de Respostas (Gabarito Oficial)</h2>
-              <p className="text-xs text-slate-500 mb-4">Selecione a alternativa correta para cada questão.</p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5">
-                {questionNumbers.map((num) => (
-                  <label key={num} className="text-sm font-medium text-slate-700">
-                    Questão {num}
-                    <select
-                      value={answers[String(num)] || ''}
-                      onChange={(e) =>
-                        setAnswers((prev) => ({ ...prev, [String(num)]: e.target.value }))
-                      }
-                      className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      required
-                    >
-                      <option value="">—</option>
-                      {OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ))}
-              </div>
-            </section>
-
-            <div className="flex justify-end gap-3">
-              <Link
-                href="/omr"
-                className="rounded-md border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-              >
-                Cancelar
-              </Link>
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-md bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 disabled:bg-emerald-400"
-              >
-                {saving ? 'Salvando...' : 'Criar e Gerar Gabarito'}
-              </button>
-            </div>
-          </form>
-        </main>
+    <div className="space-y-8">
+      <div>
+        <Link href="/omr" className="text-sm font-medium text-emerald-700 hover:underline">
+          ← Voltar para Gabaritos
+        </Link>
+        <h1 className="mt-4 text-3xl font-bold text-slate-900">Novo Gabarito OMR</h1>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600">
+          Informe o título da avaliação, selecione a estrutura de questões e defina o gabarito.
+        </p>
       </div>
-    </ProtectedRoute>
+
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-base font-semibold text-slate-900">Informações Principais</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700">
+                Título / Nome do Gabarito <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Ex: Prova de Química – Ligações Químicas – 2ª Série A"
+                className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Modelo de Folha (Layout)</label>
+              <select
+                value={layoutVersion}
+                onChange={(e) => handleLayoutChange(e.target.value)}
+                className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="v1_std_20q">v1_std_20q (20 questões - Folha Padrão)</option>
+                <option value="v1_std_50q">v1_std_50q (50 questões - Folha Expandida)</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Chave de Respostas (Gabarito Oficial)</h2>
+          <p className="mb-4 text-xs text-slate-500">Selecione a alternativa correta para cada questão.</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5">
+            {questionNumbers.map((num) => (
+              <label key={num} className="text-sm font-medium text-slate-700">
+                Questão {num}
+                <select
+                  value={answers[String(num)] || ''}
+                  onChange={(e) => setAnswers((prev) => ({ ...prev, [String(num)]: e.target.value }))}
+                  className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  required
+                >
+                  <option value="">—</option>
+                  {OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <div className="flex justify-end gap-3">
+          <Link
+            href="/omr"
+            className="rounded-md border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            Cancelar
+          </Link>
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-md bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 disabled:bg-emerald-400"
+          >
+            {saving ? 'Salvando...' : 'Criar e Gerar Gabarito'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

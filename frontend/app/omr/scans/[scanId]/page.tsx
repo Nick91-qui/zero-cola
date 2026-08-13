@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import { confirmScan, getScan, OMRScan, updateScan } from '@/lib/omr';
 
 const OPTIONS = ['A', 'B', 'C', 'D', 'E', ''] as const;
@@ -81,39 +80,35 @@ export default function OmrScanReviewPage() {
   };
 
   return (
-    <ProtectedRoute requiredRoles={['teacher', 'admin']}>
-      <div className="min-h-screen bg-slate-50">
-        <main className="mx-auto max-w-4xl px-4 py-10">
-          <Link href="/omr" className="text-sm text-emerald-700 hover:underline">
-            ← Gabaritos
-          </Link>
+    <div className="space-y-8">
+      <Link href="/omr" className="text-sm font-medium text-emerald-700 hover:underline">
+        ← Gabaritos
+      </Link>
 
-          {!scan ? (
-            <p className="mt-6 text-slate-500">{error || 'Carregando scan...'}</p>
-          ) : (
-            <>
-              <h1 className="mt-4 text-3xl font-semibold text-slate-900">Revisão OMR</h1>
-              <p className="mt-2 text-slate-600">
-                Status: <strong>{scan.status}</strong>
-                {scan.score != null ? ` · Score: ${scan.score}` : ''}
-              </p>
-              {scan.error_message && (
-                <p className="mt-2 text-sm text-amber-700">{scan.error_message}</p>
-              )}
+      {!scan ? (
+        <p className="text-slate-500">{error || 'Carregando scan...'}</p>
+      ) : (
+        <>
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-900">Revisão OMR</h1>
+            <p className="mt-2 text-slate-600">
+              Status: <strong>{scan.status}</strong>
+              {scan.score != null ? ` · Score: ${scan.score}` : ''}
+            </p>
+            {scan.error_message && <p className="mt-2 text-sm text-amber-700">{scan.error_message}</p>}
+          </div>
 
-              {error && (
-                <div className="mt-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
-                  {error}
-                </div>
-              )}
-              {message && (
-                <div className="mt-4 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
-                  {message}
-                </div>
-              )}
+          {error && (
+            <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>
+          )}
+          {message && (
+            <div className="rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+              {message}
+            </div>
+          )}
 
-              <form onSubmit={handleSave} className="mt-8 space-y-6">
-                <section className="rounded border border-slate-200 bg-white p-5">
+          <form onSubmit={handleSave} className="space-y-6">
+            <section className="rounded border border-slate-200 bg-white p-5">
                   <label className="block text-sm font-medium text-slate-700">
                     Código do aluno
                     <input
@@ -126,9 +121,9 @@ export default function OmrScanReviewPage() {
                   <p className="mt-2 text-xs text-slate-500">
                     Student ID resolvido: {scan.student_id || 'não associado'}
                   </p>
-                </section>
+            </section>
 
-                <section className="rounded border border-slate-200 bg-white p-5">
+            <section className="rounded border border-slate-200 bg-white p-5">
                   <h2 className="text-lg font-medium text-slate-900">Respostas detectadas</h2>
                   <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5">
                     {questionKeys.map((key) => (
@@ -153,30 +148,28 @@ export default function OmrScanReviewPage() {
                       </label>
                     ))}
                   </div>
-                </section>
+            </section>
 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="submit"
-                    disabled={busy}
-                    className="rounded border border-slate-300 bg-white px-4 py-2 text-slate-800 hover:bg-slate-100 disabled:opacity-50"
-                  >
-                    Salvar ajustes
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={handleConfirm}
-                    className="rounded bg-emerald-700 px-4 py-2 text-white hover:bg-emerald-600 disabled:bg-emerald-400"
-                  >
-                    Confirmar nota
-                  </button>
-                </div>
-              </form>
-            </>
-          )}
-        </main>
-      </div>
-    </ProtectedRoute>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={busy}
+                className="rounded border border-slate-300 bg-white px-4 py-2 text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+              >
+                Salvar ajustes
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleConfirm}
+                className="rounded bg-emerald-700 px-4 py-2 text-white hover:bg-emerald-600 disabled:bg-emerald-400"
+              >
+                Confirmar nota
+              </button>
+            </div>
+          </form>
+        </>
+      )}
+    </div>
   );
 }
