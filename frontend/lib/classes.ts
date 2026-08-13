@@ -2,7 +2,7 @@ import { apiFetch } from '@/lib/api';
 
 export interface ClassSummary {
   id: string;
-  teacher_id: string;
+  teacher_id: string | null;
   name: string;
   academic_period: string | null;
   description: string | null;

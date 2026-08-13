@@ -424,7 +424,7 @@ export default function AttemptPage() {
                   <ol className="mt-4 space-y-2 text-sm text-slate-700">
                     {session.attempt.answers.map((answer) => (
                       <li
-                        key={answer.id}
+                        key={answer.question_number}
                         className={[
                           'flex items-center justify-between rounded-lg px-3 py-2',
                           answer.question_number === currentQuestion.question_number

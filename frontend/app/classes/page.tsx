@@ -10,8 +10,6 @@ import {
   type ClassCreatePayload,
   type ClassSummary,
 } from '@/lib/classes';
-import { MemberSearchField } from './[classId]/member-search-field';
-import type { UserSearchResult } from '@/lib/users';
 
 export default function ClassesPage() {
   const { user, logout } = useAuth();
@@ -23,7 +21,6 @@ export default function ClassesPage() {
   const [name, setName] = useState('');
   const [academicPeriod, setAcademicPeriod] = useState('');
   const [description, setDescription] = useState('');
-  const [primaryTeacher, setPrimaryTeacher] = useState<UserSearchResult | null>(null);
 
   const isAdmin = user?.role === 'admin';
 
@@ -73,22 +70,16 @@ export default function ClassesPage() {
         setError('A criação de turmas é restrita ao administrador.');
         return;
       }
-      if (!primaryTeacher) {
-        setError('Selecione o professor responsável antes de criar a turma.');
-        return;
-      }
       const payload: ClassCreatePayload = {
         name: trimmedName,
         academic_period: academicPeriod.trim() || null,
         description: description.trim() || null,
-        teacher_id: primaryTeacher.id,
       };
       const created = await createClass(payload);
       setClasses((current) => [created, ...current]);
       setName('');
       setAcademicPeriod('');
       setDescription('');
-      setPrimaryTeacher(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao criar turma');
     } finally {
@@ -128,7 +119,7 @@ export default function ClassesPage() {
               <h1 className="text-3xl font-bold text-slate-900">Turmas</h1>
               <p className="mt-1 max-w-3xl text-sm text-slate-600">
                 {isAdmin
-                  ? 'Crie turmas, vincule o professor responsável, cadastre membros e acompanhe o histórico de matrícula.'
+                  ? 'Crie turmas vazias, vincule professores e cadastre membros quando fizer sentido.'
                   : 'Consulte as turmas vinculadas à sua conta e abra o detalhe para ver informações e vínculos.'}
               </p>
             </div>
@@ -192,6 +183,10 @@ export default function ClassesPage() {
                           <p className="mt-1 text-sm text-slate-600">
                             {classItem.academic_period || 'Sem período informado'}
                           </p>
+                          <p className="mt-1 text-sm text-slate-700">
+                            Professor:{' '}
+                            {classItem.teacher_id ? 'vinculado' : 'sem professor vinculado'}
+                          </p>
                           {classItem.description && (
                             <p className="mt-2 max-w-2xl text-sm text-slate-700">
                               {classItem.description}
@@ -222,33 +217,8 @@ export default function ClassesPage() {
                 <>
                   <h2 className="text-lg font-semibold text-slate-900">Nova turma</h2>
                   <p className="mt-1 text-sm text-slate-600">
-                    Registre uma turma concreta e selecione o professor responsável antes de publicar.
+                    Registre uma turma vazia agora e associe professores e alunos depois.
                   </p>
-
-                  <div className="mt-6">
-                    <MemberSearchField
-                      role="teacher"
-                      title="Professor responsável"
-                      helperText="Busque o docente que vai coordenar a turma."
-                      placeholder="Ex: professor@cola-zero.edu"
-                      actionLabel="Selecionar professor"
-                      onSelectionChange={(selectedUsers) => {
-                        setPrimaryTeacher(selectedUsers[0] ?? null);
-                      }}
-                      onSubmit={async (selectedIds) => {
-                        if (selectedIds.length !== 1) {
-                          throw new Error('Selecione exatamente um professor responsável.');
-                        }
-                      }}
-                    />
-                  </div>
-
-                  {primaryTeacher && (
-                    <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                      Professor selecionado: {primaryTeacher.email}
-                      {primaryTeacher.student_code ? ` (${primaryTeacher.student_code})` : ''}
-                    </p>
-                  )}
 
                   <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
                     <label className="block text-sm font-medium text-slate-700">
@@ -286,7 +256,7 @@ export default function ClassesPage() {
 
                     <button
                       type="submit"
-                      disabled={saving || !primaryTeacher}
+                      disabled={saving}
                       className="w-full rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:bg-slate-300"
                     >
                       {saving ? 'Criando...' : 'Criar turma'}

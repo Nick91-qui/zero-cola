@@ -85,7 +85,6 @@ export default function ExamDetailStatisticsPage() {
           : action === 'draft'
             ? await returnExamToDraft(examId)
             : await archiveExam(examId);
-      setExam((current) => (current ? { ...current, ...updated } : updated));
       await loadExam();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar status da avaliação');
@@ -106,7 +105,6 @@ export default function ExamDetailStatisticsPage() {
 
     try {
       const updated = await updateExam(examId, { class_ids: selectedClassIds });
-      setExam((current) => (current ? { ...current, ...updated } : updated));
       await loadExam();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar turmas da avaliação');

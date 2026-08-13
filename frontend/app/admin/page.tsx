@@ -37,7 +37,7 @@ export default function AdminHomePage() {
           <h1 className="text-3xl font-bold text-slate-900">Administração</h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-600">
             Escolha a área que deseja administrar. Usuários e turmas ficam em caminhos explícitos,
-            e o detalhe da turma mostra o vínculo professor > turma > aluno.
+            e o detalhe da turma mostra o vínculo professor &gt; turma &gt; aluno.
           </p>
 
           <div className="mt-8 grid gap-6 md:grid-cols-3">

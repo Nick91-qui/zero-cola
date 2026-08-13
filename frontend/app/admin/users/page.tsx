@@ -474,10 +474,12 @@ export default function AdminUsersPage() {
                 </div>
               ) : (
                 <div className="mt-5 grid gap-3">
-                  {filteredClasses.map((classItem) => {
-                    const checked = selectedClassIds.includes(classItem.id);
-                    const teacher = teacherLookup.get(classItem.teacher_id);
-                    return (
+                {filteredClasses.map((classItem) => {
+                  const checked = selectedClassIds.includes(classItem.id);
+                  const teacher = classItem.teacher_id
+                    ? teacherLookup.get(classItem.teacher_id)
+                    : undefined;
+                  return (
                       <label
                         key={classItem.id}
                         className={[
@@ -501,7 +503,7 @@ export default function AdminUsersPage() {
                             </span>
                           </div>
                           <p className="mt-1 text-sm text-slate-600">
-                            Professor: {teacher?.email || 'não encontrado'}
+                            Professor: {teacher?.email || 'sem professor vinculado'}
                           </p>
                           {classItem.description && (
                             <p className="mt-1 text-sm text-slate-600">{classItem.description}</p>
@@ -650,7 +652,9 @@ export default function AdminUsersPage() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {classes.map((classItem) => {
-                  const teacher = teacherLookup.get(classItem.teacher_id);
+                  const teacher = classItem.teacher_id
+                    ? teacherLookup.get(classItem.teacher_id)
+                    : undefined;
                   return (
                     <article
                       key={classItem.id}
@@ -678,7 +682,7 @@ export default function AdminUsersPage() {
                       </div>
 
                       <p className="mt-3 text-sm text-slate-700">
-                        Professor: {teacher?.email || 'não encontrado'}
+                        Professor: {teacher?.email || 'sem professor vinculado'}
                       </p>
                       <p className="mt-1 text-sm text-slate-700">
                         {classItem.student_count} aluno(s)
