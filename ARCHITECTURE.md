@@ -122,8 +122,8 @@ O schema relacional atual mantém o COLA-ZERO centrado em `AnswerKey` e em vínc
 
 ### 4.1 Regras de relacionamento já consolidadas
 
-- `Class` representa uma turma concreta de um período acadêmico.
-- `Class.teacher_id` permanece como metadado de proveniência/criação; a autorização de professor usa `teacher_classes`.
+- `Class` representa uma turma concreta de um período acadêmico e pode ser criada vazia.
+- `Class.teacher_id` é opcional e serve apenas como metadado de proveniência/criação; a autorização de professor usa `teacher_classes`.
 - `class_students` preserva histórico de matrícula e permite no máximo uma matrícula ativa por estudante e período.
 - `Exam.class_id` continua como campo legado de compatibilidade e não é a fonte primária de atribuição; `exam_classes` é o vínculo canônico entre exame e turma.
 - `ExamQuestion` projeta `Question` em `AnswerKeyItem` durante Workflow A.

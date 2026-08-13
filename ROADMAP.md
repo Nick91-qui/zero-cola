@@ -28,7 +28,7 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 - **Status**: concluído no backend e validado com testes e PostgreSQL de desenvolvimento.
 - **Objetivo**: estabelecer turmas concretas por período letivo, vínculo explícito entre professores e turmas, histórico de matrícula dos alunos e atribuição multi-turma de exames.
 - **Entregas**:
-  - `Class` como instância concreta de turma por período.
+  - `Class` como instância concreta de turma por período, com criação inicial vazia quando necessário.
   - Associação `teacher_classes` para acesso de professores a múltiplas turmas.
   - Associação `class_students` com histórico de matrícula e regra de uma matrícula ativa por período.
   - Associação `exam_classes` para permitir que um mesmo exame seja atribuído a múltiplas turmas.

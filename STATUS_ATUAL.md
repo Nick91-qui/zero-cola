@@ -46,6 +46,7 @@
 ### 2.5 Milestone 5 — Classes, Monitoring, Audit & LGPD ✅
 - `classes`, `teacher_classes`, `class_students` e `exam_classes` implementados.
 - Isolamento por vínculo explícito entre professor, turma e exame.
+- Turmas podem ser criadas sem professor e depois receber vínculos de docentes e estudantes.
 - `audit_logs`, `security_events` e `consents` disponíveis no backend.
 - Política de privacidade, exportação de dados e anonimização suave implementadas.
 
