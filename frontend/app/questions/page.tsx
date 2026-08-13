@@ -2,8 +2,6 @@
 
 import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { ProtectedRoute } from '@/app/components/ProtectedRoute';
-import { useAuth } from '@/app/hooks/useAuth';
 import { createSkill, listSkills, type SkillSummary } from '@/lib/skills';
 import { createQuestion, listQuestions } from '@/lib/questions';
 import type { Question } from '@/lib/exams';
@@ -31,7 +29,6 @@ function normalizeOptions(options: Record<string, string>) {
 }
 
 export default function QuestionsPage() {
-  const { user, logout } = useAuth();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,32 +191,7 @@ export default function QuestionsPage() {
   };
 
   return (
-    <ProtectedRoute requiredRoles={['teacher', 'admin']}>
-      <div className="min-h-screen bg-slate-50">
-        <nav className="border-b border-slate-200 bg-white shadow-sm">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-lg font-bold text-slate-900">
-                COLA-ZERO
-              </Link>
-              <span className="rounded bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800">
-                Banco de Questões
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-slate-600">
-              <span>{user?.email}</span>
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-md bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </nav>
-
-        <main className="mx-auto max-w-6xl px-4 py-10">
+    <div className="space-y-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">Questões reutilizáveis</h1>
@@ -600,8 +572,6 @@ export default function QuestionsPage() {
               </form>
             </section>
           </div>
-        </main>
-      </div>
-    </ProtectedRoute>
+    </div>
   );
 }

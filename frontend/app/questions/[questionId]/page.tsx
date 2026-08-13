@@ -3,8 +3,6 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ProtectedRoute } from '@/app/components/ProtectedRoute';
-import { useAuth } from '@/app/hooks/useAuth';
 import { listSkills, type SkillSummary } from '@/lib/skills';
 import { deactivateQuestion, getQuestion, updateQuestion, type QuestionUpdatePayload } from '@/lib/questions';
 import type { Question } from '@/lib/exams';
@@ -19,7 +17,6 @@ export default function QuestionDetailPage() {
   const params = useParams<{ questionId: string }>();
   const questionId = params.questionId;
   const router = useRouter();
-  const { user, logout } = useAuth();
 
   const [question, setQuestion] = useState<Question | null>(null);
   const [skills, setSkills] = useState<SkillSummary[]>([]);
@@ -135,32 +132,7 @@ export default function QuestionDetailPage() {
   };
 
   return (
-    <ProtectedRoute requiredRoles={['teacher', 'admin']}>
-      <div className="min-h-screen bg-slate-50">
-        <nav className="border-b border-slate-200 bg-white shadow-sm">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-lg font-bold text-slate-900">
-                COLA-ZERO
-              </Link>
-              <span className="rounded bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800">
-                Questão
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-slate-600">
-              <span>{user?.email}</span>
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-md bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </nav>
-
-        <main className="mx-auto max-w-5xl px-4 py-10">
+    <div className="space-y-8">
           <Link href="/questions" className="text-sm font-medium text-emerald-700 hover:underline">
             ← Voltar para questões
           </Link>
@@ -359,8 +331,6 @@ export default function QuestionDetailPage() {
               </form>
             </>
           ) : null}
-        </main>
-      </div>
-    </ProtectedRoute>
+    </div>
   );
 }
