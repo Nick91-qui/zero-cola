@@ -110,7 +110,13 @@ export default function ExamsListPage() {
               Abrir banco
             </Link>
             <Link
-              href="/questions#nova-questao"
+              href="/questions/skills/new"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50"
+            >
+              Criar habilidade
+            </Link>
+            <Link
+              href="/questions/new"
               className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50"
             >
               Criar questão
@@ -134,26 +140,26 @@ export default function ExamsListPage() {
       <section className="grid gap-3 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            1. Questões
+            1. Banco
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Cadastre ou revise questões no banco antes de montar a avaliação.
+            Consulte o banco para ver as questões já cadastradas.
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            2. Prova
+            2. Criação
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Use o montador para escolher turmas e organizar a sequência.
+            Crie habilidades e questões nas rotas específicas.
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            3. Gabarito
+            3. Prova
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Gere o OMR quando houver aplicação impressa da mesma avaliação.
+            Monte a avaliação em `/exams/new` ou gere o gabarito OMR se for impresso.
           </p>
         </div>
       </section>
