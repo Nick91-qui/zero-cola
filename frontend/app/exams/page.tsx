@@ -89,35 +89,74 @@ export default function ExamsListPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Gerenciamento de Avaliações</h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-600">
-            Acompanhe o desempenho por prova, análise por questão e exporte relatórios consolidados em PDF e XLSX.
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+              Avaliações
+            </p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">Fluxo do professor</h1>
+            <p className="mt-2 max-w-3xl text-sm text-slate-600">
+              Comece pela criação da questão no banco, siga para a montagem da prova online e, se
+              necessário, gere o gabarito OMR para a versão impressa.
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <Link
+              href="/questions"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50"
+            >
+              Abrir banco
+            </Link>
+            <Link
+              href="/questions#nova-questao"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50"
+            >
+              Criar questão
+            </Link>
+            <Link
+              href="/exams/new"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+            >
+              Montar prova
+            </Link>
+            <Link
+              href="/omr/new"
+              className="inline-flex items-center justify-center rounded-xl border border-emerald-700 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+            >
+              Criar gabarito
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            1. Questões
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            Cadastre ou revise questões no banco antes de montar a avaliação.
           </p>
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/exams/new"
-            className="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-600"
-          >
-            + Criar Prova Online
-          </Link>
-          <Link
-            href="/questions"
-            className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-          >
-            Banco de Questões
-          </Link>
-          <Link
-            href="/omr/new"
-            className="inline-flex items-center justify-center rounded-md border border-emerald-700 bg-white px-4 py-2.5 text-sm font-medium text-emerald-700 shadow-sm hover:bg-emerald-50"
-          >
-            + Criar Gabarito OMR
-          </Link>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            2. Prova
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            Use o montador para escolher turmas e organizar a sequência.
+          </p>
         </div>
-      </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            3. Gabarito
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            Gere o OMR quando houver aplicação impressa da mesma avaliação.
+          </p>
+        </div>
+      </section>
 
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
         <label className="text-sm font-medium text-slate-700">Filtrar por Turma:</label>
