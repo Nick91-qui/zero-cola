@@ -39,6 +39,7 @@ A documentação do COLA-ZERO é organizada com base no princípio de **Fonte Ú
 | [PLANO_MODELO_ACADEMICO.md](PLANO_MODELO_ACADEMICO.md) | Modelo acadêmico de turmas, matrículas, professores e atribuição multi-turma de exames. |
 | [PLANO_TELA_ADMIN.md](PLANO_TELA_ADMIN.md) | Plano de design da tela administrativa, com foco em navegação, listas operacionais, detalhes e governança. |
 | [PLANO_IMPL_TELA_ADMIN.md](PLANO_IMPL_TELA_ADMIN.md) | Plano de implementação da área administrativa, com fases, entregas e critérios de aceite. |
+| [PLANO_IMPL_FRONTEND.md](PLANO_IMPL_FRONTEND.md) | Plano de implementação do frontend, cobrindo portal, area academica, admin, tentativas e pendencias priorizadas. |
 | [AGENTS.md](AGENTS.md) | Convenções de código, padrões do repositório, fluxo de trabalho e instruções para agentes de IA. |
 | [docs/archive/](docs/archive/) | Arquivo histórico de planejamentos técnicos anteriores e backlog inicial. |
 
