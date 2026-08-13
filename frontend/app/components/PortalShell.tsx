@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useMemo } from 'react';
 import { ProtectedRoute, type UserRole } from '@/app/components/ProtectedRoute';
+import { ShellSearch, type ShellSearchItem } from '@/app/components/ShellSearch';
 import { useAuth } from '@/app/hooks/useAuth';
 
 type PortalNavItem = {
@@ -40,6 +41,13 @@ function getNavItems(role?: UserRole): PortalNavItem[] {
   return [base[0], ...staffItems, base[1], base[2]];
 }
 
+function getSearchItems(role?: UserRole): ShellSearchItem[] {
+  return getNavItems(role).map((item) => ({
+    ...item,
+    keywords: [item.label, item.hint, item.href.replace('/', ' ')],
+  }));
+}
+
 function isActivePath(pathname: string, href: string) {
   if (href === '/dashboard') return pathname === '/dashboard';
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -54,6 +62,7 @@ export function PortalShell({ children }: PortalShellProps) {
   const pathname = usePathname();
 
   const navItems = useMemo(() => getNavItems(user?.role), [user?.role]);
+  const searchItems = useMemo(() => getSearchItems(user?.role), [user?.role]);
   const activeItem = useMemo(
     () => navItems.find((item) => isActivePath(pathname, item.href)),
     [navItems, pathname],
@@ -74,15 +83,7 @@ export function PortalShell({ children }: PortalShellProps) {
             </div>
 
             <div className="flex flex-1 items-center gap-3 lg:max-w-xl">
-              <label className="sr-only" htmlFor="portal-search">
-                Busca global
-              </label>
-              <input
-                id="portal-search"
-                type="search"
-                placeholder="Busca global"
-                className="w-full rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500"
-              />
+              <ShellSearch id="portal-search" items={searchItems} />
             </div>
 
             <div className="flex items-center justify-between gap-3 text-sm text-slate-600 lg:justify-end">

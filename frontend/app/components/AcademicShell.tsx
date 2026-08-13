@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useMemo } from 'react';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
+import { ShellSearch, type ShellSearchItem } from '@/app/components/ShellSearch';
 import { useAuth } from '@/app/hooks/useAuth';
 
 type AcademicNavItem = {
@@ -20,6 +21,11 @@ const NAV_ITEMS: AcademicNavItem[] = [
   { href: '/consents', label: 'Consentimentos', hint: 'LGPD e monitoramento' },
   { href: '/privacy', label: 'Privacidade', hint: 'Política pública' },
 ];
+
+const SEARCH_ITEMS: ShellSearchItem[] = NAV_ITEMS.map((item) => ({
+  ...item,
+  keywords: [item.label, item.hint, item.href.replace('/', ' ')],
+}));
 
 function isActivePath(pathname: string, href: string) {
   if (href === '/classes') {
@@ -56,15 +62,7 @@ export function AcademicShell({ children }: AcademicShellProps) {
             </div>
 
             <div className="flex flex-1 items-center gap-3 lg:max-w-xl">
-              <label className="sr-only" htmlFor="academic-search">
-                Busca global
-              </label>
-              <input
-                id="academic-search"
-                type="search"
-                placeholder="Busca global"
-                className="w-full rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500"
-              />
+              <ShellSearch id="academic-search" items={SEARCH_ITEMS} />
             </div>
 
             <div className="flex items-center justify-between gap-3 text-sm text-slate-600 lg:justify-end">
