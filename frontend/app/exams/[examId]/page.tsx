@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import { listClasses, type ClassSummary } from '@/lib/classes';
 import {
   archiveExam,
@@ -79,12 +78,13 @@ export default function ExamDetailStatisticsPage() {
     setBusyAction(action);
     setError(null);
     try {
-      const updated =
+      await (
         action === 'publish'
-          ? await publishExam(examId)
+          ? publishExam(examId)
           : action === 'draft'
-            ? await returnExamToDraft(examId)
-            : await archiveExam(examId);
+            ? returnExamToDraft(examId)
+            : archiveExam(examId)
+      );
       await loadExam();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar status da avaliação');
@@ -104,7 +104,7 @@ export default function ExamDetailStatisticsPage() {
     setError(null);
 
     try {
-      const updated = await updateExam(examId, { class_ids: selectedClassIds });
+      await updateExam(examId, { class_ids: selectedClassIds });
       await loadExam();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar turmas da avaliação');
@@ -152,22 +152,20 @@ export default function ExamDetailStatisticsPage() {
   };
 
   return (
-    <ProtectedRoute requiredRoles={['teacher', 'admin']}>
-      <div className="min-h-screen bg-slate-50">
-        <main className="mx-auto max-w-6xl px-4 py-10">
-          <Link href="/exams" className="text-sm font-medium text-emerald-700 hover:underline">
-            ← Voltar para Avaliações
-          </Link>
+    <div className="space-y-8">
+      <Link href="/exams" className="text-sm font-medium text-emerald-700 hover:underline">
+        ← Voltar para Avaliações
+      </Link>
 
-          {loading ? (
-            <p className="mt-8 text-center text-sm text-slate-500">Carregando avaliação...</p>
-          ) : error || !stats || !exam ? (
-            <div className="mt-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {error || 'Avaliação não encontrada.'}
-            </div>
-          ) : (
-            <>
-              <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-start lg:justify-between">
+      {loading ? (
+        <p className="py-12 text-center text-sm text-slate-500">Carregando avaliação...</p>
+      ) : error || !stats || !exam ? (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error || 'Avaliação não encontrada.'}
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-3">
                     <h1 className="text-3xl font-bold text-slate-900">{exam.title}</h1>
@@ -263,7 +261,7 @@ export default function ExamDetailStatisticsPage() {
                 </div>
               </div>
 
-              <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">Turmas vinculadas</h2>
@@ -318,10 +316,10 @@ export default function ExamDetailStatisticsPage() {
                 )}
               </section>
 
-              <section
-                className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-                data-testid="exam-preview-section"
-              >
+          <section
+            className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+            data-testid="exam-preview-section"
+          >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">Pré-visualização da prova</h2>
@@ -402,7 +400,7 @@ export default function ExamDetailStatisticsPage() {
                 )}
               </section>
 
-              <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">Estatísticas e exportações</h2>
@@ -471,10 +469,8 @@ export default function ExamDetailStatisticsPage() {
                   </table>
                 </div>
               </section>
-            </>
-          )}
-        </main>
-      </div>
-    </ProtectedRoute>
+        </>
+      )}
+    </div>
   );
 }
