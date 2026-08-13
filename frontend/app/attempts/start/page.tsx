@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import { useAuth } from '@/app/hooks/useAuth';
 import { listAvailableExams, startOnlineAttempt, type AvailableExam } from '@/lib/attempts';
 
-export default function StartAttemptPage() {
+function StartAttemptContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, logout } = useAuth();
@@ -187,5 +187,23 @@ export default function StartAttemptPage() {
         </main>
       </div>
     </ProtectedRoute>
+  );
+}
+
+export default function StartAttemptPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50">
+          <main className="mx-auto max-w-4xl px-4 py-10">
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">
+              Carregando tentativa...
+            </div>
+          </main>
+        </div>
+      }
+    >
+      <StartAttemptContent />
+    </Suspense>
   );
 }
