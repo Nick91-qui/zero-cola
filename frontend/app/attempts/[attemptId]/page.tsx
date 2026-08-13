@@ -3,8 +3,6 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ProtectedRoute } from '@/app/components/ProtectedRoute';
-import { useAuth } from '@/app/hooks/useAuth';
 import { ApiError } from '@/lib/api';
 import { getExamSummary, type ExamSummary } from '@/lib/exams';
 import {
@@ -40,7 +38,6 @@ function stringifyOption(value: unknown) {
 export default function AttemptPage() {
   const params = useParams<{ attemptId: string }>();
   const attemptId = params.attemptId;
-  const { user, logout } = useAuth();
 
   const [session, setSession] = useState<AttemptSession | null>(null);
   const [result, setResult] = useState<AttemptResult | null>(null);
@@ -177,27 +174,7 @@ export default function AttemptPage() {
   const answeredCount = session?.attempt.answers.filter((answer) => answer.selected_option).length ?? 0;
 
   return (
-    <ProtectedRoute requiredRole="student">
-      <div className="min-h-screen bg-slate-50">
-        <nav className="border-b border-slate-200 bg-white shadow-sm">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-            <Link href="/dashboard" className="text-lg font-bold text-slate-900">
-              COLA-ZERO
-            </Link>
-            <div className="flex items-center gap-3 text-sm text-slate-600">
-              <span>{user?.email}</span>
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-md bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </nav>
-
-        <main className="mx-auto max-w-6xl px-4 py-10">
+    <div className="space-y-8">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
               Carregando sua tentativa...
@@ -447,8 +424,6 @@ export default function AttemptPage() {
               Não foi possível carregar a tentativa.
             </div>
           )}
-        </main>
-      </div>
-    </ProtectedRoute>
+    </div>
   );
 }

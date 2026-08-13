@@ -3,14 +3,11 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, Suspense, useEffect, useState } from 'react';
-import { ProtectedRoute } from '@/app/components/ProtectedRoute';
-import { useAuth } from '@/app/hooks/useAuth';
 import { listAvailableExams, startOnlineAttempt, type AvailableExam } from '@/lib/attempts';
 
 function StartAttemptContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, logout } = useAuth();
   const [examId, setExamId] = useState(() => searchParams.get('examId') ?? '');
   const [availableExams, setAvailableExams] = useState<AvailableExam[]>([]);
   const [loadingExams, setLoadingExams] = useState(true);
@@ -65,28 +62,8 @@ function StartAttemptContent() {
   };
 
   return (
-    <ProtectedRoute requiredRole="student">
-      <div className="min-h-screen bg-slate-50">
-        <nav className="border-b border-slate-200 bg-white shadow-sm">
-          <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-            <Link href="/dashboard" className="text-lg font-bold text-slate-900">
-              COLA-ZERO
-            </Link>
-            <div className="flex items-center gap-3 text-sm text-slate-600">
-              <span>{user?.email}</span>
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-md bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </nav>
-
-        <main className="mx-auto max-w-4xl px-4 py-10">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <div className="space-y-8">
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
               Prova online
             </p>
@@ -183,10 +160,8 @@ function StartAttemptContent() {
                 </div>
               </form>
             </div>
-          </div>
-        </main>
       </div>
-    </ProtectedRoute>
+    </div>
   );
 }
 
@@ -194,12 +169,8 @@ export default function StartAttemptPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50">
-          <main className="mx-auto max-w-4xl px-4 py-10">
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">
-              Carregando tentativa...
-            </div>
-          </main>
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">
+          Carregando tentativa...
         </div>
       }
     >
