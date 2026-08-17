@@ -92,9 +92,7 @@ export default function ClassesPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Turmas</h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-600">
-            {isAdmin
-              ? 'Crie turmas vazias, vincule professores e cadastre membros quando fizer sentido.'
-              : 'Consulte as turmas vinculadas à sua conta e abra o detalhe para ver informações e vínculos.'}
+            Consulte as turmas disponíveis e abra o detalhe para ver alunos e vínculos.
           </p>
         </div>
 
@@ -157,12 +155,6 @@ export default function ClassesPage() {
                       <p className="mt-1 text-sm text-slate-600">
                         {classItem.academic_period || 'Sem período informado'}
                       </p>
-                      {isAdmin ? (
-                        <p className="mt-1 text-sm text-slate-700">
-                          Professor:{' '}
-                          {classItem.teacher_id ? 'vinculado' : 'sem professor vinculado'}
-                        </p>
-                      ) : null}
                       {classItem.description && (
                         <p className="mt-2 max-w-2xl text-sm text-slate-700">
                           {classItem.description}
@@ -241,10 +233,9 @@ export default function ClassesPage() {
             </>
           ) : (
             <>
-              <h2 className="text-lg font-semibold text-slate-900">Acesso de consulta</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Turmas na sua conta</h2>
               <p className="mt-1 text-sm text-slate-600">
-                O administrador realiza o cadastro de turmas e vínculos. Aqui você vê apenas as
-                turmas que já foram disponibilizadas para sua conta.
+                Veja as turmas que já foram disponibilizadas para sua conta.
               </p>
             </>
           )}

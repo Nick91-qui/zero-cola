@@ -121,9 +121,6 @@ export default function ClassDetailPage() {
         <Link href="/classes" className="text-sm font-medium text-emerald-700 hover:underline">
           ← Voltar para Turmas
         </Link>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-          {classId}
-        </span>
       </div>
 
       {loading ? (
