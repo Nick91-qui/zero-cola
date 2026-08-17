@@ -191,7 +191,6 @@ export default function QuestionsPage() {
                   </div>
                   <div className="flex flex-col items-end gap-2 text-right text-xs text-slate-500">
                     <div>Versão {question.version ?? 1}</div>
-                    <div>ID {question.id}</div>
                     <Link
                       href={`/questions/${question.id}`}
                       className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"

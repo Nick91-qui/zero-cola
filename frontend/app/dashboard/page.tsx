@@ -78,10 +78,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-[2rem] border border-slate-200 bg-white px-6 py-6 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Painel</h1>
-      </section>
-
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {primaryActions.map((action) => (
           <Link

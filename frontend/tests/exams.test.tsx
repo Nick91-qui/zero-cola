@@ -482,6 +482,41 @@ describe('Teacher exam frontend flow', () => {
     });
   });
 
+  it('keeps the exam detail visible when statistics fail to load', async () => {
+    const now = new Date().toISOString();
+    vi.spyOn(classesLib, 'listClasses').mockResolvedValue([classroom]);
+    vi.spyOn(examsLib, 'getExam').mockResolvedValue({
+      id: 'exam-1',
+      title: 'Prova integradora',
+      description: 'Avaliação criada pelo frontend',
+      teacher_id: 'teacher-1',
+      class_id: '2º Ano A',
+      class_ids: ['class-1'],
+      omr_template_id: null,
+      total_questions: 1,
+      total_time_seconds: 900,
+      max_attempts: 2,
+      randomization_enabled: true,
+      max_score: '10.00',
+      status: 'draft',
+      is_active: true,
+      deleted_at: null,
+      created_at: now,
+      updated_at: now,
+      questions: [],
+      exam_questions: [],
+    });
+    vi.spyOn(examsLib, 'getExamStatistics').mockRejectedValue(new Error('Failed to fetch'));
+
+    render(<ExamDetailPage />);
+
+    await screen.findByText('Prova integradora');
+    expect(
+      await screen.findByText('Failed to fetch', { selector: 'p' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Baixar folhas OMR' })).toBeInTheDocument();
+  });
+
   it('allows updating the classes linked to an existing exam', async () => {
     const now = new Date().toISOString();
     vi.spyOn(classesLib, 'listClasses').mockResolvedValue([

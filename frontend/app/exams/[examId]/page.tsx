@@ -42,7 +42,9 @@ export default function ExamDetailStatisticsPage() {
   const [classes, setClasses] = useState<ClassSummary[]>([]);
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [savingClasses, setSavingClasses] = useState(false);
   const [downloadingOmr, setDownloadingOmr] = useState(false);
@@ -53,13 +55,11 @@ export default function ExamDetailStatisticsPage() {
     setError(null);
 
     try {
-      const [examData, statsData, classData] = await Promise.all([
+      const [examData, classData] = await Promise.all([
         getExam(examId),
-        getExamStatistics(examId),
         listClasses().catch(() => []),
       ]);
       setExam(examData);
-      setStats(statsData);
       setClasses(classData);
       setSelectedClassIds(examData.class_ids ?? []);
     } catch (err) {
@@ -69,10 +69,26 @@ export default function ExamDetailStatisticsPage() {
     }
   }, [examId]);
 
+  const loadStatistics = useCallback(async () => {
+    setLoadingStats(true);
+    setStatsError(null);
+
+    try {
+      const statsData = await getExamStatistics(examId);
+      setStats(statsData);
+    } catch (err) {
+      setStats(null);
+      setStatsError(err instanceof Error ? err.message : 'Falha ao carregar estatísticas');
+    } finally {
+      setLoadingStats(false);
+    }
+  }, [examId]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch hydrates local exam state on mount
     void loadExam();
-  }, [loadExam]);
+    void loadStatistics();
+  }, [loadExam, loadStatistics]);
 
   const handleAction = async (action: 'publish' | 'draft' | 'archive') => {
     setBusyAction(action);
@@ -159,7 +175,7 @@ export default function ExamDetailStatisticsPage() {
 
       {loading ? (
         <p className="py-12 text-center text-sm text-slate-500">Carregando avaliação...</p>
-      ) : error || !stats || !exam ? (
+      ) : error || !exam ? (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error || 'Avaliação não encontrada.'}
         </div>
@@ -418,56 +434,81 @@ export default function ExamDetailStatisticsPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
-                    <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                      Média da Turma
-                    </span>
-                    <p className="mt-2 text-3xl font-extrabold text-slate-900">
-                      {stats.average_score.toFixed(2)}{' '}
-                      <span className="text-sm font-normal text-slate-500">/ {stats.max_score.toFixed(2)}</span>
-                    </p>
+                {loadingStats ? (
+                  <p className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
+                    Carregando estatísticas por questão...
+                  </p>
+                ) : statsError ? (
+                  <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+                    <p>{statsError}</p>
+                    <button
+                      type="button"
+                      onClick={() => void loadStatistics()}
+                      className="mt-3 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 shadow-sm hover:bg-amber-100"
+                    >
+                      Tentar novamente
+                    </button>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
-                    <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                      Alunos Avaliados
-                    </span>
-                    <p className="mt-2 text-3xl font-extrabold text-slate-900">{stats.total_attempts}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
-                    <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                      Total de Questões
-                    </span>
-                    <p className="mt-2 text-3xl font-extrabold text-slate-900">
-                      {stats.question_statistics.length}
-                    </p>
-                  </div>
-                </div>
+                ) : stats ? (
+                  <>
+                    <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                        <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                          Média da Turma
+                        </span>
+                        <p className="mt-2 text-3xl font-extrabold text-slate-900">
+                          {stats.average_score.toFixed(2)}{' '}
+                          <span className="text-sm font-normal text-slate-500">
+                            / {stats.max_score.toFixed(2)}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                        <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                          Alunos Avaliados
+                        </span>
+                        <p className="mt-2 text-3xl font-extrabold text-slate-900">{stats.total_attempts}</p>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                        <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                          Total de Questões
+                        </span>
+                        <p className="mt-2 text-3xl font-extrabold text-slate-900">
+                          {stats.question_statistics.length}
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="mt-8 overflow-hidden rounded-xl border border-slate-200">
-                  <table className="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead className="bg-slate-100">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Questão</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Gabarito</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Acertos</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">Erros</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-700">% Acerto</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 bg-white">
-                      {stats.question_statistics.map((question) => (
-                        <tr key={question.question_number}>
-                          <td className="px-4 py-3 font-medium text-slate-900">Q{question.question_number}</td>
-                          <td className="px-4 py-3 text-emerald-700">{question.correct_option || '-'}</td>
-                          <td className="px-4 py-3 text-slate-700">{question.correct_count}</td>
-                          <td className="px-4 py-3 text-slate-700">{question.incorrect_count}</td>
-                          <td className="px-4 py-3 text-slate-700">{question.accuracy_percentage.toFixed(1)}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    <div className="mt-8 overflow-hidden rounded-xl border border-slate-200">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-100">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-700">Questão</th>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-700">Gabarito</th>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-700">Acertos</th>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-700">Erros</th>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-700">% Acerto</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {stats.question_statistics.map((question) => (
+                            <tr key={question.question_number}>
+                              <td className="px-4 py-3 font-medium text-slate-900">
+                                Q{question.question_number}
+                              </td>
+                              <td className="px-4 py-3 text-emerald-700">{question.correct_option || '-'}</td>
+                              <td className="px-4 py-3 text-slate-700">{question.correct_count}</td>
+                              <td className="px-4 py-3 text-slate-700">{question.incorrect_count}</td>
+                              <td className="px-4 py-3 text-slate-700">
+                                {question.accuracy_percentage.toFixed(1)}%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : null}
               </section>
         </>
       )}

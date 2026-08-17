@@ -1,14 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, Suspense, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { listAvailableExams, startOnlineAttempt, type AvailableExam } from '@/lib/attempts';
 
 function StartAttemptContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [examId, setExamId] = useState(() => searchParams.get('examId') ?? '');
   const [availableExams, setAvailableExams] = useState<AvailableExam[]>([]);
   const [loadingExams, setLoadingExams] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -56,11 +54,6 @@ function StartAttemptContent() {
     }
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await handleStart(examId.trim());
-  };
-
   return (
     <div className="space-y-8">
       <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -71,7 +64,8 @@ function StartAttemptContent() {
               Iniciar tentativa online
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Escolha uma prova publicada da sua turma ou informe o identificador da avaliação para iniciar a tentativa e continuar a prova com salvamento automático.
+              Escolha uma prova publicada da sua turma para iniciar a tentativa e continuar a prova
+              com salvamento automático.
             </p>
 
             <div className="mt-8 space-y-6">
@@ -124,41 +118,20 @@ function StartAttemptContent() {
                 )}
               </section>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">
-                    ID da avaliação manual
-                  </span>
-                  <input
-                    value={examId}
-                    onChange={(event) => setExamId(event.target.value)}
-                    placeholder="Cole aqui o exam_id"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-600"
-                  />
-                </label>
-
-                {error && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
-                  </div>
-                )}
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={loading || !examId.trim()}
-                    className="rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
-                  >
-                    {loading ? 'Iniciando...' : 'Iniciar por ID'}
-                  </button>
-                  <Link
-                    href="/dashboard"
-                    className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Voltar ao painel
-                  </Link>
+              {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
                 </div>
-              </form>
+              )}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href="/dashboard"
+                  className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Voltar ao painel
+                </Link>
+              </div>
             </div>
       </div>
     </div>

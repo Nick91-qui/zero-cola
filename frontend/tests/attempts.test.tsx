@@ -8,14 +8,12 @@ import * as attemptsLib from '@/lib/attempts';
 import * as examsLib from '@/lib/exams';
 
 const routerPush = vi.fn();
-const searchParams = new URLSearchParams('examId=exam-123');
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: routerPush,
   }),
   useParams: () => ({ attemptId: 'attempt-1' }),
-  useSearchParams: () => searchParams,
 }));
 
 vi.mock('@/app/components/ProtectedRoute', () => ({
@@ -87,36 +85,11 @@ describe('Online attempt frontend flow', () => {
     });
   });
 
-  it('still allows starting an online attempt by exam id', async () => {
-    vi.spyOn(attemptsLib, 'startOnlineAttempt').mockResolvedValue({
-      attempt: {
-        id: 'attempt-1',
-        exam_id: 'exam-123',
-        student_id: 'student-1',
-        student_code: '12345',
-        omr_scan_id: null,
-        attempt_number: 1,
-        source: 'ONLINE',
-        status: 'in_progress',
-        total_questions: 2,
-        started_at: new Date().toISOString(),
-        completed_at: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        answers: [],
-      },
-      current_question: null,
-      total_questions: 2,
-    });
-
+  it('does not expose a manual exam id field', async () => {
     render(<StartAttemptPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Iniciar por ID' }));
-
-    await waitFor(() => {
-      expect(attemptsLib.startOnlineAttempt).toHaveBeenCalledWith('exam-123');
-      expect(routerPush).toHaveBeenCalledWith('/attempts/attempt-1');
-    });
+    expect(await screen.findByText('Provas disponíveis')).toBeInTheDocument();
+    expect(screen.queryByLabelText('ID da avaliação manual')).not.toBeInTheDocument();
   });
 
   it('renders one question at a time and supports autosave, navigation and submission', async () => {
@@ -292,8 +265,8 @@ describe('Online attempt frontend flow', () => {
   it('exposes a student entry point in the dashboard', () => {
     render(<DashboardPage />);
 
-    expect(screen.getByText('Provas Online')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Iniciar Prova Online/i })).toHaveAttribute(
+    expect(screen.getByText('Iniciar prova')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Iniciar prova online/i })).toHaveAttribute(
       'href',
       '/attempts/start',
     );
