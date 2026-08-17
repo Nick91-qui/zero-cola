@@ -113,7 +113,7 @@ export default function ClassesPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className={isAdmin ? 'grid gap-6 lg:grid-cols-[1.2fr_0.8fr]' : 'space-y-6'}>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -180,63 +180,54 @@ export default function ClassesPage() {
           )}
         </section>
 
-        <section className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          {isAdmin ? (
-            <>
-              <h2 className="text-lg font-semibold text-slate-900">Criar turma</h2>
+        {isAdmin ? (
+          <section className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">Criar turma</h2>
 
-              <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
-                <label className="block text-sm font-medium text-slate-700">
-                  Nome
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Ex: 2º Ano A"
-                    className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none"
-                  />
-                </label>
+            <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
+              <label className="block text-sm font-medium text-slate-700">
+                Nome
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Ex: 2º Ano A"
+                  className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none"
+                />
+              </label>
 
-                <label className="block text-sm font-medium text-slate-700">
-                  Período letivo
-                  <input
-                    type="text"
-                    value={academicPeriod}
-                    onChange={(event) => setAcademicPeriod(event.target.value)}
-                    placeholder="Ex: 2026"
-                    className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none"
-                  />
-                </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Período letivo
+                <input
+                  type="text"
+                  value={academicPeriod}
+                  onChange={(event) => setAcademicPeriod(event.target.value)}
+                  placeholder="Ex: 2026"
+                  className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none"
+                />
+              </label>
 
-                <label className="block text-sm font-medium text-slate-700">
-                  Descrição
-                  <textarea
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                    rows={4}
-                    placeholder="Observações da turma"
-                    className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none"
-                  />
-                </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Descrição
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={4}
+                  placeholder="Observações da turma"
+                  className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none"
+                />
+              </label>
 
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:bg-slate-300"
-                >
-                  {saving ? 'Criando...' : 'Criar turma'}
-                </button>
-              </form>
-            </>
-          ) : (
-            <>
-              <h2 className="text-lg font-semibold text-slate-900">Turmas na sua conta</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Veja as turmas que já foram disponibilizadas para sua conta.
-              </p>
-            </>
-          )}
-        </section>
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:bg-slate-300"
+              >
+                {saving ? 'Criando...' : 'Criar turma'}
+              </button>
+            </form>
+          </section>
+        ) : null}
       </div>
     </div>
   );

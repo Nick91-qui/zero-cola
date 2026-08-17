@@ -42,11 +42,6 @@ export function AdminShell({ children }: AdminShellProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
 
-  const activeItem = useMemo(
-    () => NAV_ITEMS.find((item) => isActivePath(pathname, item.href)),
-    [pathname],
-  );
-
   return (
     <ProtectedRoute requiredRoles={['admin']}>
       <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -80,15 +75,6 @@ export function AdminShell({ children }: AdminShellProps) {
 
         <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:px-6">
           <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:sticky lg:top-6">
-            <div className="mb-3 px-2 pt-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Navegação
-              </p>
-              <p className="mt-1 text-sm text-slate-600">
-                {activeItem ? activeItem.hint : 'Escolha uma área'}
-              </p>
-            </div>
-
             <nav className="space-y-1">
               {NAV_ITEMS.map((item) => {
                 const active = isActivePath(pathname, item.href);

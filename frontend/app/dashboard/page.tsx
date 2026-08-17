@@ -76,89 +76,10 @@ export default function DashboardPage() {
     ];
   }, [user?.role]);
 
-  const stats = useMemo(
-    () => [
-      { label: 'Usuário', value: user?.email ?? 'Indefinido', helper: 'Conta ativa' },
-      { label: 'Função', value: user?.role ?? 'indefinido', helper: 'Permissões da sessão' },
-      {
-        label: 'Matrícula',
-        value: user?.student_code ?? 'N/A',
-        helper: user?.student_code ? 'Identificador do aluno' : 'Não aplicável',
-      },
-    ],
-    [user?.email, user?.role, user?.student_code],
-  );
-
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-900 px-6 py-8 shadow-sm">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(56,189,248,0.14),transparent_25%)]" />
-        <div className="relative grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="space-y-5">
-            <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200">
-              Portal principal
-            </div>
-            <div>
-              <h1 className="max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
-                {user?.role === 'student'
-                  ? 'Comece sua prova, revise consentimentos e acompanhe sua jornada.'
-                  : user?.role === 'teacher'
-                    ? 'Organize turmas, avaliações e relatórios em um só lugar.'
-                    : 'Administre usuários, turmas, auditoria e governança com visão centralizada.'}
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
-                A navegação do portal foi reorganizada para reduzir atrito: cada perfil encontra o
-                seu próximo passo sem precisar caçar telas espalhadas.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              {user?.role === 'student' ? (
-                <Link
-                  href="/attempts/start"
-                  className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-emerald-400"
-                >
-                  Iniciar prova
-                </Link>
-              ) : (
-                <Link
-                  href="/classes"
-                  className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-emerald-400"
-                >
-                  Abrir turmas
-                </Link>
-              )}
-              <Link
-                href="/consents"
-                className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                Consentimentos
-              </Link>
-            </div>
-          </div>
-
-          <div className="relative rounded-[1.5rem] border border-white/10 bg-white/5 p-5 backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-              Estado da sessão
-            </p>
-            <div className="mt-4 space-y-3">
-              {stats.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
-                >
-                  <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                    {item.label}
-                  </span>
-                  <span className="mt-2 block break-words text-base font-semibold text-white">
-                    {item.value}
-                  </span>
-                  <span className="mt-1 block text-xs text-slate-400">{item.helper}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <section className="rounded-[2rem] border border-slate-200 bg-white px-6 py-6 shadow-sm">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Painel</h1>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -280,10 +201,6 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-            O portal agora usa um único envelope visual para aluno, professor e admin. Isso reduz
-            a sensação de mudança de contexto entre telas.
-          </div>
         </article>
       </section>
     </div>
