@@ -512,9 +512,57 @@ describe('Teacher exam frontend flow', () => {
 
     await screen.findByText('Prova integradora');
     expect(
-      await screen.findByText('Failed to fetch', { selector: 'p' }),
+      await screen.findByText('Não foi possível carregar as estatísticas por questão agora.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Baixar folhas OMR' })).toBeInTheDocument();
+  });
+
+  it('shows class names instead of raw ids in the exam summary', async () => {
+    const now = new Date().toISOString();
+    vi.spyOn(classesLib, 'listClasses').mockResolvedValue([
+      classroom,
+      {
+        ...classroom,
+        id: 'class-2',
+        name: '2º Ano B',
+      },
+    ]);
+    vi.spyOn(examsLib, 'getExam').mockResolvedValue({
+      id: 'exam-1',
+      title: 'Prova integradora',
+      description: 'Avaliação criada pelo frontend',
+      teacher_id: 'teacher-1',
+      class_id: null,
+      class_ids: ['class-1', 'class-2'],
+      omr_template_id: null,
+      total_questions: 1,
+      total_time_seconds: 900,
+      max_attempts: 2,
+      randomization_enabled: true,
+      max_score: '10.00',
+      status: 'draft',
+      is_active: true,
+      deleted_at: null,
+      created_at: now,
+      updated_at: now,
+      questions: [],
+      exam_questions: [],
+    });
+    vi.spyOn(examsLib, 'getExamStatistics').mockResolvedValue({
+      exam_id: 'exam-1',
+      exam_title: 'Prova integradora',
+      total_attempts: 0,
+      class_id: 'class-1',
+      average_score: 0,
+      max_score: 10,
+      question_statistics: [],
+    });
+
+    render(<ExamDetailPage />);
+
+    await screen.findByText('Prova integradora');
+    expect(screen.getByText('2 turmas')).toBeInTheDocument();
+    expect(screen.getByText('2º Ano A, 2º Ano B')).toBeInTheDocument();
   });
 
   it('allows updating the classes linked to an existing exam', async () => {

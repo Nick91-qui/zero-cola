@@ -17,9 +17,17 @@ import {
   type ExamStatistics,
 } from '@/lib/exams';
 
-function downloadLabelList(values: string[] | undefined) {
-  if (!values || values.length === 0) return 'Geral';
-  return values.join(', ');
+function formatClassNames(classIds: string[] | undefined, classes: ClassSummary[]) {
+  if (!classIds || classIds.length === 0) return 'Geral';
+
+  const classNameById = new Map(classes.map((classItem) => [classItem.id, classItem.name]));
+  const labels = classIds.map((classId) => classNameById.get(classId) ?? classId);
+
+  if (labels.length <= 3) {
+    return labels.join(', ');
+  }
+
+  return `${labels.slice(0, 3).join(', ')} + ${labels.length - 3}`;
 }
 
 function statusBadge(status?: string) {
@@ -167,6 +175,8 @@ export default function ExamDetailStatisticsPage() {
     }
   };
 
+  const classCountLabel = selectedClassIds.length === 1 ? '1 turma' : `${selectedClassIds.length} turmas`;
+
   return (
     <div className="space-y-8">
       <Link href="/exams" className="text-sm font-medium text-emerald-700 hover:underline">
@@ -199,7 +209,10 @@ export default function ExamDetailStatisticsPage() {
                         Turmas
                       </span>
                       <p className="mt-2 text-sm font-semibold text-slate-900">
-                        {downloadLabelList(exam.class_ids)}
+                        {classCountLabel}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {formatClassNames(exam.class_ids, classes)}
                       </p>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -440,7 +453,7 @@ export default function ExamDetailStatisticsPage() {
                   </p>
                 ) : statsError ? (
                   <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-                    <p>{statsError}</p>
+                    <p>Não foi possível carregar as estatísticas por questão agora.</p>
                     <button
                       type="button"
                       onClick={() => void loadStatistics()}
