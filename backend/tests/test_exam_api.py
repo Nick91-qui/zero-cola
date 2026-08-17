@@ -8,6 +8,7 @@ from app.api.routes.exams import create_exam
 from app.main import app
 from app.models.enums import UserRole
 from app.models.exam import Exam
+from app.models.skill import Skill
 from app.models.user import User
 from app.schemas.exam import ExamCreate
 from app.services.class_service import ClassService
@@ -85,6 +86,48 @@ def test_create_and_get_exam_api(auth_headers):
     xlsx_res = client.get(f"/api/v1/exams/{exam_id}/export/xlsx", headers=auth_headers)
     assert xlsx_res.status_code == 200
     assert "spreadsheetml" in xlsx_res.headers["content-type"]
+
+
+def test_exam_statistics_include_skill_timestamps(auth_headers, test_db_session):
+    skill = Skill(
+        code="hab-stat-01",
+        description="Habilidade para estatísticas",
+        subject="Matemática",
+        grade_level="EM",
+    )
+    test_db_session.add(skill)
+    test_db_session.commit()
+
+    payload = {
+        "title": "Avaliação com skill",
+        "description": "Usa skill vinculada",
+        "class_id": "TURMA-404",
+        "total_questions": 1,
+        "questions": [
+            {
+                "display_order": 1,
+                "question": {
+                    "statement": "Questão com habilidade",
+                    "correct_answer": "A",
+                    "skill_ids": [str(skill.id)],
+                },
+            }
+        ],
+    }
+
+    response = client.post("/api/v1/exams", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    exam_id = response.json()["id"]
+
+    publish_res = client.post(f"/api/v1/exams/{exam_id}/publish", headers=auth_headers)
+    assert publish_res.status_code == 200, publish_res.text
+
+    stats_res = client.get(f"/api/v1/exams/{exam_id}/statistics", headers=auth_headers)
+    assert stats_res.status_code == 200, stats_res.text
+    stats = stats_res.json()
+    assert stats["question_statistics"][0]["skills"][0]["code"] == skill.code
+    assert "created_at" in stats["question_statistics"][0]["skills"][0]
+    assert "updated_at" in stats["question_statistics"][0]["skills"][0]
 
 
 def test_export_exam_omr_package_api(auth_headers, test_db_session):

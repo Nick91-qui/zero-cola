@@ -23,6 +23,7 @@ from app.repositories.grade import GradeRepository
 from app.repositories.omr import OMRScanRepository, OMRTemplateRepository
 from app.repositories.skill import SkillRepository
 from app.schemas.exam import ExamCreate, ExamUpdate
+from app.schemas.skill import SkillResponse
 from app.schemas.omr import OMRTemplateCreate
 from app.services.answer_key import AnswerKeyService
 from app.services.audit_log import AuditLogService
@@ -451,14 +452,7 @@ class ExamService:
             error_pct = (incorrect_cnt / total_resp * 100.0) if total_resp > 0 else 0.0
 
             q_skills = [
-                {
-                    "id": s.id,
-                    "code": s.code,
-                    "description": s.description,
-                    "subject": s.subject,
-                    "grade_level": s.grade_level,
-                    "curriculum": s.curriculum,
-                }
+                SkillResponse.model_validate(s)
                 for s in (answer_key_item.skills if answer_key_item else [])
             ]
 
