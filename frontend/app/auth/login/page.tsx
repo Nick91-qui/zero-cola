@@ -82,9 +82,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Account creation is managed by the administrator.
-        </p>
       </div>
     </div>
   );

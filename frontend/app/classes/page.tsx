@@ -66,7 +66,7 @@ export default function ClassesPage() {
 
     try {
       if (!isAdmin) {
-        setError('A criação de turmas é restrita ao administrador.');
+        setError('Você não tem permissão para criar turmas.');
         return;
       }
       const payload: ClassCreatePayload = {
@@ -183,10 +183,7 @@ export default function ClassesPage() {
         <section className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           {isAdmin ? (
             <>
-              <h2 className="text-lg font-semibold text-slate-900">Nova turma</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Registre uma turma vazia agora e associe professores e alunos depois.
-              </p>
+              <h2 className="text-lg font-semibold text-slate-900">Criar turma</h2>
 
               <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
                 <label className="block text-sm font-medium text-slate-700">

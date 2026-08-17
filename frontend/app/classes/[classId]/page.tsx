@@ -208,9 +208,7 @@ export default function ClassDetailPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">Professores vinculados</h2>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Acesso compartilhado entre docentes vinculados a esta turma.
-                    </p>
+                    <p className="mt-1 text-sm text-slate-600">Docentes desta turma.</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                     {classData.teachers.length} vínculo(s)
@@ -283,9 +281,7 @@ export default function ClassDetailPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Estudantes vinculados</h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Histórico de matrícula e acesso à turma.
-                  </p>
+                  <p className="mt-1 text-sm text-slate-600">Alunos desta turma.</p>
                 </div>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                   {classData.memberships.length} vínculo(s)
