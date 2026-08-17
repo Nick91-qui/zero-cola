@@ -157,10 +157,12 @@ export default function ClassesPage() {
                       <p className="mt-1 text-sm text-slate-600">
                         {classItem.academic_period || 'Sem período informado'}
                       </p>
-                      <p className="mt-1 text-sm text-slate-700">
-                        Professor:{' '}
-                        {classItem.teacher_id ? 'vinculado' : 'sem professor vinculado'}
-                      </p>
+                      {isAdmin ? (
+                        <p className="mt-1 text-sm text-slate-700">
+                          Professor:{' '}
+                          {classItem.teacher_id ? 'vinculado' : 'sem professor vinculado'}
+                        </p>
+                      ) : null}
                       {classItem.description && (
                         <p className="mt-2 max-w-2xl text-sm text-slate-700">
                           {classItem.description}

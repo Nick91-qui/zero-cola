@@ -168,20 +168,26 @@ export default function ClassDetailPage() {
                   </span>
                   <p className="mt-2 text-2xl font-bold text-slate-900">{classData.student_count}</p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Professores vinculados
-                  </span>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">
-                    {classData.teachers.length}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    ID da turma
-                  </span>
-                  <p className="mt-2 break-all text-sm font-semibold text-slate-900">{classData.id}</p>
-                </div>
+                {isAdmin ? (
+                  <>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                        Professores vinculados
+                      </span>
+                      <p className="mt-2 text-2xl font-bold text-slate-900">
+                        {classData.teachers.length}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                        ID da turma
+                      </span>
+                      <p className="mt-2 break-all text-sm font-semibold text-slate-900">
+                        {classData.id}
+                      </p>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
 
@@ -200,20 +206,20 @@ export default function ClassDetailPage() {
           </div>
 
           <section className="grid gap-6 xl:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Professores vinculados</h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Acesso compartilhado entre docentes vinculados a esta turma.
-                  </p>
+            {isAdmin ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Professores vinculados</h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Acesso compartilhado entre docentes vinculados a esta turma.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                    {classData.teachers.length} vínculo(s)
+                  </span>
                 </div>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                  {classData.teachers.length} vínculo(s)
-                </span>
-              </div>
 
-              {isAdmin ? (
                 <MemberSearchField
                   role="teacher"
                   title="Vincular professor(es)"
@@ -225,60 +231,56 @@ export default function ClassDetailPage() {
                     .map((membership) => membership.teacher_id)}
                   onSubmit={handleAddTeachers}
                 />
-              ) : (
-                <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
-                  O vínculo de professores é administrado por um usuário administrador.
-                </p>
-              )}
 
-              {classData.teachers.length === 0 ? (
-                <p className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
-                  Nenhum professor vinculado.
-                </p>
-              ) : (
-                <div className="mt-6 space-y-3">
-                  {classData.teachers.map((membership) => (
-                    <article
-                      key={membership.id}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-slate-900">
-                            {membership.teacher ? membership.teacher.email : membership.teacher_id}
-                          </p>
-                          <p className="text-sm text-slate-600">
-                            {membership.teacher?.role || 'teacher'}
-                          </p>
+                {classData.teachers.length === 0 ? (
+                  <p className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
+                    Nenhum professor vinculado.
+                  </p>
+                ) : (
+                  <div className="mt-6 space-y-3">
+                    {classData.teachers.map((membership) => (
+                      <article
+                        key={membership.id}
+                        className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {membership.teacher ? membership.teacher.email : membership.teacher_id}
+                            </p>
+                            <p className="text-sm text-slate-600">
+                              {membership.teacher?.role || 'teacher'}
+                            </p>
+                          </div>
+                          <span
+                            className={[
+                              'rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.15em]',
+                              membership.is_active
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-slate-200 text-slate-700',
+                            ].join(' ')}
+                          >
+                            {membership.is_active ? 'Ativo' : 'Arquivado'}
+                          </span>
                         </div>
-                        <span
-                          className={[
-                            'rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.15em]',
-                            membership.is_active
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-slate-200 text-slate-700',
-                          ].join(' ')}
-                        >
-                          {membership.is_active ? 'Ativo' : 'Arquivado'}
-                        </span>
-                      </div>
-                      {isAdmin && membership.is_active && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTeacher(membership.teacher_id)}
-                          disabled={removingMembershipId === membership.teacher_id}
-                          className="mt-3 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:text-slate-400"
-                        >
-                          {removingMembershipId === membership.teacher_id
-                            ? 'Removendo...'
-                            : 'Remover vínculo do professor'}
-                        </button>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
+                        {membership.is_active && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTeacher(membership.teacher_id)}
+                            disabled={removingMembershipId === membership.teacher_id}
+                            className="mt-3 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:text-slate-400"
+                          >
+                            {removingMembershipId === membership.teacher_id
+                              ? 'Removendo...'
+                              : 'Remover vínculo do professor'}
+                          </button>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-4">
@@ -305,11 +307,7 @@ export default function ClassDetailPage() {
                     .map((membership) => membership.student_id)}
                   onSubmit={handleAddStudents}
                 />
-              ) : (
-                <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
-                  A matrícula de estudantes é administrada por um usuário administrador.
-                </p>
-              )}
+              ) : null}
 
               {classData.memberships.length === 0 ? (
                 <p className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
