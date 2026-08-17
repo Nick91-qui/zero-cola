@@ -3,15 +3,16 @@
 import { FormEvent, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createTemplate } from '@/lib/omr';
+import { createTemplate, OMR_LAYOUT_OPTIONS } from '@/lib/omr';
 
 const OPTIONS = ['A', 'B', 'C', 'D', 'E'] as const;
 
 export default function NewOmrTemplatePage() {
   const router = useRouter();
+  type LayoutVersion = (typeof OMR_LAYOUT_OPTIONS)[number]['value'];
   const [title, setTitle] = useState('');
-  const [layoutVersion, setLayoutVersion] = useState('v1_std_20q');
-  const [totalQuestions, setTotalQuestions] = useState(20);
+  const [layoutVersion, setLayoutVersion] = useState<LayoutVersion>(OMR_LAYOUT_OPTIONS[0].value);
+  const [totalQuestions, setTotalQuestions] = useState<number>(OMR_LAYOUT_OPTIONS[0].totalQuestions);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -21,9 +22,9 @@ export default function NewOmrTemplatePage() {
     [totalQuestions],
   );
 
-  const handleLayoutChange = (value: string) => {
+  const handleLayoutChange = (value: LayoutVersion) => {
     setLayoutVersion(value);
-    const nextTotal = value === 'v1_std_50q' ? 50 : 20;
+    const nextTotal = OMR_LAYOUT_OPTIONS.find((option) => option.value === value)?.totalQuestions ?? 10;
     setTotalQuestions(nextTotal);
     setAnswers({});
   };
@@ -100,12 +101,18 @@ export default function NewOmrTemplatePage() {
               <label className="block text-sm font-medium text-slate-700">Modelo de Folha (Layout)</label>
               <select
                 value={layoutVersion}
-                onChange={(e) => handleLayoutChange(e.target.value)}
+                onChange={(e) => handleLayoutChange(e.target.value as LayoutVersion)}
                 className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
-                <option value="v1_std_20q">v1_std_20q (20 questões - Folha Padrão)</option>
-                <option value="v1_std_50q">v1_std_50q (50 questões - Folha Expandida)</option>
+                {OMR_LAYOUT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value} ({option.label})
+                  </option>
+                ))}
               </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Layouts disponíveis de 10 a 100 questões, em passos de 10.
+              </p>
             </div>
           </div>
         </section>

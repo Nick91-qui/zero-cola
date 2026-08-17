@@ -58,6 +58,19 @@ export interface CreateTemplateInput {
   exam_id?: string | null;
 }
 
+export const OMR_LAYOUT_OPTIONS = [
+  { value: 'v1_std_10q', label: '10 questões', totalQuestions: 10 },
+  { value: 'v1_std_20q', label: '20 questões', totalQuestions: 20 },
+  { value: 'v1_std_30q', label: '30 questões', totalQuestions: 30 },
+  { value: 'v1_std_40q', label: '40 questões', totalQuestions: 40 },
+  { value: 'v1_std_50q', label: '50 questões', totalQuestions: 50 },
+  { value: 'v1_std_60q', label: '60 questões', totalQuestions: 60 },
+  { value: 'v1_std_70q', label: '70 questões', totalQuestions: 70 },
+  { value: 'v1_std_80q', label: '80 questões', totalQuestions: 80 },
+  { value: 'v1_std_90q', label: '90 questões', totalQuestions: 90 },
+  { value: 'v1_std_100q', label: '100 questões', totalQuestions: 100 },
+] as const;
+
 export function listTemplates() {
   return apiFetch<OMRTemplate[]>('/omr/templates');
 }
