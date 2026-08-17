@@ -21,10 +21,12 @@ function formatClassNames(classIds: string[] | undefined, classes: ClassSummary[
   if (!classIds || classIds.length === 0) return 'Geral';
 
   const classNameById = new Map(classes.map((classItem) => [classItem.id, classItem.name]));
-  const labels = classIds.map((classId) => classNameById.get(classId) ?? classId);
+  const labels = classIds
+    .map((classId) => classNameById.get(classId))
+    .filter((label): label is string => Boolean(label));
 
   if (labels.length <= 3) {
-    return labels.join(', ');
+    return labels.length > 0 ? labels.join(', ') : `${classIds.length} turmas vinculadas`;
   }
 
   return `${labels.slice(0, 3).join(', ')} + ${labels.length - 3}`;

@@ -5,7 +5,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import event, inspect
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.answer_key import AnswerKey, AnswerKeyItem
 from app.models.exam_question import ExamQuestion
@@ -28,6 +28,7 @@ class AnswerKeyService:
         answer_key = self.require_for_exam(exam_id)
         items = (
             self.db.query(AnswerKeyItem)
+            .options(selectinload(AnswerKeyItem.skills))
             .filter(AnswerKeyItem.answer_key_id == answer_key.id)
             .order_by(AnswerKeyItem.item_number.asc())
             .all()

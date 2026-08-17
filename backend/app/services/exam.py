@@ -2,6 +2,7 @@ import io
 import json
 import re
 import zipfile
+from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -423,25 +424,25 @@ class ExamService:
         attempts = self.attempt_repo.get_by_exam_id(exam_id)
         total_attempts = len(attempts)
         answer_key_items = self.answer_key_service.get_item_map_for_exam(exam_id)
+        answers = (
+            self.db.query(AttemptAnswer)
+            .join(Attempt)
+            .filter(Attempt.exam_id == exam_id)
+            .all()
+        )
+        answers_by_item_id: dict[UUID, list[AttemptAnswer]] = defaultdict(list)
+        for answer in answers:
+            if answer.answer_key_item_id is not None:
+                answers_by_item_id[answer.answer_key_item_id].append(answer)
 
         question_stats = []
         for i in range(1, exam.total_questions + 1):
             answer_key_item = answer_key_items.get(i)
             correct_opt = answer_key_item.correct_answer if answer_key_item else None
 
-            # Query answers for the canonical AnswerKeyItem when one exists.
-            if answer_key_item:
-                answers_for_q = (
-                    self.db.query(AttemptAnswer)
-                    .join(Attempt)
-                    .filter(
-                        Attempt.exam_id == exam_id,
-                        AttemptAnswer.answer_key_item_id == answer_key_item.id,
-                    )
-                    .all()
-                )
-            else:
-                answers_for_q = []
+            answers_for_q = (
+                answers_by_item_id.get(answer_key_item.id, []) if answer_key_item else []
+            )
 
             total_resp = len(answers_for_q)
             correct_cnt = sum(1 for a in answers_for_q if a.is_correct)
