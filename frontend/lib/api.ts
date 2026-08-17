@@ -1,4 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const AUTH_REFRESH_PATH = '/auth/refresh';
 
 export class ApiError extends Error {
   status: number;
@@ -7,6 +8,47 @@ export class ApiError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+function shouldRetryAfterAuthError(path: string): boolean {
+  return !path.startsWith('/auth/login') && !path.startsWith('/auth/logout') && path !== AUTH_REFRESH_PATH;
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  const response = await fetch(`${API_URL}${AUTH_REFRESH_PATH}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({}),
+    credentials: 'include',
+  });
+
+  return response.ok;
+}
+
+async function requestWithAuthRefresh(
+  path: string,
+  options: RequestInit,
+): Promise<Response> {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    credentials: 'include',
+  });
+
+  if (response.status !== 401 || !shouldRetryAfterAuthError(path)) {
+    return response;
+  }
+
+  const refreshed = await refreshAccessToken();
+  if (!refreshed) {
+    return response;
+  }
+
+  return fetch(`${API_URL}${path}`, {
+    ...options,
+    credentials: 'include',
+  });
 }
 
 async function parseError(response: Response): Promise<string> {
@@ -32,10 +74,9 @@ export async function apiFetch<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await requestWithAuthRefresh(path, {
     ...options,
     headers,
-    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -57,9 +98,8 @@ export async function apiFetch<T>(
 export async function apiFetchBlob(path: string): Promise<Blob> {
   const headers = new Headers();
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await requestWithAuthRefresh(path, {
     headers,
-    credentials: 'include',
   });
 
   if (!response.ok) {
