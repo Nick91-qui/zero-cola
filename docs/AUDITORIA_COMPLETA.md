@@ -47,6 +47,7 @@ O backend cobre os pilares centrais do COLA-ZERO:
 - OMR para provas impressas;
 - relatórios e exportações;
 - auditoria, consentimentos e LGPD básica.
+- solicitação de anonimização com revisão administrativa antes da execução.
 
 O frontend já expõe as principais jornadas de uso para professor, estudante e administrador, com páginas reais para:
 
@@ -227,7 +228,8 @@ Implementado:
 
 - política de privacidade;
 - exportação de dados do usuário;
-- solicitação de anonimização;
+- solicitação de anonimização com fila administrativa;
+- revisão administrativa do pedido antes da execução da anonimização;
 - consentimentos;
 - consentimento de monitoramento;
 - eventos de segurança por tentativa;
@@ -382,12 +384,13 @@ Situação atual:
 
 ### 6.3 LGPD e anti-cola no frontend
 
-O backend já expõe os recursos, mas a interface ainda pode evoluir em:
+O backend já expõe os recursos, e a interface já cobre a base de privacidade e consentimentos, mas ainda pode evoluir em:
 
 - tela pública de política de privacidade;
 - fluxo mais explícito de consentimento antes da prova online;
 - visualização de consentimentos do usuário;
 - tela administrativa para eventos de segurança;
+- tela administrativa para revisão de solicitações de anonimização.
 - revisão pedagógica de eventos suspeitos;
 - painéis mais claros para o monitoramento de integridade.
 
@@ -474,8 +477,8 @@ Em termos práticos:
 
 - [ ] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
 - [ ] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
-- [ ] Consolidar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
-- [ ] Expor visualização mais legível dos eventos de segurança e consentimentos no frontend administrativo.
+- [ ] Refinar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
+- [ ] Expor visualização mais legível dos eventos de segurança, consentimentos e solicitações de anonimização no frontend administrativo.
 
 ### P2 - Prioridade baixa
 
@@ -494,8 +497,8 @@ Em termos práticos:
 
 - fluxo completo de edição/versionamento do Banco de Questões exposto na API;
 - inativação/exclusão lógica de questões;
-- tela e API de política de privacidade e consentimento mais explícitas para o usuário;
-- visão administrativa dos eventos de segurança e consentimentos.
+- tela e API de política de privacidade, consentimento e solicitação de anonimização mais explícitas para o usuário;
+- visão administrativa dos eventos de segurança, consentimentos e solicitações de anonimização.
 
 **Critério de saída:**
 
