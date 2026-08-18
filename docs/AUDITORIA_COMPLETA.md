@@ -478,7 +478,7 @@ Em termos práticos:
 - [x] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
 - [x] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
 - [x] Refinar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
-- [ ] Expor visualização mais legível dos eventos de segurança, consentimentos e solicitações de anonimização no frontend administrativo.
+- [x] Expor visualização mais legível dos eventos de segurança, consentimentos e solicitações de anonimização no frontend administrativo.
 
 ### P2 - Prioridade baixa
 

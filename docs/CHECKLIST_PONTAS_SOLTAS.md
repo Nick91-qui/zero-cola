@@ -14,7 +14,7 @@
 
 - [x] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
 - [x] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
-- [ ] Expor visualização mais legível dos eventos de segurança e consentimentos no frontend administrativo.
+- [x] Expor visualização mais legível dos eventos de segurança e consentimentos no frontend administrativo.
 
 ## P2
 
