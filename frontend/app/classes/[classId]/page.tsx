@@ -113,6 +113,10 @@ export default function ClassDetailPage() {
     () => classData?.memberships.filter((membership) => membership.is_active) ?? [],
     [classData],
   );
+  const activeTeachers = useMemo(
+    () => classData?.teachers.filter((membership) => membership.is_active) ?? [],
+    [classData],
+  );
 
   const availableTransferTargets = useMemo(
     () => classOptions.filter((item) => item.is_active),
@@ -244,26 +248,20 @@ export default function ClassDetailPage() {
                   </span>
                   <p className="mt-2 text-2xl font-bold text-slate-900">{classData.student_count}</p>
                 </div>
-                {isAdmin ? (
-                  <>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Professores vinculados
-                      </span>
-                      <p className="mt-2 text-2xl font-bold text-slate-900">
-                        {classData.teachers.length}
-                      </p>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        ID da turma
-                      </span>
-                      <p className="mt-2 break-all text-sm font-semibold text-slate-900">
-                        {classData.id}
-                      </p>
-                    </div>
-                  </>
-                ) : null}
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Professores ativos
+                  </span>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{activeTeachers.length}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Estado
+                  </span>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {classData.is_active ? 'Ativa' : 'Arquivada'}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -286,11 +284,11 @@ export default function ClassDetailPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Professores vinculados</h2>
+                    <h2 className="text-lg font-semibold text-slate-900">Professores ativos</h2>
                     <p className="mt-1 text-sm text-slate-600">Docentes desta turma.</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    {classData.teachers.length} vínculo(s)
+                    {activeTeachers.length} ativo(s)
                   </span>
                 </div>
 
@@ -325,6 +323,11 @@ export default function ClassDetailPage() {
                             <p className="text-sm text-slate-600">
                               {membership.teacher?.role || 'teacher'}
                             </p>
+                            {membership.teacher?.student_code ? (
+                              <p className="text-xs text-slate-500">
+                                Código: {membership.teacher.student_code}
+                              </p>
+                            ) : null}
                           </div>
                           <span
                             className={[
@@ -356,14 +359,14 @@ export default function ClassDetailPage() {
               </div>
             ) : null}
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Estudantes vinculados</h2>
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Estudantes ativos</h2>
                   <p className="mt-1 text-sm text-slate-600">Alunos desta turma.</p>
                 </div>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                  {classData.memberships.length} vínculo(s)
+                  {activeStudents.length} ativo(s)
                 </span>
               </div>
 
@@ -544,6 +547,9 @@ export default function ClassDetailPage() {
                           </p>
                           <p className="text-sm text-slate-600">
                             {membership.academic_period || 'Sem período'}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {membership.student?.is_active ? 'Conta ativa' : 'Conta inativa'}
                           </p>
                         </div>
                         <span

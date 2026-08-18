@@ -681,7 +681,10 @@ export default function AdminUsersPage() {
                     <tr key={item.id} className="align-top">
                       <td className="px-4 py-4">
                         <div className="font-medium text-slate-900">{item.email}</div>
-                        <div className="mt-1 text-xs text-slate-500">{item.id}</div>
+                        <div className="mt-1 text-xs text-slate-500 capitalize">
+                          {item.role}
+                          {item.student_code ? ` · código ${item.student_code}` : ''}
+                        </div>
                       </td>
                       <td className="px-4 py-4 capitalize text-slate-700">{item.role}</td>
                       <td className="px-4 py-4">
@@ -769,10 +772,14 @@ export default function AdminUsersPage() {
                     </span>
                   </div>
 
-                  <p className="mt-3 text-sm text-slate-700">
-                    Professor: {teacher?.email || 'sem professor vinculado'}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-700">{classItem.student_count} aluno(s)</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                      Professor: {teacher?.email || 'sem professor'}
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                      {classItem.student_count} aluno(s)
+                    </span>
+                  </div>
 
                   {classItem.description && (
                     <p className="mt-3 text-sm text-slate-600">{classItem.description}</p>
