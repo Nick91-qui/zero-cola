@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
+import { buildDeactivateCopy } from '@/app/components/destructiveCopy';
 import { listSkills, type SkillSummary } from '@/lib/skills';
 import { deactivateQuestion, getQuestion, updateQuestion, type QuestionUpdatePayload } from '@/lib/questions';
 import type { Question } from '@/lib/exams';
@@ -70,6 +71,7 @@ export default function QuestionDetailPage() {
   }, [questionId]);
 
   const selectedSkillCount = useMemo(() => selectedSkillIds.length, [selectedSkillIds.length]);
+  const deactivateCopy = question ? buildDeactivateCopy('a questão', question.statement) : null;
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -185,10 +187,15 @@ export default function QuestionDetailPage() {
 
               <ConfirmDialog
                 open={deactivateConfirmationOpen}
-                title="Inativar questão?"
-                message="A questão deixa de aparecer como ativa no banco, mas a versão atual e o histórico permanecem disponíveis."
-                warning="Essa ação preserva o histórico pedagógico e não apaga as tentativas já registradas."
-                confirmLabel={deactivating ? 'Inativando...' : 'Confirmar inativação'}
+                title={deactivateCopy?.title ?? 'Inativar questão?'}
+                message={
+                  deactivateCopy?.message ??
+                  `Inativar a questão ${question.statement}?`
+                }
+                warning={deactivateCopy?.warning}
+                confirmLabel={
+                  deactivating ? 'Inativando...' : deactivateCopy?.confirmLabel ?? 'Confirmar inativação'
+                }
                 busy={deactivating}
                 onConfirm={handleDeactivate}
                 onCancel={() => setDeactivateConfirmationOpen(false)}

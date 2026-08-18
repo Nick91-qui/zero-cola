@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
+import { buildDeleteCopy } from '@/app/components/destructiveCopy';
 import { deleteTemplate, listTemplates, OMRTemplate } from '@/lib/omr';
 
 export default function OmrHomePage() {
@@ -12,6 +13,9 @@ export default function OmrHomePage() {
 
   const [deletingTemplate, setDeletingTemplate] = useState<OMRTemplate | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const deleteCopy = deletingTemplate
+    ? buildDeleteCopy('o gabarito', deletingTemplate.title || deletingTemplate.layout_version)
+    : null;
 
   const loadTemplates = async () => {
     try {
@@ -123,14 +127,10 @@ export default function OmrHomePage() {
 
       <ConfirmDialog
         open={deletingTemplate !== null}
-        title="Excluir gabarito?"
-        message={
-          deletingTemplate
-            ? `Você está prestes a excluir o gabarito ${deletingTemplate.title || deletingTemplate.layout_version}.`
-            : 'Você está prestes a excluir o gabarito selecionado.'
-        }
-        warning="As notas, provas e imagens de cartões já corrigidos referentes a este gabarito não serão apagadas do histórico dos alunos."
-        confirmLabel={isDeleting ? 'Excluindo...' : 'Confirmar exclusão'}
+        title={deleteCopy?.title ?? 'Excluir gabarito?'}
+        message={deleteCopy?.message ?? 'Você está prestes a excluir o gabarito selecionado.'}
+        warning={deleteCopy?.warning}
+        confirmLabel={isDeleting ? 'Excluindo...' : deleteCopy?.confirmLabel ?? 'Confirmar exclusão'}
         busy={isDeleting}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeletingTemplate(null)}

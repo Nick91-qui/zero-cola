@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
+import { buildArchiveCopy } from '@/app/components/destructiveCopy';
 import { useAuth } from '@/app/hooks/useAuth';
 import {
   addStudentsToClass,
@@ -84,6 +85,8 @@ export default function ClassDetailPage() {
       setSaving(false);
     }
   };
+
+  const archiveCopy = classData ? buildArchiveCopy('a turma', classData.name) : null;
 
   const handleAddStudents = useCallback(
     async (studentIds: string[]) => {
@@ -483,10 +486,10 @@ export default function ClassDetailPage() {
           </section>
           <ConfirmDialog
             open={archiveConfirmationOpen}
-            title="Arquivar turma?"
-            message={`Arquivar a turma ${classData.name}?`}
-            warning="A turma deixa de aparecer como ativa para novos vínculos, mas o histórico e os vínculos já existentes continuam preservados."
-            confirmLabel={saving ? 'Arquivando...' : 'Confirmar arquivamento'}
+            title={archiveCopy?.title ?? 'Arquivar turma?'}
+            message={archiveCopy?.message ?? `Arquivar a turma ${classData.name}?`}
+            warning={archiveCopy?.warning}
+            confirmLabel={saving ? 'Arquivando...' : archiveCopy?.confirmLabel ?? 'Confirmar arquivamento'}
             busy={saving}
             onConfirm={handleArchive}
             onCancel={() => setArchiveConfirmationOpen(false)}

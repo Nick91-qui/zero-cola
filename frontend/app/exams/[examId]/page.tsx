@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
+import { buildArchiveCopy } from '@/app/components/destructiveCopy';
 import { listClasses, type ClassSummary } from '@/lib/classes';
 import {
   archiveExam,
@@ -61,6 +62,7 @@ export default function ExamDetailStatisticsPage() {
   const [downloadingOmr, setDownloadingOmr] = useState(false);
   const [downloadingPreview, setDownloadingPreview] = useState(false);
   const [archiveConfirmationOpen, setArchiveConfirmationOpen] = useState(false);
+  const archiveCopy = exam ? buildArchiveCopy('a avaliação', exam.title) : null;
 
   const loadExam = useCallback(async () => {
     setLoading(true);
@@ -299,10 +301,12 @@ export default function ExamDetailStatisticsPage() {
 
           <ConfirmDialog
             open={archiveConfirmationOpen}
-            title="Arquivar avaliação?"
-            message={`Arquivar a avaliação ${exam.title}?`}
-            warning="A avaliação deixa de aparecer como ativa, mas o histórico e os resultados permanecem preservados."
-            confirmLabel={busyAction === 'archive' ? 'Arquivando...' : 'Confirmar arquivamento'}
+            title={archiveCopy?.title ?? 'Arquivar avaliação?'}
+            message={archiveCopy?.message ?? `Arquivar a avaliação ${exam.title}?`}
+            warning={archiveCopy?.warning}
+            confirmLabel={
+              busyAction === 'archive' ? 'Arquivando...' : archiveCopy?.confirmLabel ?? 'Confirmar arquivamento'
+            }
             busy={busyAction === 'archive'}
             onConfirm={() => void handleAction('archive')}
             onCancel={() => setArchiveConfirmationOpen(false)}
