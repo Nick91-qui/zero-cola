@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import { buildArchiveCopy } from '@/app/components/destructiveCopy';
 import { listClasses, type ClassSummary } from '@/lib/classes';
@@ -43,6 +43,47 @@ function statusBadge(status?: string) {
     default:
       return 'bg-amber-100 text-amber-800';
   }
+}
+
+type SkillInsight = {
+  id: string;
+  code: string;
+  description: string | null;
+  totalQuestions: number;
+  totalResponses: number;
+  correctCount: number;
+  incorrectCount: number;
+  accuracyPercentage: number;
+};
+
+function aggregateSkillInsights(questionStatistics: ExamStatistics['question_statistics']) {
+  const skills = new Map<string, SkillInsight>();
+
+  questionStatistics.forEach((question) => {
+    question.skills.forEach((skill) => {
+      const current = skills.get(skill.id) ?? {
+        id: skill.id,
+        code: skill.code,
+        description: skill.description,
+        totalQuestions: 0,
+        totalResponses: 0,
+        correctCount: 0,
+        incorrectCount: 0,
+        accuracyPercentage: 0,
+      };
+      current.totalQuestions += 1;
+      current.totalResponses += question.total_responses;
+      current.correctCount += question.correct_count;
+      current.incorrectCount += question.incorrect_count;
+      current.accuracyPercentage =
+        current.totalResponses > 0
+          ? Math.round((current.correctCount / current.totalResponses) * 1000) / 10
+          : 0;
+      skills.set(skill.id, current);
+    });
+  });
+
+  return [...skills.values()].sort((a, b) => a.accuracyPercentage - b.accuracyPercentage);
 }
 
 export default function ExamDetailStatisticsPage() {
@@ -185,6 +226,21 @@ export default function ExamDetailStatisticsPage() {
   };
 
   const classCountLabel = selectedClassIds.length === 1 ? '1 turma' : `${selectedClassIds.length} turmas`;
+  const skillInsights = useMemo(
+    () => (stats ? aggregateSkillInsights(stats.question_statistics) : []),
+    [stats],
+  );
+  const overallAccuracy = useMemo(() => {
+    if (!stats || stats.total_attempts === 0) return 0;
+    return Math.round((stats.average_score / stats.max_score) * 1000) / 10;
+  }, [stats]);
+  const mostDifficultQuestions = useMemo(() => {
+    if (!stats) return [];
+    return [...stats.question_statistics]
+      .filter((question) => question.total_responses > 0)
+      .sort((a, b) => a.accuracy_percentage - b.accuracy_percentage)
+      .slice(0, 5);
+  }, [stats]);
 
   return (
     <div className="space-y-8">
@@ -504,14 +560,153 @@ export default function ExamDetailStatisticsPage() {
                         </span>
                         <p className="mt-2 text-3xl font-extrabold text-slate-900">{stats.total_attempts}</p>
                       </div>
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
-                        <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                          Total de Questões
-                        </span>
-                        <p className="mt-2 text-3xl font-extrabold text-slate-900">
-                          {stats.question_statistics.length}
-                        </p>
-                      </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                      <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                        Total de Questões
+                      </span>
+                      <p className="mt-2 text-3xl font-extrabold text-slate-900">
+                        {stats.question_statistics.length}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                      <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                        Acerto médio
+                      </span>
+                      <p className="mt-2 text-3xl font-extrabold text-slate-900">
+                        {overallAccuracy.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+
+                    <div className="mt-8 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+                      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                          <div>
+                            <h3 className="text-base font-semibold text-slate-900">
+                              Habilidades avaliadas
+                            </h3>
+                            <p className="mt-1 text-sm text-slate-600">
+                              Agrupamento por habilidade com taxa de acerto consolidada.
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                            {skillInsights.length} habilidade(s)
+                          </span>
+                        </div>
+
+                        {skillInsights.length === 0 ? (
+                          <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                            Nenhuma habilidade vinculada às questões desta avaliação.
+                          </p>
+                        ) : (
+                          <div className="mt-4 space-y-3">
+                            {skillInsights.map((skill) => (
+                              <article
+                                key={skill.id}
+                                className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{skill.code}</p>
+                                    <p className="mt-1 text-sm text-slate-600">
+                                      {skill.description || 'Sem descrição'}
+                                    </p>
+                                  </div>
+                                  <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-700 shadow-sm">
+                                    {skill.accuracyPercentage.toFixed(1)}%
+                                  </span>
+                                </div>
+
+                                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+                                  <div
+                                    className="h-full rounded-full bg-emerald-600"
+                                    style={{ width: `${Math.max(4, skill.accuracyPercentage)}%` }}
+                                  />
+                                </div>
+
+                                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                                  <span className="rounded-full bg-white px-2.5 py-1">
+                                    {skill.totalQuestions} questão(ões)
+                                  </span>
+                                  <span className="rounded-full bg-white px-2.5 py-1">
+                                    {skill.totalResponses} resposta(s)
+                                  </span>
+                                  <span className="rounded-full bg-white px-2.5 py-1">
+                                    {skill.correctCount} acertos
+                                  </span>
+                                  <span className="rounded-full bg-white px-2.5 py-1">
+                                    {skill.incorrectCount} erros
+                                  </span>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        )}
+                      </section>
+
+                      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                          <div>
+                            <h3 className="text-base font-semibold text-slate-900">
+                              Questões mais sensíveis
+                            </h3>
+                            <p className="mt-1 text-sm text-slate-600">
+                              Leitura visual das questões com menor taxa de acerto.
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                            Top 5
+                          </span>
+                        </div>
+
+                        {mostDifficultQuestions.length === 0 ? (
+                          <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                            Nenhum dado suficiente para comparação por questão.
+                          </p>
+                        ) : (
+                          <div className="mt-4 space-y-3">
+                            {mostDifficultQuestions.map((question) => (
+                              <article
+                                key={question.question_number}
+                                className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-semibold text-slate-900">
+                                      Q{question.question_number}
+                                    </p>
+                                    <p className="mt-1 line-clamp-2 text-sm text-slate-600">
+                                      {question.statement || 'Enunciado indisponível'}
+                                    </p>
+                                  </div>
+                                  <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-700 shadow-sm">
+                                    {question.accuracy_percentage.toFixed(1)}%
+                                  </span>
+                                </div>
+
+                                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+                                  <div
+                                    className="h-full rounded-full bg-amber-500"
+                                    style={{ width: `${Math.max(4, question.accuracy_percentage)}%` }}
+                                  />
+                                </div>
+
+                                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                                  <span className="rounded-full bg-white px-2.5 py-1">
+                                    {question.total_responses} resposta(s)
+                                  </span>
+                                  <span className="rounded-full bg-white px-2.5 py-1">
+                                    {question.correct_count} acertos
+                                  </span>
+                                  <span className="rounded-full bg-white px-2.5 py-1">
+                                    {question.incorrect_count} erros
+                                  </span>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        )}
+                      </section>
                     </div>
 
                     <div className="mt-8 overflow-hidden rounded-xl border border-slate-200">
@@ -520,6 +715,7 @@ export default function ExamDetailStatisticsPage() {
                           <tr>
                             <th className="px-4 py-3 text-left font-semibold text-slate-700">Questão</th>
                             <th className="px-4 py-3 text-left font-semibold text-slate-700">Gabarito</th>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-700">Habilidades</th>
                             <th className="px-4 py-3 text-left font-semibold text-slate-700">Acertos</th>
                             <th className="px-4 py-3 text-left font-semibold text-slate-700">Erros</th>
                             <th className="px-4 py-3 text-left font-semibold text-slate-700">% Acerto</th>
@@ -532,6 +728,22 @@ export default function ExamDetailStatisticsPage() {
                                 Q{question.question_number}
                               </td>
                               <td className="px-4 py-3 text-emerald-700">{question.correct_option || '-'}</td>
+                              <td className="px-4 py-3 text-slate-700">
+                                {question.skills.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {question.skills.map((skill) => (
+                                      <span
+                                        key={skill.id}
+                                        className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700"
+                                      >
+                                        {skill.code}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
                               <td className="px-4 py-3 text-slate-700">{question.correct_count}</td>
                               <td className="px-4 py-3 text-slate-700">{question.incorrect_count}</td>
                               <td className="px-4 py-3 text-slate-700">
