@@ -57,6 +57,13 @@ export interface ClassStudentTransferResponse {
   target_membership: ClassStudent;
 }
 
+export interface ClassStudentBulkTransferResponse {
+  source_class_id: string;
+  target_class_id: string;
+  transferred_count: number;
+  transfers: ClassStudentTransferResponse[];
+}
+
 export interface ClassCreatePayload {
   name: string;
   academic_period?: string | null;
@@ -129,6 +136,13 @@ export function transferStudentBetweenClasses(
   targetClassId: string,
 ) {
   return apiFetch<ClassStudentTransferResponse>(`/classes/${classId}/students/${studentId}/transfer`, {
+    method: 'POST',
+    body: JSON.stringify({ target_class_id: targetClassId }),
+  });
+}
+
+export function transferAllStudentsBetweenClasses(classId: string, targetClassId: string) {
+  return apiFetch<ClassStudentBulkTransferResponse>(`/classes/${classId}/students/transfer-all`, {
     method: 'POST',
     body: JSON.stringify({ target_class_id: targetClassId }),
   });

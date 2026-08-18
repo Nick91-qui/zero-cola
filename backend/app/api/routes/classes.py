@@ -9,11 +9,13 @@ from app.models.class_ import ClassStudent
 from app.models.enums import UserRole
 from app.schemas.class_ import (
     ClassCreate,
+    ClassStudentBulkTransferCreate,
     ClassDetailResponse,
     ClassResponse,
     ClassStudentCreate,
     ClassStudentResponse,
     ClassStudentTransferCreate,
+    ClassStudentBulkTransferResponse,
     ClassStudentTransferResponse,
     ClassTeacherCreate,
     ClassTeacherResponse,
@@ -291,6 +293,35 @@ async def transfer_student(
             current_user=current_user,
         )
         return ClassStudentTransferResponse.model_validate(result)
+    except ValueError as exc:
+        message = str(exc)
+        status_code = status.HTTP_409_CONFLICT
+        if "not found" in message.lower():
+            status_code = status.HTTP_404_NOT_FOUND
+        elif "archived" in message.lower() or "differ" in message.lower():
+            status_code = status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status_code=status_code, detail=message)
+
+
+@router.post(
+    "/classes/{class_id}/students/transfer-all",
+    response_model=ClassStudentBulkTransferResponse,
+)
+@require_role(UserRole.ADMIN)
+async def transfer_all_students(
+    class_id: UUID,
+    payload: ClassStudentBulkTransferCreate,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ClassService(db)
+    try:
+        result = service.transfer_students(
+            source_class_id=class_id,
+            target_class_id=payload.target_class_id,
+            current_user=current_user,
+        )
+        return ClassStudentBulkTransferResponse.model_validate(result)
     except ValueError as exc:
         message = str(exc)
         status_code = status.HTTP_409_CONFLICT

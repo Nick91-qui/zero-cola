@@ -313,25 +313,16 @@ class ClassService:
         )
         self.db.commit()
 
-    def transfer_student(
+    def _transfer_student_membership(
         self,
         *,
-        source_class_id: UUID,
-        target_class_id: UUID,
+        source_class: Class,
+        target_class: Class,
         student_id: UUID,
         current_user: User,
     ) -> dict[str, object]:
-        self._require_admin(current_user)
-        if source_class_id == target_class_id:
+        if source_class.id == target_class.id:
             raise ValueError("Source and target classes must differ.")
-
-        source_class = self._require_class(source_class_id, current_user, include_inactive=True)
-        target_class = self._require_class(target_class_id, current_user, include_inactive=True)
-
-        if not source_class.is_active:
-            raise ValueError(f"Class {source_class_id} is archived.")
-        if not target_class.is_active:
-            raise ValueError(f"Class {target_class_id} is archived.")
 
         student = self.db.query(User).filter(User.id == student_id).first()
         if (
@@ -352,7 +343,7 @@ class ClassService:
         )
         if source_membership is None or not source_membership.is_active:
             raise ValueError(
-                f"Student {student_id} is not an active member of class {source_class_id}."
+                f"Student {student_id} is not an active member of class {source_class.id}."
             )
 
         target_membership = (
@@ -364,7 +355,7 @@ class ClassService:
             .first()
         )
         if target_membership is not None and target_membership.is_active:
-            raise ValueError(f"Student {student_id} is already an active member of class {target_class_id}.")
+            raise ValueError(f"Student {student_id} is already an active member of class {target_class.id}.")
 
         period_conflict = (
             self.db.query(ClassStudent)
@@ -417,17 +408,47 @@ class ClassService:
             },
         )
 
+        return {
+            "student_id": student_id,
+            "source_class_id": source_class.id,
+            "target_class_id": target_class.id,
+            "source_membership": source_membership,
+            "target_membership": target_membership,
+        }
+
+    def transfer_student(
+        self,
+        *,
+        source_class_id: UUID,
+        target_class_id: UUID,
+        student_id: UUID,
+        current_user: User,
+    ) -> dict[str, object]:
+        self._require_admin(current_user)
+        source_class = self._require_class(source_class_id, current_user, include_inactive=True)
+        target_class = self._require_class(target_class_id, current_user, include_inactive=True)
+
+        if not source_class.is_active:
+            raise ValueError(f"Class {source_class_id} is archived.")
+        if not target_class.is_active:
+            raise ValueError(f"Class {target_class_id} is archived.")
+        result = self._transfer_student_membership(
+            source_class=source_class,
+            target_class=target_class,
+            student_id=student_id,
+            current_user=current_user,
+        )
         self.db.commit()
         source_membership = (
             self.db.query(ClassStudent)
             .options(joinedload(ClassStudent.student))
-            .filter(ClassStudent.id == source_membership.id)
+            .filter(ClassStudent.id == result["source_membership"].id)
             .first()
         )
         target_membership = (
             self.db.query(ClassStudent)
             .options(joinedload(ClassStudent.student))
-            .filter(ClassStudent.id == target_membership.id)
+            .filter(ClassStudent.id == result["target_membership"].id)
             .first()
         )
         assert source_membership is not None
@@ -438,6 +459,93 @@ class ClassService:
             "target_class_id": target_class.id,
             "source_membership": source_membership,
             "target_membership": target_membership,
+        }
+
+    def transfer_students(
+        self,
+        *,
+        source_class_id: UUID,
+        target_class_id: UUID,
+        current_user: User,
+    ) -> dict[str, object]:
+        self._require_admin(current_user)
+        if source_class_id == target_class_id:
+            raise ValueError("Source and target classes must differ.")
+
+        source_class = self._require_class(source_class_id, current_user, include_inactive=True)
+        target_class = self._require_class(target_class_id, current_user, include_inactive=True)
+
+        if not source_class.is_active:
+            raise ValueError(f"Class {source_class_id} is archived.")
+        if not target_class.is_active:
+            raise ValueError(f"Class {target_class_id} is archived.")
+
+        active_memberships = (
+            self.db.query(ClassStudent)
+            .filter(
+                ClassStudent.class_id == source_class.id,
+                ClassStudent.is_active.is_(True),
+            )
+            .order_by(ClassStudent.created_at.asc())
+            .all()
+        )
+
+        transfers: list[dict[str, object]] = []
+        for membership in active_memberships:
+            transfers.append(
+                self._transfer_student_membership(
+                    source_class=source_class,
+                    target_class=target_class,
+                    student_id=membership.student_id,
+                    current_user=current_user,
+                )
+            )
+
+        self.audit_log_service.record(
+            event_type="class_student.transfer_bulk",
+            user_id=current_user.id,
+            resource_type="class_student",
+            resource_id=source_class.id,
+            metadata={
+                "source_class_id": str(source_class.id),
+                "target_class_id": str(target_class.id),
+                "transferred_count": len(transfers),
+                "academic_period": target_class.academic_period,
+            },
+        )
+        self.db.commit()
+
+        refreshed_transfers = []
+        for transfer in transfers:
+            source_membership = (
+                self.db.query(ClassStudent)
+                .options(joinedload(ClassStudent.student))
+                .filter(ClassStudent.id == transfer["source_membership"].id)
+                .first()
+            )
+            target_membership = (
+                self.db.query(ClassStudent)
+                .options(joinedload(ClassStudent.student))
+                .filter(ClassStudent.id == transfer["target_membership"].id)
+                .first()
+            )
+            assert source_membership is not None
+            assert target_membership is not None
+            refreshed_transfers.append(
+                {
+                    "student_id": transfer["student_id"],
+                    "source_class_id": source_class.id,
+                    "target_class_id": target_class.id,
+                    "source_membership": source_membership,
+                    "target_membership": target_membership,
+                }
+            )
+
+        return {
+            "source_class_id": source_class.id,
+            "target_class_id": target_class.id,
+            "transferred_count": len(refreshed_transfers),
+            "transfers": refreshed_transfers,
         }
 
     def list_teachers(

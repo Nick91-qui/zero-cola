@@ -14,6 +14,7 @@ import {
   removeStudentFromClass,
   removeTeacherFromClass,
   listClasses,
+  transferAllStudentsBetweenClasses,
   transferStudentBetweenClasses,
   type ClassDetail,
   type ClassSummary,
@@ -37,6 +38,10 @@ export default function ClassDetailPage() {
   const [transferringStudentId, setTransferringStudentId] = useState<string>('');
   const [transferTargetClassId, setTransferTargetClassId] = useState<string>('');
   const [transferMessage, setTransferMessage] = useState<string | null>(null);
+  const [promotionTargetClassId, setPromotionTargetClassId] = useState<string>('');
+  const [promotionConfirmationOpen, setPromotionConfirmationOpen] = useState(false);
+  const [promotionMessage, setPromotionMessage] = useState<string | null>(null);
+  const [promoting, setPromoting] = useState(false);
   const [archiveConfirmationOpen, setArchiveConfirmationOpen] = useState(false);
   const [classOptions, setClassOptions] = useState<ClassSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +118,7 @@ export default function ClassDetailPage() {
     () => classOptions.filter((item) => item.is_active),
     [classOptions],
   );
+  const activeStudentCount = activeStudents.length;
 
   const handleTransferStudent = async () => {
     if (!transferringStudentId || !transferTargetClassId) {
@@ -134,6 +140,29 @@ export default function ClassDetailPage() {
       setError(err instanceof Error ? err.message : 'Falha ao transferir estudante');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePromoteStudents = async () => {
+    if (!promotionTargetClassId) {
+      setError('Escolha uma turma de destino para a promoção.');
+      return;
+    }
+
+    setPromoting(true);
+    setError(null);
+    setPromotionMessage(null);
+
+    try {
+      const result = await transferAllStudentsBetweenClasses(classId, promotionTargetClassId);
+      setPromotionMessage(`${result.transferred_count} aluno(s) promovido(s) com sucesso.`);
+      setPromotionTargetClassId('');
+      setPromotionConfirmationOpen(false);
+      await loadClass();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao promover estudantes');
+    } finally {
+      setPromoting(false);
     }
   };
 
@@ -417,6 +446,68 @@ export default function ClassDetailPage() {
               ) : null}
 
               {isAdmin ? (
+                <div className="mt-6 rounded-xl border border-violet-200 bg-violet-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">Promoção anual</h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Transfira todos os alunos ativos desta turma para a turma destino em uma
+                        operação única. Depois, arquive a turma de origem quando fizer sentido.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                      {activeStudentCount} ativo(s)
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Turma destino da promoção
+                      <select
+                        value={promotionTargetClassId}
+                        onChange={(event) => setPromotionTargetClassId(event.target.value)}
+                        className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-violet-500 focus:outline-none"
+                      >
+                        <option value="">Selecione a turma destino</option>
+                        {availableTransferTargets.map((targetClass) => (
+                          <option key={targetClass.id} value={targetClass.id}>
+                            {targetClass.name}
+                            {targetClass.academic_period ? ` · ${targetClass.academic_period}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => setPromotionConfirmationOpen(true)}
+                        disabled={
+                          promoting ||
+                          activeStudentCount === 0 ||
+                          availableTransferTargets.length === 0 ||
+                          !promotionTargetClassId
+                        }
+                        className="w-full rounded-md bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-600 disabled:bg-slate-300"
+                      >
+                        {promoting ? 'Promovendo...' : 'Promover todos os alunos'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-xs text-slate-500">
+                    A operação preserva o histórico individual e não apaga a turma de origem.
+                  </p>
+                </div>
+              ) : null}
+
+              {promotionMessage ? (
+                <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-700">
+                  {promotionMessage}
+                </div>
+              ) : null}
+
+              {isAdmin ? (
                 <MemberSearchField
                   role="student"
                   title="Vincular estudante(s)"
@@ -493,6 +584,21 @@ export default function ClassDetailPage() {
             busy={saving}
             onConfirm={handleArchive}
             onCancel={() => setArchiveConfirmationOpen(false)}
+          />
+
+          <ConfirmDialog
+            open={promotionConfirmationOpen}
+            title="Promover todos os alunos?"
+            message={
+              promotionTargetClassId
+                ? `Mover todos os alunos ativos de ${classData.name} para a turma de destino selecionada?`
+                : 'Selecione uma turma de destino para continuar.'
+            }
+            warning="A turma de origem continuará ativa. Use essa ação para promoção anual e depois arquive a turma antiga quando fizer sentido."
+            confirmLabel={promoting ? 'Promovendo...' : 'Confirmar promoção'}
+            busy={promoting}
+            onConfirm={handlePromoteStudents}
+            onCancel={() => setPromotionConfirmationOpen(false)}
           />
         </>
       )}

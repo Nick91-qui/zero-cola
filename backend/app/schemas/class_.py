@@ -30,6 +30,10 @@ class ClassStudentTransferCreate(BaseModel):
     target_class_id: UUID
 
 
+class ClassStudentBulkTransferCreate(BaseModel):
+    target_class_id: UUID
+
+
 class ClassTeacherCreate(BaseModel):
     teacher_ids: list[UUID]
 
@@ -84,5 +88,14 @@ class ClassStudentTransferResponse(BaseModel):
     target_class_id: UUID
     source_membership: ClassStudentResponse
     target_membership: ClassStudentResponse
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClassStudentBulkTransferResponse(BaseModel):
+    source_class_id: UUID
+    target_class_id: UUID
+    transferred_count: int
+    transfers: list[ClassStudentTransferResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
