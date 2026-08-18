@@ -11,7 +11,7 @@
 
 ## P1
 
-- [ ] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
+- [x] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
 - [ ] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
 - [ ] Consolidar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
 - [ ] Expor visualização mais legível dos eventos de segurança e consentimentos no frontend administrativo.

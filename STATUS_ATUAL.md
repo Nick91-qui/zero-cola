@@ -54,7 +54,7 @@
 ### 2.6 Frontend Atual ✅
 - `/auth/login` e `/admin/users`
 - `/dashboard`
-- `/classes` e `/classes/[classId]`
+- `/classes` e `/classes/[classId]` com leitura operacional mais enxuta para alunos, professores e vínculos
 - `/questions`, `/questions/new`, `/questions/[questionId]`
 - `/exams`, `/exams/new`, `/exams/[examId]`
 - `/attempts/start`, `/attempts/[attemptId]`
