@@ -3,6 +3,8 @@
 > Pendências priorizadas identificadas na auditoria atual.  
 > Itens já implementados, como cadastro administrativo de usuários, shells de navegação, layouts OMR de 10 a 100 questões e versionamento de questões, não entram aqui.
 
+> Validação recente: as rotas principais de `classes`, `questions`, `admin`, `audit`, `consents` e `auth` foram smoke-testadas via proxy sem novos `500` nas leituras verificadas.
+
 ## P0
 
 - [x] Implementar fluxo explícito de transferência de aluno entre turmas, com histórico e auditoria.

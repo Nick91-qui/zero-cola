@@ -7,7 +7,8 @@
 ## 1. Resumo Executivo do Status
 
 - **Status Geral**: os módulos backend centrais do COLA-ZERO estão implementados e validados, incluindo autenticação/RBAC, OMR, AnswerKey/Attempt Engine, Question Bank, Workflow A, Workflow B, classes, auditoria, consentimentos e LGPD básica. A Fase 8 de produção e visualização de provas está concluída e validada, com a pré-visualização da prova, a montagem por seleção de questões e a exportação de folhas OMR personalizadas já disponíveis no backend/frontend.
-- **Frontend**: já existem as telas principais para autenticação, painel, avaliações, tentativas online, OMR, administração de usuários, classes, auditoria, privacidade e consentimentos; a transferência entre turmas e a promoção anual em lote já estão disponíveis no detalhe da turma. O fluxo `/attempts/start` agora exige consentimento de monitoramento antes de liberar a prova online, e o que ainda precisa evoluir é o refinamento de UX em ações destrutivas e detalhes operacionais.
+- **Frontend**: já existem as telas principais para autenticação, painel, avaliações, tentativas online, OMR, administração de usuários, classes, auditoria, privacidade e consentimentos; a transferência entre turmas e a promoção anual em lote já estão disponíveis no detalhe da turma. O fluxo `/attempts/start` exige consentimento de monitoramento antes de liberar a prova online, e o que ainda precisa evoluir é o refinamento de UX em ações destrutivas e detalhes operacionais.
+- **Validação recente**: o backend voltou a subir após a consolidação das heads do Alembic e o proxy do Next foi smoke-testado nas rotas principais de `auth`, `classes`, `questions`, `admin`, `audit` e `consents` sem novos `500` nas leituras verificadas.
 - **Suíte de Testes Automatizados**: a validação consolidada mais recente registrou **175 testes de backend aprovados** e **22 testes Vitest de frontend aprovados**.
 - **Infraestrutura**: o ambiente continua containerizado com Docker e Docker Compose (`postgres`, `backend`, `frontend`).
 
@@ -80,8 +81,9 @@
 
 ## 5. Próximo Passo Planejado
 
-1. **Produção e Visualização de Provas**: esta etapa foi concluída e validada. O professor já pode consultar o Banco de Questões, montar provas por seleção de questões, visualizar a prova antes de publicar e gerar folhas OMR personalizadas por aluno. O plano detalhado está em [PLANO_PRODUCAO_PROVAS.md](PLANO_PRODUCAO_PROVAS.md).
-2. **Próxima frente operacional**: confirmação destrutiva padronizada e refinamento final das telas administrativas.
+1. **OMR em escala**: abstração de storage para uploads e processamento em lote de PDFs multipágina.
+2. **Cobertura de integração**: ampliar a validação automatizada dos fluxos mais sensíveis, especialmente admin, auditoria e mobilidade acadêmica.
+3. **UX administrativa residual**: refinamento visual dos painéis menos usados no dia a dia e das telas densas já implementadas.
 
 ---
 

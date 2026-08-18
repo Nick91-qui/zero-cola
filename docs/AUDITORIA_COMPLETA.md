@@ -33,6 +33,12 @@ Validação executada na auditoria:
 - Backend: `175 passed`
 - Frontend: `22 passed`
 
+Validação adicional recente:
+
+- o backend voltou a subir após a consolidação das heads do Alembic;
+- o proxy do frontend foi verificado nas rotas principais de `auth`, `classes`, `questions`, `admin`, `audit` e `consents` sem retorno `500` nas leituras testadas;
+- as exportações PDF e as consultas de estatísticas continuaram respondendo normalmente no caminho do navegador.
+
 ## 3. Resumo executivo
 
 O projeto está em um estado avançado e funcional.
@@ -459,6 +465,13 @@ O que ainda falta não é a fundação do sistema, e sim a consolidação de cam
 - analytics mais profundo;
 - OMR em lote multipágina e storage abstrato;
 - refinamentos finais de UX em telas densas.
+
+Fila de implementação imediata, por prioridade:
+
+1. abstração de storage para OMR com foco em escalabilidade horizontal;
+2. processamento OMR em lote para PDFs multipágina;
+3. revisão e ampliação da cobertura de testes de integração para fluxos sensíveis;
+4. melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.
 
 Em termos práticos:
 

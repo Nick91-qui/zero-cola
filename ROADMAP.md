@@ -107,7 +107,16 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 
 ### Backlog Operacional Imediato
 
-Esses itens já não são fundação nova; são as próximas pendências de produto e UX mais importantes no estado atual:
+Esses itens já não são fundação nova; são as próximas pendências de produto e UX mais importantes no estado atual.
+
+Prioridade da fila:
+
+1. abstração de storage para OMR com foco em escalabilidade horizontal;
+2. processamento OMR em lote para PDFs multipágina;
+3. revisão e ampliação da cobertura de testes de integração para fluxos sensíveis;
+4. melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.
+
+Itens de UX e operação já tratados na trilha recente:
 
 - padronização das confirmações destrutivas em turmas, avaliações, questões e OMR;
 - detalhes mais claros de usuários e turmas para operação administrativa;
