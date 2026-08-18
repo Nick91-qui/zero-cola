@@ -7,8 +7,8 @@
 ## 1. Resumo Executivo do Status
 
 - **Status Geral**: os módulos backend centrais do COLA-ZERO estão implementados e validados, incluindo autenticação/RBAC, OMR, AnswerKey/Attempt Engine, Question Bank, Workflow A, Workflow B, classes, auditoria, consentimentos e LGPD básica. A Fase 8 de produção e visualização de provas está concluída e validada, com a pré-visualização da prova, a montagem por seleção de questões e a exportação de folhas OMR personalizadas já disponíveis no backend/frontend.
-- **Frontend**: já existem as telas principais para autenticação, painel, avaliações, tentativas online e OMR; a camada visual de administração para classes, auditoria e LGPD é mais enxuta e ainda pode evoluir.
-- **Suíte de Testes Automatizados**: a validação consolidada mais recente registrou **111 testes de backend aprovados** e **8 testes Vitest de frontend aprovados**.
+- **Frontend**: já existem as telas principais para autenticação, painel, avaliações, tentativas online, OMR, administração de usuários, classes e auditoria; a transferência entre turmas já está disponível no detalhe da turma e o que ainda precisa evoluir é o refinamento de UX em ações destrutivas e detalhes operacionais.
+- **Suíte de Testes Automatizados**: a validação consolidada mais recente registrou **175 testes de backend aprovados** e **22 testes Vitest de frontend aprovados**.
 - **Infraestrutura**: o ambiente continua containerizado com Docker e Docker Compose (`postgres`, `backend`, `frontend`).
 
 ---
@@ -53,6 +53,8 @@
 ### 2.6 Frontend Atual ✅
 - `/auth/login` e `/admin/users`
 - `/dashboard`
+- `/classes` e `/classes/[classId]`
+- `/questions`, `/questions/new`, `/questions/[questionId]`
 - `/exams`, `/exams/new`, `/exams/[examId]`
 - `/attempts/start`, `/attempts/[attemptId]`
 - `/omr`, `/omr/new`, `/omr/[templateId]`, `/omr/scans/[scanId]`
@@ -61,12 +63,11 @@
 
 ## 3. Limitações Conhecidas
 
-1. **Upload OMR Individual**: o endpoint OMR segue aceitando uma imagem por vez.
-2. **Layouts OMR Fixos**: os layouts continuam registrados no código e novos formatos ainda exigem atualização manual.
-3. **Calibração de Iluminação OMR**: imagens muito degradadas podem exigir revisão manual.
-4. **Frontend Administrativo de Step 9**: a camada visual para classes, auditoria, consentimentos, eventos de segurança e LGPD ainda pode ser expandida.
-5. **Anti-Cheating Analítico**: a base de eventos existe, mas a análise pedagógica de suspeitas continua como funcionalidade futura.
-6. **Produção OMR Personalizada**: a geração de folhas por aluno e por turma está em implementação; a pré-visualização da prova já está disponível e ainda falta consolidar o fluxo completo de produção/UX.
+1. **Confirmações destrutivas**: nem todas as telas usam a mesma linguagem de risco e modal de confirmação para arquivar, inativar ou excluir.
+2. **Analytics mais profundos**: a base de relatório existe, mas a exploração por habilidade e a comparação visual ainda podem evoluir.
+3. **Frontend Administrativo de Step 9**: a camada visual para classes, auditoria, consentimentos, eventos de segurança e LGPD ainda pode ser expandida.
+4. **Anti-Cheating Analítico**: a base de eventos existe, mas a análise pedagógica de suspeitas continua como funcionalidade futura.
+5. **OMR em Lote e Storage**: o fluxo atual cobre layouts padrão de 10 a 100 questões, mas ainda falta batch multipágina de PDFs e abstração de storage para escala horizontal.
 
 ---
 
@@ -78,20 +79,21 @@
 ## 5. Próximo Passo Planejado
 
 1. **Produção e Visualização de Provas**: esta etapa foi concluída e validada. O professor já pode consultar o Banco de Questões, montar provas por seleção de questões, visualizar a prova antes de publicar e gerar folhas OMR personalizadas por aluno. O plano detalhado está em [PLANO_PRODUCAO_PROVAS.md](PLANO_PRODUCAO_PROVAS.md).
+2. **Próxima frente operacional**: confirmação destrutiva padronizada e refinamento final das telas administrativas.
 
 ---
 
 ## 6. Histórico de Verificação de Qualidade
 
-- **Backend Pytest**: 111 testes aprovados.
+- **Backend Pytest**: 175 testes aprovados.
   - Step 8 online attempt API: 2 testes aprovados.
   - Step 8 attempt service: 6 testes aprovados.
   - OMR API: 4 testes aprovados.
   - Step 9 targeted tests: 10 testes aprovados.
-  - Suite completa do backend: `111 passed, 0 failed, 0 skipped`.
+  - Suite completa do backend: `175 passed, 0 failed, 0 skipped`.
 - **Execução dos Testes**:
   - Os testes foram executados dentro do container backend.
   - O PostgreSQL de desenvolvimento esteve acessível durante a execução.
   - A migração Alembic foi validada no banco de desenvolvimento antes de registrar o status.
   - Health endpoint da API: `{"status":"ok"}`.
-- **Frontend Vitest**: 8 testes aprovados, cobrindo autenticação, tentativas online, OMR e avaliação.
+- **Frontend Vitest**: 22 testes aprovados, cobrindo autenticação, tentativas online, OMR, avaliação e fluxos administrativos.

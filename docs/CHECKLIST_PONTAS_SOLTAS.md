@@ -1,20 +1,24 @@
 # Checklist de Pontas Soltas
 
-> Lista priorizada dos ajustes feitos para fechar o fluxo de cadastro e reduzir superfície pública.
+> Pendências priorizadas identificadas na auditoria atual.  
+> Itens já implementados, como cadastro administrativo de usuários, shells de navegação, layouts OMR de 10 a 100 questões e versionamento de questões, não entram aqui.
 
 ## P0
 
-- [x] Remover o cadastro público em `/auth/register` do backend.
-- [x] Migrar o frontend para autenticação baseada em cookie HttpOnly.
-- [x] Eliminar o método `register()` do contexto de auth do frontend.
-- [x] Garantir que o acesso à criação de usuários fique restrito a `/admin/users`.
+- [x] Implementar fluxo explícito de transferência de aluno entre turmas, com histórico e auditoria.
+- [ ] Padronizar confirmações destrutivas para arquivar turma, arquivar avaliação, inativar questão e excluir gabarito OMR.
+- [ ] Criar um atalho operacional para a promoção anual dos alunos sem depender de remoção e re-vinculação manual.
 
 ## P1
 
-- [x] Atualizar os testes que dependiam de `/auth/register` para criação direta em banco.
-- [x] Verificar que `auth/me` funciona com sessão por cookie.
-- [x] Corrigir a documentação de status e auditoria para refletir o novo fluxo.
+- [ ] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
+- [ ] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
+- [ ] Consolidar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
+- [ ] Expor visualização mais legível dos eventos de segurança e consentimentos no frontend administrativo.
 
 ## P2
 
-- [ ] Revisar referências históricas em arquivos de arquivo morto (`docs/archive/`) se for desejado um alinhamento total do histórico.
+- [ ] Evoluir a abstração de storage para OMR com foco em escalabilidade horizontal.
+- [ ] Expandir o processamento OMR para PDFs multipágina em lote.
+- [ ] Revisar a cobertura de testes de integração para os fluxos mais sensíveis.
+- [ ] Preparar melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.

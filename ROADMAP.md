@@ -105,6 +105,16 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 
 ---
 
+### Backlog Operacional Imediato
+
+Esses itens já não são fundação nova; são as próximas pendências de produto e UX mais importantes no estado atual:
+
+- padronização das confirmações destrutivas em turmas, avaliações, questões e OMR;
+- detalhes mais claros de usuários e turmas para operação administrativa;
+- leitura mais rica de analytics pedagógico por habilidade e por questão.
+
+---
+
 ### Fase 9 — Escala OMR e Funcionalidades Avançadas (Pós-MVP)
 - **Objetivo**: Expandir as capacidades operacionais do módulo impresso para grandes redes de ensino.
 - **Entregas**:

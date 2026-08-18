@@ -18,14 +18,15 @@ Ja foram consolidados:
 - area academica com shell compartilhado;
 - area administrativa com shell compartilhado;
 - fluxo de tentativas do aluno com shell proprio;
-- paginas de `dashboard`, `consents`, `privacy`, `classes`, `exams`, `questions` e `omr` sem chrome duplicado.
+- transferencia de aluno entre turmas no detalhe da turma;
+- pagina de dashboard administrativo com dados reais;
+- pagina de usuarios com criacao, inativacao, exclusao e vinculo com turmas;
+- paginas de `dashboard`, `consents`, `privacy`, `classes`, `exams`, `questions` e `omr` sem chrome duplicado;
+- busca global dentro dos shells, com atalhos para as rotas principais.
 
 Ainda existem pendencias de produto e UX, principalmente em:
 
-- busca global;
-- dashboard administrativo com dados reais;
-- confirmacoes de acao destrutiva;
-- movimentacao de aluno entre turmas;
+- padronizacao das confirmacoes destrutivas;
 - detalhes mais completos de usuarios e turmas;
 - refinamento responsivo das telas densas.
 
@@ -35,18 +36,15 @@ Ainda existem pendencias de produto e UX, principalmente em:
 
 ### P0 - Critico
 
-1. Tornar a busca global funcional ou remove-la ate existir uma implementacao confiavel.
-2. Substituir os dados mockados do dashboard admin por dados reais.
-3. Padronizar confirmacoes para exclusao, arquivamento e inativacao.
-4. Criar fluxo claro para mover aluno de turma, garantindo a regra de uma turma por vez.
-5. Melhorar estados vazios e mensagens de orientacao nas telas operacionais.
+1. Padronizar confirmacoes para exclusao, arquivamento e inativacao.
+2. Melhorar estados vazios e mensagens de orientacao nas telas operacionais.
 
 ### P1 - Importante
 
 1. Criar paginas de detalhe mais completas para usuarios e turmas no admin.
 2. Padronizar modais, alerts e feedback visual em todo o frontend.
-3. Revisar a leitura da home do portal para cada perfil de usuario.
-4. Melhorar responsividade das telas densas de questoes, avaliacoes e tentativas.
+3. Melhorar responsividade das telas densas de questoes, avaliacoes e tentativas.
+4. Revisar a leitura da home do portal para cada perfil de usuario.
 
 ### P2 - Evolucao
 
@@ -90,9 +88,11 @@ Aceite:
 
 ### Fase 3 - Mobilidade Academica
 
-Entregas:
+Status: o fluxo de transferência de aluno entre turmas já foi implementado e validado.
 
-- implementar transferencia de aluno entre turmas;
+Entregas concluídas:
+
+- transferência explícita de aluno entre turmas com histórico e auditoria;
 - reforcar a regra de uma turma por vez para aluno;
 - permitir turma vazia como estado valido desde a criacao;
 - tratar desativacao e arquivamento sem quebrar os vinculos restantes.
@@ -139,8 +139,7 @@ Aceite:
 1. Busca global e feedback padronizado.
 2. Dashboard admin com dados reais.
 3. Detalhes de usuario e turma.
-4. Fluxo de mover aluno entre turmas.
-5. Revisao visual de questoes, avaliacoes, OMR e tentativas.
+4. Revisao visual de questoes, avaliacoes, OMR e tentativas.
 
 ---
 
@@ -150,7 +149,5 @@ Este plano pode ser considerado avancado quando:
 
 - o portal principal tiver navegacao util para cada papel;
 - o admin tiver contexto operacional real, nao apenas listas;
-- a movimentacao de alunos entre turmas estiver resolvida;
 - o frontend mantiver build verde;
 - a documentacao refletir o estado final da interface.
-

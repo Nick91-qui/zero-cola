@@ -1,6 +1,6 @@
 # COLA-ZERO - Auditoria Completa do Projeto
 
-**Data da auditoria:** 12 de agosto de 2026  
+**Data da auditoria:** 18 de agosto de 2026  
 **Escopo:** leitura dos documentos `.md`, inspeção do backend e frontend, e validação automatizada local
 
 ## 1. Objetivo
@@ -61,8 +61,9 @@ O frontend já expõe as principais jornadas de uso para professor, estudante e 
 
 O principal ponto de atenção da auditoria é este:
 
-- a base técnica está ampla;
-- mas algumas capacidades ainda estão mais completas no modelo e no backend do que na interface e na API pública do Banco de Questões.
+- a base técnica está ampla e funcional;
+- o backend cobre o núcleo do produto;
+- a interface ainda precisa fechar alguns fluxos operacionais, principalmente a padronização das confirmações destrutivas e a consolidação final da experiência administrativa.
 
 ## 4. O que já está implementado no backend
 
@@ -349,21 +350,37 @@ Arquivos principais:
 
 ## 6. O que falta implementar ou consolidar
 
-### 6.1 Banco de Questões
+### 6.1 Fluxo de mobilidade acadêmica
 
-Falta consolidar a camada completa de manutenção do acervo:
+Falta consolidar o fluxo de movimentação de aluno entre turmas:
 
-- editar questão com fluxo explícito de nova versão;
-- endpoint de exclusão lógica/inativação;
-- API pública completa para gerenciamento do ciclo de vida;
-- confirmação operacional do versionamento por interface e não só por modelo.
+- transferência atômica de um aluno de uma turma para outra;
+- UI específica para esse movimento, sem depender de remover e readicionar manualmente;
+- registro de auditoria mais explícito da troca de turma;
+- reforço visual de que o aluno só pode estar ativo em uma turma por período.
 
 Situação atual:
 
-- o modelo já carrega `parent_id`, `version` e `is_active`;
-- a API ainda está limitada em relação ao que o plano descreve.
+- a regra de uma matrícula ativa por período já é aplicada no backend;
+- o backend já permite criar turma vazia e depois vincular professores/alunos;
+- ainda falta um atalho operacional para o caso anual de promoção/migração.
 
-### 6.2 LGPD e anti-cola no frontend
+### 6.2 Confirmações destrutivas e UX administrativa
+
+Algumas ações sensíveis ainda precisam de padronização visual e de cópia:
+
+- arquivamento de turma;
+- arquivamento de avaliação;
+- inativação de questão;
+- exclusão de gabarito OMR;
+- harmonização da linguagem de risco em todas as telas administrativas.
+
+Situação atual:
+
+- a tela de usuários já possui confirmação explícita de inativação e exclusão;
+- outras telas ainda executam ações destrutivas com menos contexto do que o ideal.
+
+### 6.3 LGPD e anti-cola no frontend
 
 O backend já expõe os recursos, mas a interface ainda pode evoluir em:
 
@@ -374,7 +391,7 @@ O backend já expõe os recursos, mas a interface ainda pode evoluir em:
 - revisão pedagógica de eventos suspeitos;
 - painéis mais claros para o monitoramento de integridade.
 
-### 6.3 Analytics e dashboard avançado
+### 6.4 Analytics e dashboard avançado
 
 O núcleo de relatório existe, mas ainda há espaço para:
 
@@ -384,16 +401,15 @@ O núcleo de relatório existe, mas ainda há espaço para:
 - refinamento da UX administrativa;
 - melhor apresentação dos dados de exportação.
 
-### 6.4 OMR avançado
+### 6.5 OMR avançado
 
-Já existe correção funcional, mas ainda faltam evoluções de escala e robustez:
+O OMR já está funcional, mas ainda faltam evoluções de escala e robustez:
 
-- consolidação de layouts adicionais;
-- maior flexibilidade para novos formatos;
-- endurecimento do processamento em lote;
-- abstração de storage mais madura para cenários distribuídos.
+- processamento em lote de PDFs multipágina;
+- abstração de storage mais madura para cenários distribuídos;
+- eventual expansão além dos layouts padrão de 10 a 100 questões.
 
-### 6.5 Hardening operacional
+### 6.6 Hardening operacional
 
 Ainda é recomendável consolidar:
 
@@ -436,11 +452,10 @@ O backend atende os pilares do domínio e o frontend já cobre as jornadas princ
 
 O que ainda falta não é a fundação do sistema, e sim a consolidação de camadas específicas:
 
-- manutenção completa do Banco de Questões;
-- interfaces mais ricas de LGPD e integridade;
-- analytics mais avançado;
-- endurecimento de OMR e storage;
-- refinamentos operacionais e de UX.
+- confirmações destrutivas consistentes em todas as áreas administrativas;
+- analytics mais profundo;
+- OMR em lote multipágina e storage abstrato;
+- refinamentos finais de UX em telas densas.
 
 Em termos práticos:
 
@@ -452,25 +467,20 @@ Em termos práticos:
 
 ### P0 - Alta prioridade
 
-- [ ] Confirmar e expor o fluxo completo de edição/versionamento do Banco de Questões via API.
-- [ ] Implementar endpoint de inativação/exclusão lógica para questões.
-- [ ] Validar a experiência completa de publicação e manutenção do acervo de questões no frontend.
-- [ ] Consolidar a tela/página pública de política de privacidade e consentimento antes das provas online.
-- [ ] Expor visualização operacional dos eventos de segurança e consentimentos no frontend administrativo.
+- [ ] Padronizar confirmações destrutivas para arquivar turma, arquivar avaliação, inativar questão e excluir gabarito OMR.
+- [ ] Criar um atalho operacional para a promoção anual dos alunos sem depender de remoção e re-vinculação manual.
 
 ### P1 - Prioridade média
 
 - [ ] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
-- [ ] Melhorar a navegação e a apresentação das exportações PDF/XLSX no frontend de avaliações.
-- [ ] Consolidar a revisão manual de scans OMR com melhor feedback de status e correção.
-- [ ] Refinar a UX do fluxo de criação de avaliação para reduzir fricção entre Banco de Questões, turmas e publicação.
-- [ ] Documentar com mais detalhe o ciclo operacional de tentativas online, OMR e auditoria.
+- [ ] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
+- [ ] Consolidar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
+- [ ] Expor visualização mais legível dos eventos de segurança e consentimentos no frontend administrativo.
 
 ### P2 - Prioridade baixa
 
 - [ ] Evoluir a abstração de storage para OMR com foco em escalabilidade horizontal.
-- [ ] Expandir o suporte a novos layouts OMR sem atualização manual frequente.
-- [ ] Tratar os warnings de ambiente/testes e dependências opcionais como hardening operacional.
+- [ ] Expandir o processamento OMR para PDFs multipágina em lote.
 - [ ] Revisar a cobertura de testes de integração para os fluxos mais sensíveis.
 - [ ] Preparar melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.
 

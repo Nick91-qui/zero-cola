@@ -32,7 +32,6 @@ Construir uma experiencia administrativa consistente, navegavel e operavel para 
 - pagina dedicada de detalhe de usuario;
 - pagina dedicada de detalhe de turma;
 - drawers de acao rapida;
-- busca global funcional;
 - filtros avancados em todas as listas;
 - rotas novas para `admin/privacy` e `admin/consents`.
 
@@ -139,7 +138,6 @@ Critério de aceite:
 ### P2
 
 - consolidar paginas de detalhe;
-- adicionar busca e filtros globais;
 - unificar a experiencia de turmas, privacidade e consentimentos.
 
 ---
@@ -153,4 +151,3 @@ A implementacao deve ser considerada fechada quando:
 - nao existir duplicacao de shell entre as paginas do admin;
 - as paginas de usuarios e auditoria continuarem funcionais;
 - o layout inicial da nova area estiver documentado.
-
