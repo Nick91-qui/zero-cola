@@ -188,7 +188,24 @@ export function archiveExam(examId: string) {
 }
 
 export function getExamStatistics(examId: string) {
-  return apiFetch<ExamStatistics>(`/exams/${examId}/statistics`);
+  return fetch(`/api/internal/exams/${examId}/statistics`, {
+    credentials: 'include',
+  }).then(async (response) => {
+    if (!response.ok) {
+      try {
+        const data = await response.json();
+        if (typeof data.detail === 'string') {
+          throw new Error(data.detail);
+        }
+      } catch {
+        throw new Error('Falha ao carregar estatísticas');
+      }
+
+      throw new Error('Falha ao carregar estatísticas');
+    }
+
+    return response.json() as Promise<ExamStatistics>;
+  });
 }
 
 export function exportExamPdf(examId: string) {
