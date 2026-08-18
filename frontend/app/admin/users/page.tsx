@@ -16,6 +16,7 @@ import {
   listUsers,
   type UserSearchResult,
 } from '@/lib/users';
+import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 
 type AdminUserRole = 'student' | 'teacher';
 type DirectoryRoleFilter = 'all' | 'student' | 'teacher' | 'admin';
@@ -39,8 +40,14 @@ export default function AdminUsersPage() {
   const [directoryRoleFilter, setDirectoryRoleFilter] = useState<DirectoryRoleFilter>('all');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    | { kind: 'archive'; target: UserSearchResult }
+    | { kind: 'delete'; target: UserSearchResult }
+    | null
+  >(null);
 
   const loadClasses = async () => {
     try {
@@ -179,44 +186,42 @@ export default function AdminUsersPage() {
 
   const handleArchiveUser = async (target: UserSearchResult) => {
     if (target.id === user?.id) {
-      setLocalError('Você não pode inativar sua própria conta.');
+      setLocalError('Você não pode inativar sua própria conta. Solicite ao administrador.');
       return;
     }
-    if (!window.confirm(`Inativar ${target.email}? O usuário perde acesso, mas os dados permanecem.`)) {
-      return;
-    }
-
-    setLocalError(null);
-    setSuccessMessage(null);
-
-    try {
-      await archiveUser(target.id);
-      setSuccessMessage(`Usuário ${target.email} inativado com sucesso.`);
-      await loadUsers();
-    } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Falha ao inativar usuario');
-    }
+    setPendingAction({ kind: 'archive', target });
   };
 
   const handleDeleteUser = async (target: UserSearchResult) => {
     if (target.id === user?.id) {
-      setLocalError('Você não pode excluir a própria conta.');
+      setLocalError('Você não pode excluir a própria conta. Solicite ao administrador.');
       return;
     }
-    const confirmed = window.confirm(
-      `Excluir definitivamente ${target.email}? Essa ação remove o acesso e anonimiza os dados pessoais do usuário. Registros acadêmicos associados podem permanecer para histórico.`,
-    );
-    if (!confirmed) return;
+    setPendingAction({ kind: 'delete', target });
+  };
 
+  const confirmPendingAction = async () => {
+    if (!pendingAction) return;
+
+    const { kind, target } = pendingAction;
+    setIsConfirming(true);
     setLocalError(null);
     setSuccessMessage(null);
 
     try {
-      await deleteUser(target.id);
-      setSuccessMessage(`Usuário ${target.email} excluído com sucesso.`);
+      if (kind === 'archive') {
+        await archiveUser(target.id);
+        setSuccessMessage(`Usuário ${target.email} inativado com sucesso.`);
+      } else {
+        await deleteUser(target.id);
+        setSuccessMessage(`Usuário ${target.email} excluído com sucesso.`);
+      }
       await loadUsers();
+      setPendingAction(null);
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Falha ao excluir usuario');
+      setLocalError(err instanceof Error ? err.message : 'Falha ao executar ação');
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -243,6 +248,10 @@ export default function AdminUsersPage() {
         <p className="mt-2 max-w-4xl text-sm text-slate-600">
           Crie contas de professor ou aluno, vincule turmas e gerencie inativação ou exclusão com
           contexto claro.
+        </p>
+        <p className="mt-2 max-w-4xl text-xs text-slate-500">
+          A própria conta não pode ser excluída ou inativada diretamente por quem está logado.
+          Qualquer solicitação desse tipo deve ser avaliada por um administrador.
         </p>
       </div>
 
@@ -419,7 +428,7 @@ export default function AdminUsersPage() {
             />
           </label>
 
-          {loadingClasses ? (
+      {loadingClasses ? (
             <p className="mt-6 text-sm text-slate-500">Carregando turmas...</p>
           ) : filteredClasses.length === 0 ? (
             <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
@@ -653,6 +662,29 @@ export default function AdminUsersPage() {
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={pendingAction !== null}
+        title={
+          pendingAction?.kind === 'delete'
+            ? 'Excluir usuário?'
+            : 'Inativar usuário?'
+        }
+        message={
+          pendingAction?.kind === 'delete'
+            ? `Excluir definitivamente ${pendingAction.target.email}?`
+            : `Inativar ${pendingAction?.target.email}?`
+        }
+        warning={
+          pendingAction?.kind === 'delete'
+            ? 'Essa ação remove o acesso e anonimiza os dados pessoais do usuário. Registros acadêmicos associados podem permanecer para histórico.'
+            : 'O usuário perde acesso, mas os dados permanecem.'
+        }
+        confirmLabel={pendingAction?.kind === 'delete' ? 'Confirmar exclusão' : 'Confirmar inativação'}
+        busy={isConfirming}
+        onConfirm={confirmPendingAction}
+        onCancel={() => setPendingAction(null)}
+      />
     </div>
   );
 }

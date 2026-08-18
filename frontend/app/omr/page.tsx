@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import { deleteTemplate, listTemplates, OMRTemplate } from '@/lib/omr';
 
 export default function OmrHomePage() {
@@ -9,7 +10,6 @@ export default function OmrHomePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Deletion modal state
   const [deletingTemplate, setDeletingTemplate] = useState<OMRTemplate | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -37,7 +37,7 @@ export default function OmrHomePage() {
       setTemplates((prev) => prev.filter((t) => t.id !== deletingTemplate.id));
       setDeletingTemplate(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao excluir gabarito');
+      setError(err instanceof Error ? err.message : 'Erro ao excluir gabarito');
     } finally {
       setIsDeleting(false);
     }
@@ -121,43 +121,20 @@ export default function OmrHomePage() {
         </div>
       )}
 
-      {deletingTemplate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-slate-900">Excluir Gabarito?</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Você está prestes a excluir o gabarito{' '}
-              <strong className="text-slate-900">
-                {deletingTemplate.title || deletingTemplate.layout_version}
-              </strong>
-              .
-            </p>
-            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-              <strong>Preservação de Dados Acadêmicos:</strong> As notas, provas e imagens de cartões já corrigidos
-              referentes a este gabarito <u>NÃO</u> serão apagadas do histórico dos alunos.
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => setDeletingTemplate(null)}
-                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={handleDeleteConfirm}
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:bg-red-400"
-              >
-                {isDeleting ? 'Excluindo...' : 'Confirmar Exclusão'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={deletingTemplate !== null}
+        title="Excluir gabarito?"
+        message={
+          deletingTemplate
+            ? `Você está prestes a excluir o gabarito ${deletingTemplate.title || deletingTemplate.layout_version}.`
+            : 'Você está prestes a excluir o gabarito selecionado.'
+        }
+        warning="As notas, provas e imagens de cartões já corrigidos referentes a este gabarito não serão apagadas do histórico dos alunos."
+        confirmLabel={isDeleting ? 'Excluindo...' : 'Confirmar exclusão'}
+        busy={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeletingTemplate(null)}
+      />
     </div>
   );
 }

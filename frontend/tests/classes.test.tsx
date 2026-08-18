@@ -50,15 +50,6 @@ describe('Classes frontend flow', () => {
         updated_at: now,
       },
     ]);
-    vi.spyOn(usersLib, 'searchUsers').mockResolvedValue([
-      {
-        id: 'teacher-1',
-        email: 'teacher@cola-zero.edu',
-        role: 'teacher',
-        student_code: null,
-        is_active: true,
-      },
-    ]);
     const createSpy = vi.spyOn(classesLib, 'createClass').mockResolvedValue({
       id: 'class-2',
       teacher_id: 'teacher-1',
@@ -75,14 +66,6 @@ describe('Classes frontend flow', () => {
     render(<ClassesPage />);
 
     expect(await screen.findByText('2º Ano A')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByRole('searchbox'), {
-      target: { value: 'teacher@cola-zero.edu' },
-    });
-
-    expect(await screen.findByText('teacher@cola-zero.edu')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Selecionar professor' }));
 
     fireEvent.change(screen.getByLabelText('Nome'), {
       target: { value: '3º Ano B' },
@@ -101,7 +84,6 @@ describe('Classes frontend flow', () => {
         name: '3º Ano B',
         academic_period: '2026',
         description: 'Nova turma',
-        teacher_id: 'teacher-1',
       });
       expect(screen.getByText('3º Ano B')).toBeInTheDocument();
     });
@@ -110,6 +92,32 @@ describe('Classes frontend flow', () => {
   it('renders the class detail with teachers and students and archives the class', async () => {
     const now = new Date().toISOString();
     const archivedNow = new Date(Date.now() + 1000).toISOString();
+    vi.spyOn(classesLib, 'listClasses').mockResolvedValue([
+      {
+        id: 'class-1',
+        teacher_id: 'teacher-1',
+        name: '2º Ano A',
+        academic_period: '2026',
+        description: 'Turma principal',
+        is_active: true,
+        archived_at: null,
+        student_count: 2,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: 'class-2',
+        teacher_id: 'teacher-2',
+        name: '3º Ano B',
+        academic_period: '2026',
+        description: 'Destino',
+        is_active: true,
+        archived_at: null,
+        student_count: 0,
+        created_at: now,
+        updated_at: now,
+      },
+    ]);
     vi.spyOn(classesLib, 'getClass')
       .mockResolvedValueOnce({
         id: 'class-1',
@@ -354,10 +362,12 @@ describe('Classes frontend flow', () => {
     render(<ClassDetailPage />);
 
     expect(await screen.findByText('2º Ano A')).toBeInTheDocument();
-    expect(screen.getByText('student@cola-zero.edu (12345)')).toBeInTheDocument();
+    expect(screen.getByText('student@cola-zero.edu (12345)', { selector: 'p' })).toBeInTheDocument();
     expect(screen.getByText('teacher@cola-zero.edu', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('Transferir estudante')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Arquivar turma' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirmar arquivamento' }));
 
     await waitFor(() => {
       expect(archiveSpy).toHaveBeenCalledWith('class-1');
@@ -367,6 +377,20 @@ describe('Classes frontend flow', () => {
 
   it('links and unlinks teachers and students by id', async () => {
     const now = new Date().toISOString();
+    vi.spyOn(classesLib, 'listClasses').mockResolvedValue([
+      {
+        id: 'class-1',
+        teacher_id: 'teacher-1',
+        name: '2º Ano A',
+        academic_period: '2026',
+        description: 'Turma principal',
+        is_active: true,
+        archived_at: null,
+        student_count: 1,
+        created_at: now,
+        updated_at: now,
+      },
+    ]);
     let classSnapshot = {
       id: 'class-1',
       teacher_id: 'teacher-1',
@@ -480,7 +504,9 @@ describe('Classes frontend flow', () => {
 
     render(<ClassDetailPage />);
 
-    expect(await screen.findByText('student@cola-zero.edu (12345)')).toBeInTheDocument();
+    expect(
+      await screen.findByText('student@cola-zero.edu (12345)', { selector: 'p' }),
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getAllByRole('searchbox')[0], {
       target: { value: 'teacher-2' },
@@ -505,6 +531,157 @@ describe('Classes frontend flow', () => {
 
     await waitFor(() => {
       expect(removeTeacherSpy).toHaveBeenCalledWith('class-1', 'teacher-1');
+    });
+  });
+
+  it('transfers a student to another class and refreshes the detail', async () => {
+    const now = new Date().toISOString();
+    vi.spyOn(classesLib, 'listClasses').mockResolvedValue([
+      {
+        id: 'class-1',
+        teacher_id: 'teacher-1',
+        name: '2º Ano A',
+        academic_period: '2026',
+        description: 'Turma principal',
+        is_active: true,
+        archived_at: null,
+        student_count: 1,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: 'class-2',
+        teacher_id: 'teacher-2',
+        name: '3º Ano B',
+        academic_period: '2026',
+        description: 'Destino',
+        is_active: true,
+        archived_at: null,
+        student_count: 0,
+        created_at: now,
+        updated_at: now,
+      },
+    ]);
+    vi.spyOn(classesLib, 'getClass')
+      .mockResolvedValueOnce({
+        id: 'class-1',
+        teacher_id: 'teacher-1',
+        name: '2º Ano A',
+        academic_period: '2026',
+        description: 'Turma principal',
+        is_active: true,
+        archived_at: null,
+        student_count: 1,
+        created_at: now,
+        updated_at: now,
+        memberships: [
+          {
+            id: 'membership-1',
+            class_id: 'class-1',
+            student_id: 'student-1',
+            academic_period: '2026',
+            student: {
+              id: 'student-1',
+              email: 'student@cola-zero.edu',
+              role: 'student',
+              student_code: '12345',
+              is_active: true,
+            },
+            is_active: true,
+            archived_at: null,
+            created_at: now,
+            updated_at: now,
+          },
+        ],
+        teachers: [],
+      })
+      .mockResolvedValueOnce({
+        id: 'class-1',
+        teacher_id: 'teacher-1',
+        name: '2º Ano A',
+        academic_period: '2026',
+        description: 'Turma principal',
+        is_active: true,
+        archived_at: null,
+        student_count: 1,
+        created_at: now,
+        updated_at: now,
+        memberships: [
+          {
+            id: 'membership-1',
+            class_id: 'class-1',
+            student_id: 'student-1',
+            academic_period: '2026',
+            student: {
+              id: 'student-1',
+              email: 'student@cola-zero.edu',
+              role: 'student',
+              student_code: '12345',
+              is_active: true,
+            },
+            is_active: false,
+            archived_at: now,
+            created_at: now,
+            updated_at: now,
+          },
+        ],
+        teachers: [],
+      });
+    const transferSpy = vi.spyOn(classesLib, 'transferStudentBetweenClasses').mockResolvedValue({
+      student_id: 'student-1',
+      source_class_id: 'class-1',
+      target_class_id: 'class-2',
+      source_membership: {
+        id: 'membership-1',
+        class_id: 'class-1',
+        student_id: 'student-1',
+        academic_period: '2026',
+        student: {
+          id: 'student-1',
+          email: 'student@cola-zero.edu',
+          role: 'student',
+          student_code: '12345',
+          is_active: true,
+        },
+        is_active: false,
+        archived_at: now,
+        created_at: now,
+        updated_at: now,
+      },
+      target_membership: {
+        id: 'membership-2',
+        class_id: 'class-2',
+        student_id: 'student-1',
+        academic_period: '2026',
+        student: {
+          id: 'student-1',
+          email: 'student@cola-zero.edu',
+          role: 'student',
+          student_code: '12345',
+          is_active: true,
+        },
+        is_active: true,
+        archived_at: null,
+        created_at: now,
+        updated_at: now,
+      },
+    });
+
+    render(<ClassDetailPage />);
+
+    expect(await screen.findByText('Transferir estudante')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Estudante'), {
+      target: { value: 'student-1' },
+    });
+    fireEvent.change(screen.getByLabelText('Turma destino'), {
+      target: { value: 'class-2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Transferir aluno' }));
+
+    await waitFor(() => {
+      expect(transferSpy).toHaveBeenCalledWith('class-1', 'student-1', 'class-2');
+      expect(screen.getByText('Aluno transferido com sucesso.')).toBeInTheDocument();
     });
   });
 });

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import { useAuth } from '@/app/hooks/useAuth';
 import {
   addStudentsToClass,
@@ -11,7 +12,10 @@ import {
   getClass,
   removeStudentFromClass,
   removeTeacherFromClass,
+  listClasses,
+  transferStudentBetweenClasses,
   type ClassDetail,
+  type ClassSummary,
 } from '@/lib/classes';
 import { MemberSearchField } from './member-search-field';
 
@@ -29,6 +33,11 @@ export default function ClassDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [removingMembershipId, setRemovingMembershipId] = useState<string | null>(null);
+  const [transferringStudentId, setTransferringStudentId] = useState<string>('');
+  const [transferTargetClassId, setTransferTargetClassId] = useState<string>('');
+  const [transferMessage, setTransferMessage] = useState<string | null>(null);
+  const [archiveConfirmationOpen, setArchiveConfirmationOpen] = useState(false);
+  const [classOptions, setClassOptions] = useState<ClassSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const loadClass = useCallback(async () => {
@@ -36,8 +45,12 @@ export default function ClassDetailPage() {
     setError(null);
 
     try {
-      const data = await getClass(classId);
+      const [data, classList] = await Promise.all([
+        getClass(classId),
+        isAdmin ? listClasses(true).catch(() => []) : Promise.resolve([]),
+      ]);
       setClassData(data);
+      setClassOptions(classList.filter((item) => item.id !== classId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao carregar turma');
     } finally {
@@ -64,6 +77,7 @@ export default function ClassDetailPage() {
           : current,
       );
       await loadClass();
+      setArchiveConfirmationOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao arquivar turma');
     } finally {
@@ -86,6 +100,39 @@ export default function ClassDetailPage() {
     },
     [classId, loadClass],
   );
+
+  const activeStudents = useMemo(
+    () => classData?.memberships.filter((membership) => membership.is_active) ?? [],
+    [classData],
+  );
+
+  const availableTransferTargets = useMemo(
+    () => classOptions.filter((item) => item.is_active),
+    [classOptions],
+  );
+
+  const handleTransferStudent = async () => {
+    if (!transferringStudentId || !transferTargetClassId) {
+      setError('Escolha um estudante e uma turma de destino.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setTransferMessage(null);
+
+    try {
+      await transferStudentBetweenClasses(classId, transferringStudentId, transferTargetClassId);
+      setTransferMessage('Aluno transferido com sucesso.');
+      setTransferringStudentId('');
+      setTransferTargetClassId('');
+      await loadClass();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao transferir estudante');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleRemoveStudent = async (studentId: string) => {
     setRemovingMembershipId(studentId);
@@ -192,11 +239,11 @@ export default function ClassDetailPage() {
               {isAdmin && classData.is_active && (
                 <button
                   type="button"
-                  onClick={handleArchive}
+                  onClick={() => setArchiveConfirmationOpen(true)}
                   disabled={saving}
                   className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-100 disabled:text-slate-400"
                 >
-                  {saving ? 'Arquivando...' : 'Arquivar turma'}
+                  Arquivar turma
                 </button>
               )}
             </div>
@@ -289,6 +336,84 @@ export default function ClassDetailPage() {
               </div>
 
               {isAdmin ? (
+                <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">Transferir estudante</h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        A matrícula atual é inativada e o aluno passa para a turma destino com
+                        trilha de auditoria.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                      {activeStudents.length} ativo(s)
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Estudante
+                      <select
+                        value={transferringStudentId}
+                        onChange={(event) => setTransferringStudentId(event.target.value)}
+                        className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none"
+                      >
+                        <option value="">Selecione um estudante</option>
+                        {activeStudents.map((membership) => (
+                          <option key={membership.id} value={membership.student_id}>
+                            {membership.student ? formatName(membership.student.email, membership.student.student_code) : membership.student_id}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block text-sm font-medium text-slate-700">
+                      Turma destino
+                      <select
+                        value={transferTargetClassId}
+                        onChange={(event) => setTransferTargetClassId(event.target.value)}
+                        className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none"
+                      >
+                        <option value="">Selecione a turma</option>
+                        {availableTransferTargets.map((targetClass) => (
+                          <option key={targetClass.id} value={targetClass.id}>
+                            {targetClass.name}
+                            {targetClass.academic_period ? ` · ${targetClass.academic_period}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleTransferStudent}
+                      disabled={
+                        saving ||
+                        activeStudents.length === 0 ||
+                        availableTransferTargets.length === 0 ||
+                        !transferringStudentId ||
+                        !transferTargetClassId
+                      }
+                      className="rounded-md bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 disabled:bg-slate-300"
+                    >
+                      {saving ? 'Transferindo...' : 'Transferir aluno'}
+                    </button>
+                    <p className="text-xs text-slate-500">
+                      Use esse fluxo para promoção anual ou troca de turma sem perder histórico.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+
+              {transferMessage ? (
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {transferMessage}
+                </div>
+              ) : null}
+
+              {isAdmin ? (
                 <MemberSearchField
                   role="student"
                   title="Vincular estudante(s)"
@@ -307,9 +432,9 @@ export default function ClassDetailPage() {
                   Nenhum estudante vinculado.
                 </p>
               ) : (
-                <div className="mt-6 space-y-3">
-                  {classData.memberships.map((membership) => (
-                    <article
+                  <div className="mt-6 space-y-3">
+                    {classData.memberships.map((membership) => (
+                      <article
                       key={membership.id}
                       className="rounded-xl border border-slate-200 bg-slate-50 p-4"
                     >
@@ -356,6 +481,16 @@ export default function ClassDetailPage() {
               )}
             </div>
           </section>
+          <ConfirmDialog
+            open={archiveConfirmationOpen}
+            title="Arquivar turma?"
+            message={`Arquivar a turma ${classData.name}?`}
+            warning="A turma deixa de aparecer como ativa para novos vínculos, mas o histórico e os vínculos já existentes continuam preservados."
+            confirmLabel={saving ? 'Arquivando...' : 'Confirmar arquivamento'}
+            busy={saving}
+            onConfirm={handleArchive}
+            onCancel={() => setArchiveConfirmationOpen(false)}
+          />
         </>
       )}
     </div>

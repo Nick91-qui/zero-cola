@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import { listSkills, type SkillSummary } from '@/lib/skills';
 import { deactivateQuestion, getQuestion, updateQuestion, type QuestionUpdatePayload } from '@/lib/questions';
 import type { Question } from '@/lib/exams';
@@ -23,6 +24,7 @@ export default function QuestionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [deactivateConfirmationOpen, setDeactivateConfirmationOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statement, setStatement] = useState('');
   const [subject, setSubject] = useState('');
@@ -124,6 +126,7 @@ export default function QuestionDetailPage() {
     try {
       const updated = await deactivateQuestion(questionId);
       setQuestion(updated);
+      setDeactivateConfirmationOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao inativar questão');
     } finally {
@@ -164,11 +167,11 @@ export default function QuestionDetailPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={handleDeactivate}
+                      onClick={() => setDeactivateConfirmationOpen(true)}
                       disabled={deactivating || !question.is_active}
                       className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50"
                     >
-                      {deactivating ? 'Inativando...' : 'Inativar'}
+                      Inativar
                     </button>
                   </div>
                 </div>
@@ -179,6 +182,17 @@ export default function QuestionDetailPage() {
                   {error}
                 </div>
               )}
+
+              <ConfirmDialog
+                open={deactivateConfirmationOpen}
+                title="Inativar questão?"
+                message="A questão deixa de aparecer como ativa no banco, mas a versão atual e o histórico permanecem disponíveis."
+                warning="Essa ação preserva o histórico pedagógico e não apaga as tentativas já registradas."
+                confirmLabel={deactivating ? 'Inativando...' : 'Confirmar inativação'}
+                busy={deactivating}
+                onConfirm={handleDeactivate}
+                onCancel={() => setDeactivateConfirmationOpen(false)}
+              />
 
               <form onSubmit={handleSave} className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
