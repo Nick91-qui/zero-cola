@@ -21,8 +21,11 @@ import {
 } from '@/lib/classes';
 import { MemberSearchField } from './member-search-field';
 
-function formatName(email: string, studentCode: string | null) {
-  return studentCode ? `${email} (${studentCode})` : email;
+function formatName(email: string, studentCode: string | null, showCode = true) {
+  if (!showCode || !studentCode) {
+    return email;
+  }
+  return `${email} (${studentCode})`;
 }
 
 export default function ClassDetailPage() {
@@ -62,7 +65,7 @@ export default function ClassDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [classId]);
+  }, [classId, isAdmin]);
 
   useEffect(() => {
     void loadClass();
@@ -123,6 +126,8 @@ export default function ClassDetailPage() {
     [classOptions],
   );
   const activeStudentCount = activeStudents.length;
+  const showTeacherManagement = isAdmin;
+  const showStudentOperationalDetails = isAdmin;
 
   const handleTransferStudent = async () => {
     if (!transferringStudentId || !transferTargetClassId) {
@@ -244,16 +249,18 @@ export default function ClassDetailPage() {
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Estudantes ativos
+                    Alunos ativos
                   </span>
                   <p className="mt-2 text-2xl font-bold text-slate-900">{classData.student_count}</p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Professores ativos
-                  </span>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{activeTeachers.length}</p>
-                </div>
+                {showTeacherManagement ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Professores ativos
+                    </span>
+                    <p className="mt-2 text-2xl font-bold text-slate-900">{activeTeachers.length}</p>
+                  </div>
+                ) : null}
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                     Estado
@@ -279,8 +286,8 @@ export default function ClassDetailPage() {
             </div>
           </div>
 
-          <section className="grid gap-6 xl:grid-cols-2">
-            {isAdmin ? (
+          <section className={`grid gap-6 ${showTeacherManagement ? 'xl:grid-cols-2' : ''}`}>
+            {showTeacherManagement ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -359,9 +366,9 @@ export default function ClassDetailPage() {
               </div>
             ) : null}
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
                   <h2 className="text-lg font-semibold text-slate-900">Estudantes ativos</h2>
                   <p className="mt-1 text-sm text-slate-600">Alunos desta turma.</p>
                 </div>
@@ -370,7 +377,7 @@ export default function ClassDetailPage() {
                 </span>
               </div>
 
-              {isAdmin ? (
+              {showTeacherManagement ? (
                 <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -396,7 +403,13 @@ export default function ClassDetailPage() {
                         <option value="">Selecione um estudante</option>
                         {activeStudents.map((membership) => (
                           <option key={membership.id} value={membership.student_id}>
-                            {membership.student ? formatName(membership.student.email, membership.student.student_code) : membership.student_id}
+                            {membership.student
+                              ? formatName(
+                                  membership.student.email,
+                                  membership.student.student_code,
+                                  showStudentOperationalDetails,
+                                )
+                              : membership.student_id}
                           </option>
                         ))}
                       </select>
@@ -448,7 +461,7 @@ export default function ClassDetailPage() {
                 </div>
               ) : null}
 
-              {isAdmin ? (
+              {showTeacherManagement ? (
                 <div className="mt-6 rounded-xl border border-violet-200 bg-violet-50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -510,7 +523,7 @@ export default function ClassDetailPage() {
                 </div>
               ) : null}
 
-              {isAdmin ? (
+              {showTeacherManagement ? (
                 <MemberSearchField
                   role="student"
                   title="Vincular estudante(s)"
@@ -529,9 +542,9 @@ export default function ClassDetailPage() {
                   Nenhum estudante vinculado.
                 </p>
               ) : (
-                  <div className="mt-6 space-y-3">
-                    {classData.memberships.map((membership) => (
-                      <article
+                <div className="mt-6 space-y-3">
+                  {classData.memberships.map((membership) => (
+                    <article
                       key={membership.id}
                       className="rounded-xl border border-slate-200 bg-slate-50 p-4"
                     >
@@ -542,15 +555,18 @@ export default function ClassDetailPage() {
                               ? formatName(
                                   membership.student.email,
                                   membership.student.student_code,
+                                  showStudentOperationalDetails,
                                 )
                               : membership.student_id}
                           </p>
                           <p className="text-sm text-slate-600">
                             {membership.academic_period || 'Sem período'}
                           </p>
-                          <p className="text-xs text-slate-500">
-                            {membership.student?.is_active ? 'Conta ativa' : 'Conta inativa'}
-                          </p>
+                          {showStudentOperationalDetails ? (
+                            <p className="text-xs text-slate-500">
+                              {membership.student?.is_active ? 'Conta ativa' : 'Conta inativa'}
+                            </p>
+                          ) : null}
                         </div>
                         <span
                           className={[
@@ -563,7 +579,7 @@ export default function ClassDetailPage() {
                           {membership.is_active ? 'Ativo' : 'Arquivado'}
                         </span>
                       </div>
-                      {isAdmin && membership.is_active && (
+                      {showTeacherManagement && membership.is_active && (
                         <button
                           type="button"
                           onClick={() => handleRemoveStudent(membership.student_id)}
@@ -573,7 +589,7 @@ export default function ClassDetailPage() {
                           {removingMembershipId === membership.student_id
                             ? 'Removendo...'
                             : 'Remover vínculo do estudante'}
-                        </button>
+                          </button>
                       )}
                     </article>
                   ))}

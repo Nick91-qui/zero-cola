@@ -371,7 +371,7 @@ describe('Classes frontend flow', () => {
 
     await waitFor(() => {
       expect(archiveSpy).toHaveBeenCalledWith('class-1');
-      expect(screen.getByText('Arquivada')).toBeInTheDocument();
+      expect(screen.getAllByText('Arquivada')).toHaveLength(2);
     });
   });
 
