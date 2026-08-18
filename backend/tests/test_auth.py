@@ -134,3 +134,12 @@ def test_get_current_user_works_with_cookie_session(override_get_db, test_db_ses
     assert response.status_code == 200
     assert response.json()["email"] == test_user_data["email"]
     cookie_client.cookies.clear()
+
+
+def test_get_current_user_invalid_cookie_token_returns_401(override_get_db):
+    cookie_client = TestClient(app)
+    cookie_client.cookies.set("access_token", "not-a-valid-jwt", path="/")
+
+    response = cookie_client.get("/api/v1/auth/me")
+    assert response.status_code == 401
+    cookie_client.cookies.clear()

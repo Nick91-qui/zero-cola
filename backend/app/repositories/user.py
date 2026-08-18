@@ -32,7 +32,10 @@ class UserRepository:
 
     def get_by_id(self, user_id: str | UUID) -> User | None:
         if isinstance(user_id, str):
-            user_id = UUID(user_id)
+            try:
+                user_id = UUID(user_id)
+            except ValueError:
+                return None
         return self.db.query(User).filter(User.id == user_id).first()
 
     def get_all(self, skip: int = 0, limit: int = 100) -> list[User]:
