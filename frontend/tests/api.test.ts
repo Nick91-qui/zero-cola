@@ -31,7 +31,7 @@ describe('api auth refresh', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      'http://localhost:8000/api/v1/auth/refresh',
+      '/api/v1/auth/refresh',
       expect.objectContaining({
         method: 'POST',
         credentials: 'include',
