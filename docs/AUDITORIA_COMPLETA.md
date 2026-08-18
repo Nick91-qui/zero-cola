@@ -365,7 +365,7 @@ Situação atual:
 
 - a regra de uma matrícula ativa por período já é aplicada no backend;
 - o backend já permite criar turma vazia e depois vincular professores/alunos;
-- ainda falta um atalho operacional para o caso anual de promoção/migração.
+- a UI da turma já expõe transferência individual e promoção em lote para migração anual;
 
 ### 6.2 Confirmações destrutivas e UX administrativa
 
@@ -471,7 +471,7 @@ Em termos práticos:
 ### P0 - Alta prioridade
 
 - [x] Padronizar confirmações destrutivas para arquivar turma, arquivar avaliação, inativar questão e excluir gabarito OMR.
-- [ ] Criar um atalho operacional para a promoção anual dos alunos sem depender de remoção e re-vinculação manual.
+- [x] Criar um atalho operacional para a promoção anual dos alunos sem depender de remoção e re-vinculação manual.
 
 ### P1 - Prioridade média
 
