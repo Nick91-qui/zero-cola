@@ -49,6 +49,14 @@ export interface ClassDetail extends ClassSummary {
   teachers: ClassTeacher[];
 }
 
+export interface ClassStudentTransferResponse {
+  student_id: string;
+  source_class_id: string;
+  target_class_id: string;
+  source_membership: ClassStudent;
+  target_membership: ClassStudent;
+}
+
 export interface ClassCreatePayload {
   name: string;
   academic_period?: string | null;
@@ -112,6 +120,17 @@ export function addTeachersToClass(classId: string, teacherIds: string[]) {
 export function removeStudentFromClass(classId: string, studentId: string) {
   return apiFetch<void>(`/classes/${classId}/students/${studentId}`, {
     method: 'DELETE',
+  });
+}
+
+export function transferStudentBetweenClasses(
+  classId: string,
+  studentId: string,
+  targetClassId: string,
+) {
+  return apiFetch<ClassStudentTransferResponse>(`/classes/${classId}/students/${studentId}/transfer`, {
+    method: 'POST',
+    body: JSON.stringify({ target_class_id: targetClassId }),
   });
 }
 
