@@ -7,7 +7,7 @@
 ## 1. Resumo Executivo do Status
 
 - **Status Geral**: os módulos backend centrais do COLA-ZERO estão implementados e validados, incluindo autenticação/RBAC, OMR, AnswerKey/Attempt Engine, Question Bank, Workflow A, Workflow B, classes, auditoria, consentimentos e LGPD básica. A Fase 8 de produção e visualização de provas está concluída e validada, com a pré-visualização da prova, a montagem por seleção de questões e a exportação de folhas OMR personalizadas já disponíveis no backend/frontend.
-- **Frontend**: já existem as telas principais para autenticação, painel, avaliações, tentativas online, OMR, administração de usuários, classes, auditoria, privacidade e consentimentos; a transferência entre turmas e a promoção anual em lote já estão disponíveis no detalhe da turma e o que ainda precisa evoluir é o refinamento de UX em ações destrutivas e detalhes operacionais.
+- **Frontend**: já existem as telas principais para autenticação, painel, avaliações, tentativas online, OMR, administração de usuários, classes, auditoria, privacidade e consentimentos; a transferência entre turmas e a promoção anual em lote já estão disponíveis no detalhe da turma. O fluxo `/attempts/start` agora exige consentimento de monitoramento antes de liberar a prova online, e o que ainda precisa evoluir é o refinamento de UX em ações destrutivas e detalhes operacionais.
 - **Suíte de Testes Automatizados**: a validação consolidada mais recente registrou **175 testes de backend aprovados** e **22 testes Vitest de frontend aprovados**.
 - **Infraestrutura**: o ambiente continua containerizado com Docker e Docker Compose (`postgres`, `backend`, `frontend`).
 
@@ -57,7 +57,7 @@
 - `/classes` e `/classes/[classId]` com leitura operacional mais enxuta para alunos, professores e vínculos
 - `/questions`, `/questions/new`, `/questions/[questionId]`
 - `/exams`, `/exams/new`, `/exams/[examId]`
-- `/attempts/start`, `/attempts/[attemptId]`
+- `/attempts/start`, `/attempts/[attemptId]` com bloqueio explícito por consentimento de monitoramento
 - `/omr`, `/omr/new`, `/omr/[templateId]`, `/omr/scans/[scanId]`
 - `/privacy` e `/consents`
 

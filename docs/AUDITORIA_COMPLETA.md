@@ -387,7 +387,7 @@ Situação atual:
 O backend já expõe os recursos, e a interface já cobre a base de privacidade e consentimentos, mas ainda pode evoluir em:
 
 - tela pública de política de privacidade;
-- fluxo mais explícito de consentimento antes da prova online;
+- fluxo administrativo mais legível para consentimentos e eventos sensíveis;
 - visualização de consentimentos do usuário;
 - tela administrativa para eventos de segurança;
 - tela administrativa para revisão de solicitações de anonimização.
@@ -477,7 +477,7 @@ Em termos práticos:
 
 - [x] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
 - [x] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
-- [ ] Refinar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
+- [x] Refinar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
 - [ ] Expor visualização mais legível dos eventos de segurança, consentimentos e solicitações de anonimização no frontend administrativo.
 
 ### P2 - Prioridade baixa
@@ -523,7 +523,8 @@ Em termos práticos:
 4. Fechar o fluxo de consentimento no frontend.
    - expor a política de privacidade de forma acessível;
    - registrar consentimento de monitoramento antes da prova;
-   - mostrar o estado atual do consentimento ao usuário.
+   - mostrar o estado atual do consentimento ao usuário;
+   - bloquear o início da prova quando o consentimento não estiver ativo.
 5. Fechar a visão administrativa de LGPD e integridade.
    - criar tela para consultar consentimentos;
    - criar tela ou seção para consultar eventos de segurança;

@@ -8,12 +8,12 @@
 - [x] Implementar fluxo explícito de transferência de aluno entre turmas, com histórico e auditoria.
 - [x] Padronizar confirmações destrutivas para arquivar turma, arquivar avaliação, inativar questão e excluir gabarito OMR.
 - [x] Criar um atalho operacional para a promoção anual dos alunos sem depender de remoção e re-vinculação manual.
+- [x] Consolidar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
 
 ## P1
 
 - [x] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
 - [x] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
-- [ ] Consolidar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
 - [ ] Expor visualização mais legível dos eventos de segurança e consentimentos no frontend administrativo.
 
 ## P2
