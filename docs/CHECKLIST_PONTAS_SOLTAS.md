@@ -6,7 +6,7 @@
 ## P0
 
 - [x] Implementar fluxo explícito de transferência de aluno entre turmas, com histórico e auditoria.
-- [ ] Padronizar confirmações destrutivas para arquivar turma, arquivar avaliação, inativar questão e excluir gabarito OMR.
+- [x] Padronizar confirmações destrutivas para arquivar turma, arquivar avaliação, inativar questão e excluir gabarito OMR.
 - [ ] Criar um atalho operacional para a promoção anual dos alunos sem depender de remoção e re-vinculação manual.
 
 ## P1
