@@ -95,10 +95,10 @@ export default function ExamsListPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
               Avaliações
             </p>
-            <h1 className="mt-2 text-3xl font-bold text-slate-900">Fluxo do professor</h1>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">Avaliações</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-600">
-              Comece pela criação da questão no banco, siga para a montagem da prova online e, se
-              necessário, gere o gabarito OMR para a versão impressa.
+              Crie, publique e exporte avaliações. Quando precisar revisar o acervo, vá para o
+              banco de questões.
             </p>
           </div>
 
@@ -148,18 +148,18 @@ export default function ExamsListPage() {
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            2. Criação
+            2. Prova
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Crie habilidades e questões nas rotas específicas.
+            Monte uma avaliação nova ou publique um rascunho existente.
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            3. Prova
+            3. Impressa
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            Monte a avaliação em `/exams/new` ou gere o gabarito OMR se for impresso.
+            Se precisar de versão impressa, gere o gabarito OMR no fluxo dedicado.
           </p>
         </div>
       </section>

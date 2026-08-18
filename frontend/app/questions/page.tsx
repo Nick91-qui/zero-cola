@@ -63,40 +63,7 @@ export default function QuestionsPage() {
             >
               Criar questões
             </Link>
-            <Link
-              href="/exams/new"
-              className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
-            >
-              Montar prova
-            </Link>
           </div>
-        </div>
-      </section>
-
-      <section className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            1. Consulta
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
-            Use filtros para localizar questões existentes.
-          </p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            2. Criação
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
-            A criação acontece nas telas específicas de habilidade e questão.
-          </p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            3. Prova
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
-            O caminho para montar avaliação fica em `/exams/new`.
-          </p>
         </div>
       </section>
 

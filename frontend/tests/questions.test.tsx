@@ -66,10 +66,6 @@ describe('Question bank frontend flow', () => {
       'href',
       '/questions/new',
     );
-    expect(screen.getByRole('link', { name: 'Montar prova' })).toHaveAttribute(
-      'href',
-      '/exams/new',
-    );
   });
 
   it('shows a question card with an explicit edit link', async () => {
