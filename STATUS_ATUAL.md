@@ -66,7 +66,7 @@
 ## 3. Limitações Conhecidas
 
 1. **Confirmações destrutivas**: nem todas as telas usam a mesma linguagem de risco e modal de confirmação para arquivar, inativar ou excluir.
-2. **Analytics mais profundos**: a base de relatório existe, mas a exploração por habilidade e a comparação visual ainda podem evoluir.
+2. **Analytics mais profundos**: a base de relatório existe e já mostra leitura por habilidade na página de estatísticas da avaliação; a comparação visual e consolidação em painéis mais amplos ainda podem evoluir.
 3. **Frontend Administrativo de Step 9**: a camada visual para classes, auditoria, consentimentos, eventos de segurança e LGPD ainda pode ser expandida.
 4. **Anti-Cheating Analítico**: a base de eventos existe, mas a análise pedagógica de suspeitas continua como funcionalidade futura.
 5. **OMR em Lote e Storage**: o fluxo atual cobre layouts padrão de 10 a 100 questões, mas ainda falta batch multipágina de PDFs e abstração de storage para escala horizontal.

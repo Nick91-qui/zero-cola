@@ -475,7 +475,7 @@ Em termos práticos:
 
 ### P1 - Prioridade média
 
-- [ ] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
+- [x] Ampliar a camada visual de analytics pedagógico com gráficos mais ricos e leitura por habilidade.
 - [x] Melhorar os detalhes de turma e usuário para leitura operacional mais clara.
 - [ ] Refinar a tela pública de privacidade e os fluxos de consentimento antes das provas online.
 - [ ] Expor visualização mais legível dos eventos de segurança, consentimentos e solicitações de anonimização no frontend administrativo.
