@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api';
 
 export interface User {
   id: string;
@@ -21,30 +22,21 @@ export interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+type LoginResponse = {
+  user: User;
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const API_URL = '/api/v1';
 
   useEffect(() => {
     let active = true;
 
     const restoreSession = async () => {
       try {
-        const response = await fetch(`${API_URL}/auth/me`, {
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          if (active) {
-            setUser(null);
-          }
-          return;
-        }
-
-        const data = await response.json();
+        const data = await apiFetch<User>('/auth/me');
         if (active) {
           setUser(data);
         }
@@ -64,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [API_URL]);
+  }, []);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -72,22 +64,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
 
       try {
-        const response = await fetch(`${API_URL}/auth/login`, {
+        const data = await apiFetch<LoginResponse>('/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ email, password }),
-          credentials: 'include',
         });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Login failed');
-        }
-
-        const data = await response.json();
-        setUser(data.user ?? data);
+        setUser(data.user);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Login failed';
         setError(message);
@@ -96,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [API_URL],
+    [],
   );
 
   const logout = useCallback(async () => {
@@ -104,17 +88,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
-      await fetch(`${API_URL}/auth/logout`, {
+      await apiFetch('/auth/logout', {
         method: 'POST',
-        credentials: 'include',
-      }).catch(() => {
-        // Ignore errors on logout - still clear local state
       });
+    } catch {
+      // Ignore logout failures and still clear local state.
     } finally {
       setUser(null);
       setIsLoading(false);
     }
-  }, [API_URL]);
+  }, []);
 
   const value: AuthContextType = {
     user,
