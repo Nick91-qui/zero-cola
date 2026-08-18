@@ -1,8 +1,12 @@
+from typing import Optional
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role
 from app.db.session import get_db
+from app.models.enums import UserRole
 from app.schemas.consent import ConsentCreate, ConsentResponse, MonitoringConsentCreate
 from app.services.consent import ConsentService
 
@@ -71,3 +75,24 @@ async def list_my_consents(
 ):
     service = ConsentService(db)
     return service.get_consents(user_id=current_user.id)
+
+
+@router.get("/admin/consents", response_model=list[ConsentResponse])
+@require_role(UserRole.ADMIN)
+async def list_all_consents(
+    skip: int = 0,
+    limit: int = 100,
+    user_id: Optional[UUID] = None,
+    consent_type: Optional[str] = None,
+    granted: Optional[bool] = None,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ConsentService(db)
+    return service.list_consents(
+        skip=skip,
+        limit=limit,
+        user_id=user_id,
+        consent_type=consent_type,
+        granted=granted,
+    )

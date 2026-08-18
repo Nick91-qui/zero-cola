@@ -643,6 +643,10 @@ def test_audit_logs_consents_and_monitoring_security_events(override_get_db, tes
     assert my_consents_res.status_code == 200
     assert [item["consent_type"] for item in my_consents_res.json()] == ["monitoring"]
 
+    admin_consents_res = client.get("/api/v1/admin/consents", headers=admin_headers)
+    assert admin_consents_res.status_code == 200, admin_consents_res.text
+    assert [item["consent_type"] for item in admin_consents_res.json()] == ["monitoring"]
+
     first_event_res = client.post(
         f"/api/v1/attempts/{attempt.id}/security-events",
         json={"event_type": "blur"},
@@ -692,6 +696,8 @@ def test_audit_logs_consents_and_monitoring_security_events(override_get_db, tes
 
     assert client.get("/api/v1/audit-logs", headers=teacher_headers).status_code == 403
     assert client.get("/api/v1/audit-logs", headers=student_headers).status_code == 403
+    assert client.get("/api/v1/admin/consents", headers=teacher_headers).status_code == 403
+    assert client.get("/api/v1/admin/consents", headers=student_headers).status_code == 403
 
 
 def test_privacy_export_and_anonymization_blocks_access(override_get_db, test_db_session):

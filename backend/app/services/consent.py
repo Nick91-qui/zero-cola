@@ -114,6 +114,29 @@ class ConsentService:
             .all()
         )
 
+    def list_consents(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        user_id: UUID | None = None,
+        consent_type: str | None = None,
+        granted: bool | None = None,
+    ) -> list[Consent]:
+        query = self.db.query(Consent)
+        if user_id is not None:
+            query = query.filter(Consent.user_id == user_id)
+        if consent_type is not None:
+            query = query.filter(Consent.consent_type == consent_type.strip().lower())
+        if granted is not None:
+            query = query.filter(Consent.granted == granted)
+        return (
+            query.order_by(Consent.updated_at.desc(), Consent.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
     def has_granted(self, *, user_id: UUID, consent_type: str) -> bool:
         consent = self.get_consent(user_id=user_id, consent_type=consent_type)
         return bool(consent and consent.granted)
