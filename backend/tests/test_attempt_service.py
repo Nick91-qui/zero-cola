@@ -15,6 +15,7 @@ from app.models.user import User
 from app.schemas.exam import ExamCreate, ExamQuestionCreate, QuestionCreate
 from app.services.attempt import AttemptService
 from app.services.class_service import ClassService
+from app.services.consent import ConsentService
 from app.services.exam import ExamService
 
 
@@ -32,6 +33,12 @@ def _create_teacher_and_student(test_db_session, *, student_code: str = "12345")
     )
     test_db_session.add_all([teacher, student])
     test_db_session.commit()
+    ConsentService(test_db_session).upsert_consent(
+        user_id=student.id,
+        consent_type="monitoring",
+        purpose="online_exam_monitoring",
+        granted=True,
+    )
     return teacher, student
 
 
@@ -275,6 +282,12 @@ def test_online_attempt_respects_max_attempts_and_student_isolation(test_db_sess
     )
     test_db_session.add(other_student)
     test_db_session.commit()
+    ConsentService(test_db_session).upsert_consent(
+        user_id=other_student.id,
+        consent_type="monitoring",
+        purpose="online_exam_monitoring",
+        granted=True,
+    )
     class_obj, admin = _create_class_and_enroll_student(
         test_db_session,
         teacher=teacher,
@@ -309,6 +322,26 @@ def test_online_attempt_respects_max_attempts_and_student_isolation(test_db_sess
 
     with pytest.raises(PermissionError):
         service.save_answer(session.attempt.id, 1, "A", other_student)
+
+
+def test_online_attempt_requires_monitoring_consent(test_db_session):
+    teacher, student = _create_teacher_and_student(test_db_session, student_code="44444")
+    ConsentService(test_db_session).revoke_consent(
+        user_id=student.id,
+        consent_type="monitoring",
+    )
+    class_obj, _admin = _create_class_and_enroll_student(
+        test_db_session,
+        teacher=teacher,
+        student=student,
+        name="Turma consentimento",
+    )
+    exam = _create_workflow_a_exam(test_db_session, teacher, class_ids=[class_obj.id])
+
+    service = AttemptService(test_db_session)
+
+    with pytest.raises(PermissionError, match="Monitoring consent is required"):
+        service.start_online_attempt(exam.id, student)
 
 
 def test_online_attempt_blocks_draft_and_archived_exams(test_db_session):

@@ -6,6 +6,7 @@ import AttemptPage from '../app/attempts/[attemptId]/page';
 import DashboardPage from '../app/dashboard/page';
 import * as attemptsLib from '@/lib/attempts';
 import * as examsLib from '@/lib/exams';
+import * as consentsLib from '@/lib/consents';
 
 const routerPush = vi.fn();
 
@@ -34,6 +35,21 @@ describe('Online attempt frontend flow', () => {
     routerPush.mockReset();
     vi.restoreAllMocks();
     vi.spyOn(attemptsLib, 'listAvailableExams').mockResolvedValue([]);
+    vi.spyOn(consentsLib, 'listMyConsents').mockResolvedValue([
+      {
+        id: 'consent-1',
+        user_id: 'student-1',
+        consent_type: 'monitoring',
+        purpose: 'online_exam_monitoring',
+        granted: true,
+        granted_at: new Date().toISOString(),
+        revoked_at: null,
+        policy_version: 'step9-v1',
+        details: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]);
   });
 
   it('starts an online attempt from the available exams list', async () => {
@@ -90,6 +106,23 @@ describe('Online attempt frontend flow', () => {
 
     expect(await screen.findByText('Provas disponíveis')).toBeInTheDocument();
     expect(screen.queryByLabelText('ID da avaliação manual')).not.toBeInTheDocument();
+  });
+
+  it('guides the student through consent before starting a test', async () => {
+    vi.spyOn(consentsLib, 'listMyConsents').mockResolvedValue([]);
+
+    render(<StartAttemptPage />);
+
+    expect(await screen.findByText('Consentimento de monitoramento')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /O sistema só permite iniciar uma prova online após registrar o consentimento de monitoramento\./i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Registrar consentimento' })).toHaveAttribute(
+      'href',
+      '/consents',
+    );
   });
 
   it('renders one question at a time and supports autosave, navigation and submission', async () => {

@@ -27,6 +27,7 @@ from app.schemas.attempt import (
     StudentAvailableExamResponse,
 )
 from app.services.answer_key import AnswerKeyService
+from app.services.consent import ConsentService
 from app.services.exam import ExamService
 
 
@@ -37,10 +38,16 @@ class AttemptService:
         self.exam_repo = ExamRepository(db)
         self.grade_repo = GradeRepository(db)
         self.answer_key_service = AnswerKeyService(db)
+        self.consent_service = ConsentService(db)
         self.exam_service = ExamService(db)
 
     def start_online_attempt(self, exam_id: UUID, student: User) -> OnlineAttemptSessionResponse:
         exam = self._require_published_exam(exam_id, student)
+
+        if not self.consent_service.has_granted(user_id=student.id, consent_type="monitoring"):
+            raise PermissionError(
+                "Monitoring consent is required before starting an online attempt."
+            )
 
         active_attempt = self.attempt_repo.get_latest_for_student_exam_source(
             exam.id,
