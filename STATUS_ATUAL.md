@@ -9,6 +9,7 @@
 - **Status Geral**: os módulos backend centrais do COLA-ZERO estão implementados e validados, incluindo autenticação/RBAC, OMR, AnswerKey/Attempt Engine, Question Bank, Workflow A, Workflow B, classes, auditoria, consentimentos e LGPD básica. A Fase 8 de produção e visualização de provas está concluída e validada, com a pré-visualização da prova, a montagem por seleção de questões e a exportação de folhas OMR personalizadas já disponíveis no backend/frontend.
 - **Frontend**: já existem as telas principais para autenticação, painel, avaliações, tentativas online, OMR, administração de usuários, classes, auditoria, privacidade e consentimentos; a transferência entre turmas e a promoção anual em lote já estão disponíveis no detalhe da turma. O fluxo `/attempts/start` exige consentimento de monitoramento antes de liberar a prova online, e o que ainda precisa evoluir é o refinamento de UX em ações destrutivas e detalhes operacionais.
 - **Validação recente**: o backend voltou a subir após a consolidação das heads do Alembic e o proxy do Next foi smoke-testado nas rotas principais de `auth`, `classes`, `questions`, `admin`, `audit` e `consents` sem novos `500` nas leituras verificadas.
+- **Validação OMR recente**: o upload em lote para PDFs multipágina foi validado em nível de serviço e de rota HTTP multipart, com uma página processada por scan.
 - **Suíte de Testes Automatizados**: a validação consolidada mais recente registrou **175 testes de backend aprovados** e **22 testes Vitest de frontend aprovados**.
 - **Infraestrutura**: o ambiente continua containerizado com Docker e Docker Compose (`postgres`, `backend`, `frontend`).
 
@@ -70,20 +71,19 @@
 2. **Analytics mais profundos**: a base de relatório existe e já mostra leitura por habilidade na página de estatísticas da avaliação; a comparação visual e consolidação em painéis mais amplos ainda podem evoluir.
 3. **Frontend Administrativo de Step 9**: a camada visual para classes, auditoria, consentimentos, eventos de segurança e LGPD já tem uma base operacional, mas ainda pode ser refinada em filtros, contexto e navegação.
 4. **Anti-Cheating Analítico**: a base de eventos existe, mas a análise pedagógica de suspeitas continua como funcionalidade futura.
-5. **OMR em Lote e Storage**: o fluxo atual cobre layouts padrão de 10 a 100 questões, mas ainda falta batch multipágina de PDFs e abstração de storage para escala horizontal.
+5. **OMR em Escala**: o fluxo atual já cobre layouts padrão de 10 a 100 questões, batch multipágina de PDFs e abstração de storage local/MinIO; o restante é amadurecimento de escala horizontal e operação distribuída.
 
 ---
 
 ## 4. Débitos Técnicos
 
 1. **Migração de Hashing de Senha**: permanece a troca para `Argon2` como hardening pré-produção. A decisão atual é manter `bcrypt` no MVP e tratar a migração para `Argon2` como débito técnico para depois da estabilização funcional.
-2. **Persistência de Uploads OMR**: os arquivos ainda estão no filesystem local; para escala horizontal, o storage precisa de abstração. O caminho recomendado é introduzir um adaptador de storage compatível com MinIO/object storage, mantendo o filesystem local como backend de desenvolvimento enquanto o MVP amadurece.
+2. **Persistência de Uploads OMR**: a persistência já está abstraída entre filesystem local e MinIO; o caminho recomendado agora é operacionalizar o backend distribuído em produção e manter o filesystem local apenas como backend de desenvolvimento.
 
 ## 5. Próximo Passo Planejado
 
-1. **OMR em escala**: abstração de storage para uploads e processamento em lote de PDFs multipágina.
-2. **Cobertura de integração**: ampliar a validação automatizada dos fluxos mais sensíveis, especialmente admin, auditoria e mobilidade acadêmica.
-3. **UX administrativa residual**: refinamento visual dos painéis menos usados no dia a dia e das telas densas já implementadas.
+1. **Cobertura de integração**: ampliar a validação automatizada dos fluxos mais sensíveis, especialmente admin, auditoria e mobilidade acadêmica.
+2. **UX administrativa residual**: refinamento visual dos painéis menos usados no dia a dia e das telas densas já implementadas.
 
 ---
 

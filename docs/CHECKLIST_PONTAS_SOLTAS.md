@@ -21,6 +21,6 @@
 ## P2
 
 - [ ] Evoluir a abstração de storage para OMR com foco em escalabilidade horizontal.
-- [ ] Expandir o processamento OMR para PDFs multipágina em lote.
+- [x] Expandir o processamento OMR para PDFs multipágina em lote.
 - [ ] Revisar a cobertura de testes de integração para os fluxos mais sensíveis.
 - [ ] Preparar melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.

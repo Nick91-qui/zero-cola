@@ -38,6 +38,7 @@ Validação adicional recente:
 - o backend voltou a subir após a consolidação das heads do Alembic;
 - o proxy do frontend foi verificado nas rotas principais de `auth`, `classes`, `questions`, `admin`, `audit` e `consents` sem retorno `500` nas leituras testadas;
 - as exportações PDF e as consultas de estatísticas continuaram respondendo normalmente no caminho do navegador.
+- o upload em lote para PDFs multipágina foi validado no backend em nível de serviço e de rota multipart;
 
 ## 3. Resumo executivo
 
@@ -199,7 +200,7 @@ Implementado:
 - geração de PDF;
 - geração de preview PNG;
 - upload de imagem;
-- upload em lote;
+- upload em lote de PDFs multipágina;
 - revisão manual de scan;
 - confirmação da correção;
 - persistência em `grades`.
@@ -463,15 +464,13 @@ O que ainda falta não é a fundação do sistema, e sim a consolidação de cam
 
 - confirmações destrutivas consistentes em todas as áreas administrativas;
 - analytics mais profundo;
-- OMR em lote multipágina e storage abstrato;
+- OMR em escala horizontal e operação distribuída;
 - refinamentos finais de UX em telas densas.
 
 Fila de implementação imediata, por prioridade:
 
-1. abstração de storage para OMR com foco em escalabilidade horizontal;
-2. processamento OMR em lote para PDFs multipágina;
-3. revisão e ampliação da cobertura de testes de integração para fluxos sensíveis;
-4. melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.
+1. revisão e ampliação da cobertura de testes de integração para fluxos sensíveis;
+2. melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.
 
 Em termos práticos:
 
@@ -495,70 +494,29 @@ Em termos práticos:
 
 ### P2 - Prioridade baixa
 
-- [ ] Evoluir a abstração de storage para OMR com foco em escalabilidade horizontal.
-- [ ] Expandir o processamento OMR para PDFs multipágina em lote.
+- [x] Evoluir a abstração de storage para OMR com foco em escalabilidade horizontal.
+- [x] Expandir o processamento OMR para PDFs multipágina em lote.
 - [ ] Revisar a cobertura de testes de integração para os fluxos mais sensíveis.
 - [ ] Preparar melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.
 
 ## 10. Plano de Execução por Etapas
 
-### Etapa 1 - Fechar a base funcional
+### Etapa 1 - Consolidar validação e UX residual
 
-**Objetivo:** completar as lacunas que impedem o ciclo de manutenção e governança de ficar totalmente fechado.
+**Objetivo:** fechar a validação automatizada dos fluxos sensíveis e ajustar as telas menos usadas para que a operação diária fique mais consistente.
 
 **Entregas:**
 
-- fluxo completo de edição/versionamento do Banco de Questões exposto na API;
-- inativação/exclusão lógica de questões;
-- tela e API de política de privacidade, consentimento e solicitação de anonimização mais explícitas para o usuário;
-- visão administrativa dos eventos de segurança, consentimentos e solicitações de anonimização.
+- ampliar os testes de integração dos fluxos de admin, auditoria e mobilidade acadêmica;
+- revisar a navegação e a hierarquia visual dos painéis administrativos menos usados;
+- padronizar feedback visual em estados vazios, carregamento e ações destrutivas;
+- manter a documentação em sincronia com o estado real do projeto.
 
 **Critério de saída:**
 
-- o acervo de questões pode ser criado, consultado, versionado e inativado sem depender de caminho manual;
-- o fluxo de consentimento fica visível e rastreável;
-- o administrador consegue auditar os eventos sensíveis.
-
-#### Tarefas técnicas
-
-1. Mapear o ciclo atual do Banco de Questões.
-   - confirmar quais endpoints existem hoje;
-   - confirmar como o `Question` versionado é persistido;
-   - confirmar se há back-end service pronto para edição/inativação.
-2. Implementar a edição/versionamento da questão.
-   - criar o endpoint de update;
-   - garantir que a edição gere nova versão quando a regra exigir imutabilidade;
-   - preservar o histórico da versão anterior.
-3. Implementar a inativação lógica da questão.
-   - expor `PATCH` ou `DELETE` lógico;
-   - bloquear uso futuro de versões inativas;
-   - manter a leitura histórica intacta.
-4. Fechar o fluxo de consentimento no frontend.
-   - expor a política de privacidade de forma acessível;
-   - registrar consentimento de monitoramento antes da prova;
-   - mostrar o estado atual do consentimento ao usuário;
-   - bloquear o início da prova quando o consentimento não estiver ativo.
-5. Fechar a visão administrativa de LGPD e integridade.
-   - criar tela para consultar consentimentos;
-   - criar tela ou seção para consultar eventos de segurança;
-   - manter filtros básicos por usuário/tipo/evento.
-
-#### Sequência sugerida
-
-1. Começar pelo backend do Banco de Questões.
-   - a base técnica do versionamento e da inativação precisa existir antes da interface;
-   - sem essa camada, o frontend ficaria acoplado a uma regra incompleta.
-2. Fechar os endpoints de LGPD e integridade no backend.
-   - política de privacidade;
-   - exportação de dados;
-   - consentimento de monitoramento;
-   - listagem de eventos de segurança.
-3. Subir a interface administrativa do Banco de Questões.
-   - edição;
-   - nova versão;
-   - inativação;
-   - confirmação visual do histórico.
-4. Subir a interface de LGPD e auditoria.
+- os fluxos sensíveis passam por cobertura automatizada suficiente para reduzir regressões;
+- a navegação administrativa residual fica consistente e compreensível;
+- os documentos oficiais refletem a fila real do projeto.
    - consentimentos do usuário;
    - política pública;
    - leitura administrativa dos eventos sensíveis.

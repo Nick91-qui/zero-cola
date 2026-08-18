@@ -1,9 +1,11 @@
 from tempfile import SpooledTemporaryFile
 
 import pytest
+from fastapi.testclient import TestClient
 from starlette.datastructures import UploadFile
 
 from app.api.routes.omr import upload_scan_batch
+from app.main import app
 from app.models.enums import UserRole
 from app.models.exam import Exam
 from app.models.user import User
@@ -16,6 +18,8 @@ from tests.test_omr_service import (
     create_multi_page_pdf_bytes,
     create_synthetic_sheet_bytes,
 )
+
+client = TestClient(app)
 
 
 def create_teacher_headers(test_db_session, email: str, password: str) -> dict[str, str]:
@@ -126,6 +130,49 @@ def test_omr_api_workflow(override_get_db, test_db_session, student_user, tmp_pa
     assert float(grade.score) == 1.00
     assert grade.source_type == "OMR"
     assert grade.source_id == scan_id
+
+
+def test_omr_api_batch_upload_via_http_route(override_get_db, test_db_session, student_user):
+    headers = create_teacher_headers(
+        test_db_session,
+        "teacher_api_http@cola-zero.edu",
+        "teacherpass123",
+    )
+    teacher = test_db_session.query(User).filter(User.email == "teacher_api_http@cola-zero.edu").one()
+
+    omr_service = OMRService(test_db_session)
+    template = omr_service.create_template(
+        OMRTemplateCreate(
+            layout_version="v1_std_20q",
+            total_questions=20,
+            options_per_question=5,
+            correct_answers={"1": "A", "2": "B"},
+        ),
+        teacher_id=teacher.id,
+    )
+    pdf_bytes = create_multi_page_pdf_bytes(
+        student_code="77777",
+        pages=[
+            {"1": "A", "2": "B"},
+            {"1": "A", "2": "C"},
+        ],
+    )
+
+    response = client.post(
+        "/api/v1/omr/scans/upload-batch",
+        headers=headers,
+        data={"omr_template_id": str(template.id)},
+        files={"file": ("batch.pdf", pdf_bytes, "application/pdf")},
+    )
+
+    assert response.status_code == 201, response.text
+    payload = response.json()
+    assert payload["omr_template_id"] == str(template.id)
+    assert payload["source_filename"] == "batch.pdf"
+    assert payload["total_pages"] == 2
+    assert len(payload["scans"]) == 2
+    assert {scan["status"] for scan in payload["scans"]} == {"success"}
+    assert all(scan["student_id"] == str(student_user.id) for scan in payload["scans"])
 
 
 def test_omr_api_template_isolation_between_teachers(

@@ -18,7 +18,7 @@ O desenvolvimento do COLA-ZERO segue uma estratégia incremental orientada a ent
 | **Fase 6** | Interface Frontend para Analytics & Dashboard (`/dashboard`) | ✅ Concluído no baseline atual | P1 |
 | **Fase 7** | Hardening de Segurança, Auditoria & LGPD | ✅ Concluído e validado | P2 |
 | **Fase 8** | Produção e Visualização de Provas (`Question Bank` → `Exam Builder` → `OMR personalizado`) | ✅ Concluído e validado | P2 |
-| **Fase 9** | Processamento OMR em Lote (PDF multipágina) & Escala | ⏳ Futuro | P3 |
+| **Fase 9** | Escala OMR, storage distribuído e funcionalidades avançadas | 🔄 Em evolução | P3 |
 
 ---
 
@@ -111,10 +111,13 @@ Esses itens já não são fundação nova; são as próximas pendências de prod
 
 Prioridade da fila:
 
-1. abstração de storage para OMR com foco em escalabilidade horizontal;
-2. processamento OMR em lote para PDFs multipágina;
-3. revisão e ampliação da cobertura de testes de integração para fluxos sensíveis;
-4. melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.
+1. revisão e ampliação da cobertura de testes de integração para fluxos sensíveis;
+2. melhoria visual e de navegação para painéis administrativos menos usados no dia a dia.
+
+Itens já validados recentemente:
+
+- abstração de storage para OMR local/MinIO;
+- processamento OMR em lote para PDFs multipágina.
 
 Itens de UX e operação já tratados na trilha recente:
 
@@ -127,7 +130,7 @@ Itens de UX e operação já tratados na trilha recente:
 ### Fase 9 — Escala OMR e Funcionalidades Avançadas (Pós-MVP)
 - **Objetivo**: Expandir as capacidades operacionais do módulo impresso para grandes redes de ensino.
 - **Entregas**:
-  - Processamento OMR em lote de PDFs multipágina digitalizados em escâneres alimentadores.
+  - Processamento OMR em lote de PDFs multipágina digitalizados em escâneres alimentadores, já implementado no backend e validado por teste de API.
   - Suporte a novos layouts de folhas de respostas (ex: 100 questões, formato Simulado ENEM).
   - Abstração de storage OMR compatível com MinIO/Object Storage, preservando o filesystem local como backend de desenvolvimento.
 - **Prioridade**: P3 (Futuro).
