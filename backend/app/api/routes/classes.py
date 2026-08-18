@@ -13,6 +13,8 @@ from app.schemas.class_ import (
     ClassResponse,
     ClassStudentCreate,
     ClassStudentResponse,
+    ClassStudentTransferCreate,
+    ClassStudentTransferResponse,
     ClassTeacherCreate,
     ClassTeacherResponse,
     ClassUpdate,
@@ -266,6 +268,37 @@ async def remove_student(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     return None
+
+
+@router.post(
+    "/classes/{class_id}/students/{student_id}/transfer",
+    response_model=ClassStudentTransferResponse,
+)
+@require_role(UserRole.ADMIN)
+async def transfer_student(
+    class_id: UUID,
+    student_id: UUID,
+    payload: ClassStudentTransferCreate,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ClassService(db)
+    try:
+        result = service.transfer_student(
+            source_class_id=class_id,
+            target_class_id=payload.target_class_id,
+            student_id=student_id,
+            current_user=current_user,
+        )
+        return ClassStudentTransferResponse.model_validate(result)
+    except ValueError as exc:
+        message = str(exc)
+        status_code = status.HTTP_409_CONFLICT
+        if "not found" in message.lower():
+            status_code = status.HTTP_404_NOT_FOUND
+        elif "archived" in message.lower() or "differ" in message.lower():
+            status_code = status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status_code=status_code, detail=message)
 
 
 @router.get("/me/classes", response_model=list[ClassResponse])

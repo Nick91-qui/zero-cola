@@ -313,6 +313,133 @@ class ClassService:
         )
         self.db.commit()
 
+    def transfer_student(
+        self,
+        *,
+        source_class_id: UUID,
+        target_class_id: UUID,
+        student_id: UUID,
+        current_user: User,
+    ) -> dict[str, object]:
+        self._require_admin(current_user)
+        if source_class_id == target_class_id:
+            raise ValueError("Source and target classes must differ.")
+
+        source_class = self._require_class(source_class_id, current_user, include_inactive=True)
+        target_class = self._require_class(target_class_id, current_user, include_inactive=True)
+
+        if not source_class.is_active:
+            raise ValueError(f"Class {source_class_id} is archived.")
+        if not target_class.is_active:
+            raise ValueError(f"Class {target_class_id} is archived.")
+
+        student = self.db.query(User).filter(User.id == student_id).first()
+        if (
+            student is None
+            or student.role != UserRole.STUDENT
+            or not student.is_active
+            or student.anonymized_at is not None
+        ):
+            raise ValueError(f"Student {student_id} not found.")
+
+        source_membership = (
+            self.db.query(ClassStudent)
+            .filter(
+                ClassStudent.class_id == source_class.id,
+                ClassStudent.student_id == student_id,
+            )
+            .first()
+        )
+        if source_membership is None or not source_membership.is_active:
+            raise ValueError(
+                f"Student {student_id} is not an active member of class {source_class_id}."
+            )
+
+        target_membership = (
+            self.db.query(ClassStudent)
+            .filter(
+                ClassStudent.class_id == target_class.id,
+                ClassStudent.student_id == student_id,
+            )
+            .first()
+        )
+        if target_membership is not None and target_membership.is_active:
+            raise ValueError(f"Student {student_id} is already an active member of class {target_class_id}.")
+
+        period_conflict = (
+            self.db.query(ClassStudent)
+            .join(Class, Class.id == ClassStudent.class_id)
+            .filter(
+                ClassStudent.student_id == student_id,
+                ClassStudent.is_active.is_(True),
+                Class.academic_period == target_class.academic_period,
+                ClassStudent.class_id != source_class.id,
+                ClassStudent.class_id != target_class.id,
+            )
+            .first()
+        )
+        if period_conflict is not None:
+            raise ValueError(
+                "Student "
+                f"{student_id} already has an active class for period {target_class.academic_period}."
+            )
+
+        now = datetime.now(timezone.utc)
+        source_membership.is_active = False
+        source_membership.archived_at = now
+
+        if target_membership is None:
+            target_membership = ClassStudent(
+                class_id=target_class.id,
+                student_id=student_id,
+                academic_period=target_class.academic_period,
+                is_active=True,
+            )
+            self.db.add(target_membership)
+            self.db.flush()
+        else:
+            target_membership.is_active = True
+            target_membership.archived_at = None
+            target_membership.academic_period = target_class.academic_period
+
+        self.audit_log_service.record(
+            event_type="class_student.transfer",
+            user_id=current_user.id,
+            resource_type="class_student",
+            resource_id=source_membership.id,
+            metadata={
+                "student_id": str(student_id),
+                "source_class_id": str(source_class.id),
+                "target_class_id": str(target_class.id),
+                "source_membership_id": str(source_membership.id),
+                "target_membership_id": str(target_membership.id),
+                "academic_period": target_class.academic_period,
+            },
+        )
+
+        self.db.commit()
+        source_membership = (
+            self.db.query(ClassStudent)
+            .options(joinedload(ClassStudent.student))
+            .filter(ClassStudent.id == source_membership.id)
+            .first()
+        )
+        target_membership = (
+            self.db.query(ClassStudent)
+            .options(joinedload(ClassStudent.student))
+            .filter(ClassStudent.id == target_membership.id)
+            .first()
+        )
+        assert source_membership is not None
+        assert target_membership is not None
+        return {
+            "student_id": student_id,
+            "source_class_id": source_class.id,
+            "target_class_id": target_class.id,
+            "source_membership": source_membership,
+            "target_membership": target_membership,
+        }
+
     def list_teachers(
         self,
         *,

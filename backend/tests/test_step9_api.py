@@ -412,6 +412,94 @@ def test_class_can_start_without_teacher_and_receive_one_later(override_get_db, 
     assert teacher_after_remove.status_code == 404
 
 
+def test_admin_can_transfer_student_between_classes_with_audit_trail(
+    override_get_db, test_db_session
+):
+    teacher_a, _teacher_a_headers = _create_teacher_user(
+        test_db_session,
+        "teacher_transfer_a@cola-zero.edu",
+        "teacher-transfer-a-pass",
+    )
+    teacher_b, _teacher_b_headers = _create_teacher_user(
+        test_db_session,
+        "teacher_transfer_b@cola-zero.edu",
+        "teacher-transfer-b-pass",
+    )
+    student, student_headers = _create_student_user(
+        test_db_session,
+        email="student_transfer@cola-zero.edu",
+        password="student-transfer-pass",
+        student_code="13579",
+    )
+    _admin, admin_headers = _create_admin_user(
+        test_db_session,
+        "admin_transfer@cola-zero.edu",
+        "admin-transfer-pass",
+    )
+
+    class_a_res = client.post(
+        "/api/v1/classes",
+        json={
+            "name": "Turma Origem",
+            "description": "classe de origem",
+            "academic_period": "2026",
+            "teacher_id": str(teacher_a.id),
+        },
+        headers=admin_headers,
+    )
+    assert class_a_res.status_code == 201, class_a_res.text
+    class_a_id = class_a_res.json()["id"]
+
+    class_b_res = client.post(
+        "/api/v1/classes",
+        json={
+            "name": "Turma Destino",
+            "description": "classe de destino",
+            "academic_period": "2026",
+            "teacher_id": str(teacher_b.id),
+        },
+        headers=admin_headers,
+    )
+    assert class_b_res.status_code == 201, class_b_res.text
+    class_b_id = class_b_res.json()["id"]
+
+    add_student_res = client.post(
+        f"/api/v1/classes/{class_a_id}/students",
+        json={"student_ids": [str(student.id)]},
+        headers=admin_headers,
+    )
+    assert add_student_res.status_code == 201, add_student_res.text
+
+    transfer_res = client.post(
+        f"/api/v1/classes/{class_a_id}/students/{student.id}/transfer",
+        json={"target_class_id": class_b_id},
+        headers=admin_headers,
+    )
+    assert transfer_res.status_code == 200, transfer_res.text
+    payload = transfer_res.json()
+    assert payload["student_id"] == str(student.id)
+    assert payload["source_class_id"] == class_a_id
+    assert payload["target_class_id"] == class_b_id
+    assert payload["source_membership"]["is_active"] is False
+    assert payload["target_membership"]["is_active"] is True
+
+    class_a_detail = client.get(f"/api/v1/classes/{class_a_id}", headers=admin_headers)
+    assert class_a_detail.status_code == 200
+    assert class_a_detail.json()["memberships"][0]["is_active"] is False
+
+    class_b_detail = client.get(f"/api/v1/classes/{class_b_id}", headers=admin_headers)
+    assert class_b_detail.status_code == 200
+    assert class_b_detail.json()["memberships"][0]["is_active"] is True
+
+    student_classes = client.get("/api/v1/me/classes", headers=student_headers)
+    assert student_classes.status_code == 200
+    assert [item["id"] for item in student_classes.json()] == [class_b_id]
+
+    audit_logs = client.get("/api/v1/audit-logs", headers=admin_headers)
+    assert audit_logs.status_code == 200
+    assert "class_student.transfer" in {item["event_type"] for item in audit_logs.json()}
+
+
 def test_audit_logs_consents_and_monitoring_security_events(override_get_db, test_db_session):
     teacher, teacher_headers = _create_teacher_user(
         test_db_session,

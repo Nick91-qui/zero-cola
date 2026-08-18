@@ -26,6 +26,10 @@ class ClassStudentCreate(BaseModel):
     student_ids: list[UUID]
 
 
+class ClassStudentTransferCreate(BaseModel):
+    target_class_id: UUID
+
+
 class ClassTeacherCreate(BaseModel):
     teacher_ids: list[UUID]
 
@@ -72,3 +76,13 @@ class ClassTeacherResponse(BaseModel):
 class ClassDetailResponse(ClassResponse):
     memberships: list[ClassStudentResponse] = Field(default_factory=list)
     teachers: list[ClassTeacherResponse] = Field(default_factory=list)
+
+
+class ClassStudentTransferResponse(BaseModel):
+    student_id: UUID
+    source_class_id: UUID
+    target_class_id: UUID
+    source_membership: ClassStudentResponse
+    target_membership: ClassStudentResponse
+
+    model_config = ConfigDict(from_attributes=True)

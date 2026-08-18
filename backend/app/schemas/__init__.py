@@ -17,6 +17,8 @@ from app.schemas.class_ import (
     ClassResponse,
     ClassStudentCreate,
     ClassStudentResponse,
+    ClassStudentTransferCreate,
+    ClassStudentTransferResponse,
     ClassUpdate,
 )
 from app.schemas.consent import ConsentCreate, ConsentResponse, MonitoringConsentCreate
@@ -87,6 +89,8 @@ __all__ = [
     "ClassDetailResponse",
     "ClassStudentCreate",
     "ClassStudentResponse",
+    "ClassStudentTransferCreate",
+    "ClassStudentTransferResponse",
     "ConsentCreate",
     "MonitoringConsentCreate",
     "ConsentResponse",
