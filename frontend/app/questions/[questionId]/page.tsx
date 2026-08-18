@@ -203,10 +203,8 @@ export default function QuestionDetailPage() {
 
               <form onSubmit={handleSave} className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-lg font-semibold text-slate-900">Editar e versionar</h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    A edição cria uma nova versão e preserva o histórico da anterior.
-                  </p>
+                  <h2 className="text-lg font-semibold text-slate-900">Editar</h2>
+                  <p className="mt-1 text-sm text-slate-600">Salvar cria uma nova versão desta questão.</p>
 
                   <label className="mt-5 block text-sm font-medium text-slate-700">
                     Enunciado
@@ -266,7 +264,7 @@ export default function QuestionDetailPage() {
                       </select>
                     </label>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                      A nova versão será criada com `parent_id` apontando para esta questão.
+                      Histórico preservado na próxima versão.
                     </div>
                   </div>
 
@@ -310,10 +308,8 @@ export default function QuestionDetailPage() {
                 </section>
 
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-lg font-semibold text-slate-900">Habilidades vinculadas</h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    A nova versão pode manter ou trocar as habilidades associadas.
-                  </p>
+                  <h2 className="text-lg font-semibold text-slate-900">Habilidades</h2>
+                  <p className="mt-1 text-sm text-slate-600">Selecione as habilidades desta versão.</p>
 
                   <div className="mt-4 grid gap-2">
                     {skills.map((skill) => {

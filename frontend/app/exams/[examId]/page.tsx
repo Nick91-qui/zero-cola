@@ -371,10 +371,8 @@ export default function ExamDetailStatisticsPage() {
           <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Turmas vinculadas</h2>
-                    <p className="text-sm text-slate-600">
-                      Ajuste as turmas que podem acessar esta avaliação. A publicação continua separada da atribuição.
-                    </p>
+                    <h2 className="text-lg font-semibold text-slate-900">Turmas</h2>
+                    <p className="text-sm text-slate-600">Selecione as turmas com acesso a esta avaliação.</p>
                   </div>
                   <button
                     type="button"
@@ -429,10 +427,8 @@ export default function ExamDetailStatisticsPage() {
           >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Pré-visualização da prova</h2>
-                    <p className="text-sm text-slate-600">
-                      Exibição da composição sem gabarito para revisão antes da publicação.
-                    </p>
+                    <h2 className="text-lg font-semibold text-slate-900">Pré-visualização</h2>
+                    <p className="text-sm text-slate-600">Visualização da prova sem gabarito.</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                     {exam.exam_questions.length} questão(ões)
@@ -510,10 +506,8 @@ export default function ExamDetailStatisticsPage() {
           <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Estatísticas e exportações</h2>
-                    <p className="text-sm text-slate-600">
-                      Os resultados consolidados continuam disponíveis no mesmo domínio unificado de avaliação.
-                    </p>
+                    <h2 className="text-lg font-semibold text-slate-900">Resultados e exportações</h2>
+                    <p className="text-sm text-slate-600">Resumo por questão e arquivos de saída.</p>
                   </div>
                   <div className="flex gap-2">
                     <Link
@@ -582,12 +576,8 @@ export default function ExamDetailStatisticsPage() {
                       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                           <div>
-                            <h3 className="text-base font-semibold text-slate-900">
-                              Habilidades avaliadas
-                            </h3>
-                            <p className="mt-1 text-sm text-slate-600">
-                              Agrupamento por habilidade com taxa de acerto consolidada.
-                            </p>
+                            <h3 className="text-base font-semibold text-slate-900">Habilidades</h3>
+                            <p className="mt-1 text-sm text-slate-600">Taxa de acerto por habilidade.</p>
                           </div>
                           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                             {skillInsights.length} habilidade(s)
@@ -647,12 +637,8 @@ export default function ExamDetailStatisticsPage() {
                       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                           <div>
-                            <h3 className="text-base font-semibold text-slate-900">
-                              Questões mais sensíveis
-                            </h3>
-                            <p className="mt-1 text-sm text-slate-600">
-                              Leitura visual das questões com menor taxa de acerto.
-                            </p>
+                            <h3 className="text-base font-semibold text-slate-900">Questões críticas</h3>
+                            <p className="mt-1 text-sm text-slate-600">Menor taxa de acerto.</p>
                           </div>
                           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                             Top 5
