@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.db.session import get_db
+from app.schemas import PrivacyRequestResponse
 from app.schemas.privacy import DataExportResponse, PrivacyPolicyResponse
 from app.services.audit_log import AuditLogService
 from app.services.privacy import PrivacyService
@@ -33,11 +34,23 @@ async def export_my_data(
     return {"data": jsonable_encoder(payload)}
 
 
-@router.post("/me/request-anonymization", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/me/request-anonymization", response_model=PrivacyRequestResponse, status_code=status.HTTP_202_ACCEPTED)
 async def request_anonymization(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = PrivacyService(db)
-    service.anonymize_user(user_id=current_user.id)
-    return {"status": "anonymized", "user_id": str(current_user.id)}
+    request = service.request_anonymization(user_id=current_user.id, requested_by_id=current_user.id)
+    return PrivacyRequestResponse.model_validate(request)
+
+
+@router.get("/me/privacy-request", response_model=PrivacyRequestResponse | None)
+async def get_my_privacy_request(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = PrivacyService(db)
+    request = service.get_my_privacy_request(user_id=current_user.id)
+    if request is None:
+        return None
+    return PrivacyRequestResponse.model_validate(request)

@@ -30,3 +30,13 @@ class AttemptStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     SUBMITTED = "submitted"
     GRADED = "graded"
+
+
+class PrivacyRequestType(str, Enum):
+    ANONYMIZATION = "anonymization"
+
+
+class PrivacyRequestStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"

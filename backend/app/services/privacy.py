@@ -9,6 +9,8 @@ from app.models.audit_log import AuditLog
 from app.models.consent import Consent
 from app.models.exam import Exam
 from app.models.grade import Grade
+from app.models.enums import PrivacyRequestStatus, PrivacyRequestType
+from app.models.privacy_request import PrivacyRequest
 from app.models.security_event import SecurityEvent
 from app.models.user import User
 from app.services.audit_log import AuditLogService
@@ -196,7 +198,182 @@ class PrivacyService:
             ],
         }
 
-    def anonymize_user(self, *, user_id: UUID | str) -> User:
+    def _get_privacy_request(self, request_id: UUID | str) -> PrivacyRequest | None:
+        if isinstance(request_id, str):
+            request_id = UUID(request_id)
+        return (
+            self.db.query(PrivacyRequest)
+            .options(joinedload(PrivacyRequest.user), joinedload(PrivacyRequest.reviewed_by))
+            .filter(PrivacyRequest.id == request_id)
+            .first()
+        )
+
+    def request_anonymization(
+        self,
+        *,
+        user_id: UUID | str,
+        requested_by_id: UUID | str | None = None,
+        reason: str | None = None,
+    ) -> PrivacyRequest:
+        if isinstance(user_id, str):
+            user_id = UUID(user_id)
+        if isinstance(requested_by_id, str):
+            requested_by_id = UUID(requested_by_id)
+
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise ValueError(f"User {user_id} not found.")
+        if user.anonymized_at is not None:
+            raise ValueError(f"User {user_id} is already anonymized.")
+
+        existing_request = (
+            self.db.query(PrivacyRequest)
+            .options(joinedload(PrivacyRequest.user), joinedload(PrivacyRequest.reviewed_by))
+            .filter(
+                PrivacyRequest.user_id == user.id,
+                PrivacyRequest.request_type == PrivacyRequestType.ANONYMIZATION,
+                PrivacyRequest.status == PrivacyRequestStatus.PENDING,
+            )
+            .first()
+        )
+        if existing_request is not None:
+            return existing_request
+
+        request = PrivacyRequest(
+            user_id=user.id,
+            requested_by_id=requested_by_id or user.id,
+            request_type=PrivacyRequestType.ANONYMIZATION,
+            status=PrivacyRequestStatus.PENDING,
+            reason=reason,
+        )
+        self.db.add(request)
+        self.db.flush()
+        self.audit_log_service.record(
+            event_type="lgpd.anonymization_requested",
+            user_id=user.id,
+            resource_type="privacy_request",
+            resource_id=request.id,
+            metadata={
+                "email": user.email,
+                "request_type": request.request_type.value,
+                "status": request.status.value,
+                "reason": reason,
+            },
+        )
+        self.db.commit()
+        refreshed_request = self._get_privacy_request(request.id)
+        assert refreshed_request is not None
+        return refreshed_request
+
+    def list_privacy_requests(
+        self,
+        *,
+        status: PrivacyRequestStatus | None = PrivacyRequestStatus.PENDING,
+    ) -> list[PrivacyRequest]:
+        query = self.db.query(PrivacyRequest).options(
+            joinedload(PrivacyRequest.user),
+            joinedload(PrivacyRequest.reviewed_by),
+        )
+        if status is not None:
+            query = query.filter(PrivacyRequest.status == status)
+        return query.order_by(PrivacyRequest.created_at.desc()).all()
+
+    def get_my_privacy_request(self, *, user_id: UUID | str) -> PrivacyRequest | None:
+        if isinstance(user_id, str):
+            user_id = UUID(user_id)
+        return (
+            self.db.query(PrivacyRequest)
+            .options(joinedload(PrivacyRequest.user), joinedload(PrivacyRequest.reviewed_by))
+            .filter(
+                PrivacyRequest.user_id == user_id,
+                PrivacyRequest.request_type == PrivacyRequestType.ANONYMIZATION,
+            )
+            .order_by(PrivacyRequest.created_at.desc())
+            .first()
+        )
+
+    def approve_privacy_request(
+        self,
+        *,
+        request_id: UUID | str,
+        reviewer: User,
+    ) -> PrivacyRequest:
+        request = self._get_privacy_request(request_id)
+        if request is None:
+            raise ValueError(f"Privacy request {request_id} not found.")
+        if request.status != PrivacyRequestStatus.PENDING:
+            raise ValueError(f"Privacy request {request_id} is not pending.")
+
+        request.status = PrivacyRequestStatus.APPROVED
+        request.reviewed_by_id = reviewer.id
+        request.reviewed_at = datetime.now(timezone.utc)
+        request.resolution_note = "approved"
+        self.audit_log_service.record(
+            event_type="admin.user_delete_approved",
+            user_id=reviewer.id,
+            resource_type="privacy_request",
+            resource_id=request.id,
+            metadata={
+                "email": request.user.email,
+                "request_type": request.request_type.value,
+                "status": request.status.value,
+            },
+        )
+        anonymized_user = self.anonymize_user(user_id=request.user_id, record_request_event=False)
+        self.audit_log_service.record(
+            event_type="admin.user_deleted",
+            user_id=reviewer.id,
+            resource_type="user",
+            resource_id=request.user_id,
+            metadata={
+                "email": request.user.email,
+                "role": request.user.role.value,
+                "is_active": False,
+                "anonymized_at": anonymized_user.anonymized_at.isoformat()
+                if anonymized_user.anonymized_at
+                else None,
+            },
+        )
+        self.db.commit()
+        refreshed_request = self._get_privacy_request(request.id)
+        assert refreshed_request is not None
+        return refreshed_request
+
+    def reject_privacy_request(
+        self,
+        *,
+        request_id: UUID | str,
+        reviewer: User,
+        resolution_note: str | None = None,
+    ) -> PrivacyRequest:
+        request = self._get_privacy_request(request_id)
+        if request is None:
+            raise ValueError(f"Privacy request {request_id} not found.")
+        if request.status != PrivacyRequestStatus.PENDING:
+            raise ValueError(f"Privacy request {request_id} is not pending.")
+
+        request.status = PrivacyRequestStatus.REJECTED
+        request.reviewed_by_id = reviewer.id
+        request.reviewed_at = datetime.now(timezone.utc)
+        request.resolution_note = resolution_note
+        self.audit_log_service.record(
+            event_type="admin.user_delete_rejected",
+            user_id=reviewer.id,
+            resource_type="privacy_request",
+            resource_id=request.id,
+            metadata={
+                "email": request.user.email,
+                "request_type": request.request_type.value,
+                "status": request.status.value,
+                "resolution_note": resolution_note,
+            },
+        )
+        self.db.commit()
+        refreshed_request = self._get_privacy_request(request.id)
+        assert refreshed_request is not None
+        return refreshed_request
+
+    def anonymize_user(self, *, user_id: UUID | str, record_request_event: bool = True) -> User:
         if isinstance(user_id, str):
             user_id = UUID(user_id)
 
@@ -221,13 +398,14 @@ class PrivacyService:
             consent.granted = False
             consent.revoked_at = now
 
-        self.audit_log_service.record(
-            event_type="lgpd.anonymization_requested",
-            user_id=user.id,
-            resource_type="user",
-            resource_id=user.id,
-            metadata={"email": anonymized_email},
-        )
+        if record_request_event:
+            self.audit_log_service.record(
+                event_type="lgpd.anonymization_requested",
+                user_id=user.id,
+                resource_type="user",
+                resource_id=user.id,
+                metadata={"email": anonymized_email},
+            )
         self.db.commit()
         self.db.refresh(user)
         return user

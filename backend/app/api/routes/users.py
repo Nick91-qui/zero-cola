@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user, require_role
 from app.db.session import get_db
-from app.models.enums import UserRole
+from app.models.enums import PrivacyRequestStatus, UserRole
 from app.repositories.user import UserRepository
-from app.schemas import UserCreate, UserResponse
+from app.schemas import PrivacyRequestResponse, UserCreate, UserResponse
 from app.services.audit_log import AuditLogService
 from app.services.auth import AuthService
 from app.services.privacy import PrivacyService
@@ -66,6 +66,56 @@ async def search_users(
 ):
     repo = UserRepository(db)
     return repo.search(query=q, role=role, limit=limit)
+
+
+@router.get("/privacy-requests", response_model=list[PrivacyRequestResponse])
+@require_role(UserRole.ADMIN)
+async def list_privacy_requests(
+    status: PrivacyRequestStatus | None = PrivacyRequestStatus.PENDING,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = PrivacyService(db)
+    requests = service.list_privacy_requests(status=status)
+    return [PrivacyRequestResponse.model_validate(request) for request in requests]
+
+
+@router.post("/privacy-requests/{request_id}/approve", response_model=PrivacyRequestResponse)
+@require_role(UserRole.ADMIN)
+async def approve_privacy_request(
+    request_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = PrivacyService(db)
+    try:
+        request = service.approve_privacy_request(request_id=request_id, reviewer=current_user)
+        return PrivacyRequestResponse.model_validate(request)
+    except ValueError as exc:
+        message = str(exc)
+        status_code = status.HTTP_409_CONFLICT
+        if "not found" in message.lower():
+            status_code = status.HTTP_404_NOT_FOUND
+        raise HTTPException(status_code=status_code, detail=message)
+
+
+@router.post("/privacy-requests/{request_id}/reject", response_model=PrivacyRequestResponse)
+@require_role(UserRole.ADMIN)
+async def reject_privacy_request(
+    request_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = PrivacyService(db)
+    try:
+        request = service.reject_privacy_request(request_id=request_id, reviewer=current_user)
+        return PrivacyRequestResponse.model_validate(request)
+    except ValueError as exc:
+        message = str(exc)
+        status_code = status.HTTP_409_CONFLICT
+        if "not found" in message.lower():
+            status_code = status.HTTP_404_NOT_FOUND
+        raise HTTPException(status_code=status_code, detail=message)
 
 
 @router.post("/users/{user_id}/archive", response_model=UserResponse)

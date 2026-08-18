@@ -8,6 +8,7 @@ from app.models.exam import Exam, ExamClass
 from app.models.exam_question import ExamQuestion
 from app.models.grade import Grade
 from app.models.omr import OMRScan, OMRTemplate
+from app.models.privacy_request import PrivacyRequest
 from app.models.question import Question
 from app.models.security_event import SecurityEvent
 from app.models.skill import Skill, question_skills
@@ -31,6 +32,7 @@ __all__ = [
     "TeacherClass",
     "Consent",
     "AuditLog",
+    "PrivacyRequest",
     "SecurityEvent",
     "Attempt",
     "AttemptAnswer",

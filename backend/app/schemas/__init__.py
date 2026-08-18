@@ -44,6 +44,7 @@ from app.schemas.omr import (
     OMRTemplateResponse,
 )
 from app.schemas.privacy import DataExportResponse, PrivacyPolicyResponse
+from app.schemas.privacy_request import PrivacyRequestResponse
 from app.schemas.security_event import SecurityEventCreate, SecurityEventResponse
 from app.schemas.skill import SkillCreate, SkillResponse
 from app.schemas.user import UserBase, UserCreate, UserLogin, UserResponse, UserUpdate
@@ -99,4 +100,5 @@ __all__ = [
     "SecurityEventResponse",
     "PrivacyPolicyResponse",
     "DataExportResponse",
+    "PrivacyRequestResponse",
 ]

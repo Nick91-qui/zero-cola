@@ -16,6 +16,12 @@ import {
   listUsers,
   type UserSearchResult,
 } from '@/lib/users';
+import {
+  approvePrivacyRequest,
+  listPrivacyRequests,
+  rejectPrivacyRequest,
+  type PrivacyRequest,
+} from '@/lib/privacy';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 
 type AdminUserRole = 'student' | 'teacher';
@@ -36,16 +42,24 @@ export default function AdminUsersPage() {
 
   const [users, setUsers] = useState<UserSearchResult[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [privacyRequests, setPrivacyRequests] = useState<PrivacyRequest[]>([]);
+  const [loadingPrivacyRequests, setLoadingPrivacyRequests] = useState(true);
   const [directorySearch, setDirectorySearch] = useState('');
   const [directoryRoleFilter, setDirectoryRoleFilter] = useState<DirectoryRoleFilter>('all');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isReviewingRequest, setIsReviewingRequest] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<
     | { kind: 'archive'; target: UserSearchResult }
     | { kind: 'delete'; target: UserSearchResult }
+    | null
+  >(null);
+  const [pendingPrivacyAction, setPendingPrivacyAction] = useState<
+    | { kind: 'approve'; target: PrivacyRequest }
+    | { kind: 'reject'; target: PrivacyRequest }
     | null
   >(null);
 
@@ -73,9 +87,22 @@ export default function AdminUsersPage() {
     }
   };
 
+  const loadPrivacyRequests = async () => {
+    try {
+      setLoadingPrivacyRequests(true);
+      const data = await listPrivacyRequests();
+      setPrivacyRequests(data);
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Falha ao carregar solicitações');
+    } finally {
+      setLoadingPrivacyRequests(false);
+    }
+  };
+
   useEffect(() => {
     void loadClasses();
     void loadUsers();
+    void loadPrivacyRequests();
   }, []);
 
   const teacherLookup = useMemo(() => {
@@ -120,7 +147,7 @@ export default function AdminUsersPage() {
   };
 
   const refreshAll = async () => {
-    await Promise.all([loadClasses(), loadUsers()]);
+    await Promise.all([loadClasses(), loadUsers(), loadPrivacyRequests()]);
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -225,6 +252,40 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleApprovePrivacyRequest = (target: PrivacyRequest) => {
+    setPendingPrivacyAction({ kind: 'approve', target });
+  };
+
+  const handleRejectPrivacyRequest = (target: PrivacyRequest) => {
+    setPendingPrivacyAction({ kind: 'reject', target });
+  };
+
+  const confirmPendingPrivacyAction = async () => {
+    if (!pendingPrivacyAction) return;
+
+    const { kind, target } = pendingPrivacyAction;
+    setIsReviewingRequest(true);
+    setLocalError(null);
+    setSuccessMessage(null);
+
+    try {
+      if (kind === 'approve') {
+        await approvePrivacyRequest(target.id);
+        setSuccessMessage(`Solicitação de ${target.user.email} aprovada e anonimizada.`);
+      } else {
+        await rejectPrivacyRequest(target.id);
+        setSuccessMessage(`Solicitação de ${target.user.email} rejeitada.`);
+      }
+      await loadPrivacyRequests();
+      await loadUsers();
+      setPendingPrivacyAction(null);
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Falha ao revisar solicitação');
+    } finally {
+      setIsReviewingRequest(false);
+    }
+  };
+
   const assignmentLabel =
     role === 'student'
       ? 'Matricular aluno nas turmas selecionadas'
@@ -288,6 +349,73 @@ export default function AdminUsersPage() {
           <p className="mt-2 text-3xl font-bold text-slate-900">{stats.students}</p>
         </div>
       </div>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Solicitações de exclusão</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Pedidos enviados pelos usuários para análise administrativa.
+            </p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {loadingPrivacyRequests ? 'Carregando...' : `${privacyRequests.length} pendência(s)`}
+          </span>
+        </div>
+
+        {loadingPrivacyRequests ? (
+          <p className="mt-6 text-sm text-slate-500">Carregando solicitações...</p>
+        ) : privacyRequests.length === 0 ? (
+          <p className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
+            Nenhuma solicitação pendente.
+          </p>
+        ) : (
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {privacyRequests.map((request) => (
+              <article key={request.id} className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      {request.user.email}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {request.user.role}
+                      {request.user.student_code ? ` · ${request.user.student_code}` : ''}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-600">
+                    {request.status}
+                  </span>
+                </div>
+
+                <p className="mt-3 text-sm text-slate-700">
+                  Solicitado em {new Date(request.created_at).toLocaleString('pt-BR')}
+                </p>
+                {request.reason ? (
+                  <p className="mt-2 text-sm text-slate-700">{request.reason}</p>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleApprovePrivacyRequest(request)}
+                    className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
+                  >
+                    Aprovar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRejectPrivacyRequest(request)}
+                    className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Rejeitar
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1.05fr]">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -684,6 +812,33 @@ export default function AdminUsersPage() {
         busy={isConfirming}
         onConfirm={confirmPendingAction}
         onCancel={() => setPendingAction(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingPrivacyAction !== null}
+        title={
+          pendingPrivacyAction?.kind === 'approve'
+            ? 'Aprovar exclusão?'
+            : 'Rejeitar exclusão?'
+        }
+        message={
+          pendingPrivacyAction?.kind === 'approve'
+            ? `Aprovar a anonimização da conta de ${pendingPrivacyAction.target.user.email}?`
+            : `Rejeitar a solicitação de ${pendingPrivacyAction?.target.user.email}?`
+        }
+        warning={
+          pendingPrivacyAction?.kind === 'approve'
+            ? 'A conta será anonimizada e o usuário perderá acesso ao sistema.'
+            : 'A solicitação será marcada como rejeitada e o usuário continuará com acesso.'
+        }
+        confirmLabel={
+          pendingPrivacyAction?.kind === 'approve'
+            ? 'Confirmar aprovação'
+            : 'Confirmar rejeição'
+        }
+        busy={isReviewingRequest}
+        onConfirm={confirmPendingPrivacyAction}
+        onCancel={() => setPendingPrivacyAction(null)}
       />
     </div>
   );

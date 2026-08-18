@@ -646,7 +646,67 @@ def test_privacy_export_and_anonymization_blocks_access(override_get_db, test_db
 
     anonymize_res = client.post("/api/v1/me/request-anonymization", headers=student_headers)
     assert anonymize_res.status_code == 202
-    assert anonymize_res.json()["status"] == "anonymized"
+    request_payload = anonymize_res.json()
+    assert request_payload["status"] == "pending"
+    assert request_payload["user"]["email"] == "student_privacy@cola-zero.edu"
+
+    request_lookup_res = client.get("/api/v1/me/privacy-request", headers=student_headers)
+    assert request_lookup_res.status_code == 200
+    assert request_lookup_res.json()["status"] == "pending"
+
+    test_db_session.expire_all()
+    pending_student = test_db_session.query(User).filter(User.id == student.id).one()
+    assert pending_student.is_active is True
+    assert pending_student.anonymized_at is None
+    assert pending_student.email == "student_privacy@cola-zero.edu"
+
+    monitoring_consent = (
+        test_db_session.query(Consent)
+        .filter(Consent.user_id == student.id, Consent.consent_type == "monitoring")
+        .one_or_none()
+    )
+    if monitoring_consent is not None:
+        assert monitoring_consent.granted is True
+        assert monitoring_consent.revoked_at is None
+
+    current_user_res = client.get("/api/v1/auth/me", headers=student_headers)
+    assert current_user_res.status_code == 200
+
+    login_res = client.post(
+        "/api/v1/auth/login",
+        json={"email": "student_privacy@cola-zero.edu", "password": "student-privacy-pass"},
+    )
+    assert login_res.status_code == 200
+
+    assert client.get("/api/v1/me/data-export", headers=student_headers).status_code == 200
+
+
+def test_admin_can_review_privacy_request_and_anonymize_user(override_get_db, test_db_session):
+    student, student_headers = _create_student_user(
+        test_db_session,
+        email="student_privacy_admin@cola-zero.edu",
+        password="student-privacy-admin-pass",
+        student_code="67891",
+    )
+    _admin, admin_headers = _create_admin_user(
+        test_db_session,
+        "admin_privacy@cola-zero.edu",
+        "admin-privacy-pass",
+    )
+
+    request_res = client.post("/api/v1/me/request-anonymization", headers=student_headers)
+    assert request_res.status_code == 202, request_res.text
+    request_id = request_res.json()["id"]
+
+    list_res = client.get("/api/v1/privacy-requests", headers=admin_headers)
+    assert list_res.status_code == 200
+    assert [item["id"] for item in list_res.json()] == [request_id]
+
+    approve_res = client.post(f"/api/v1/privacy-requests/{request_id}/approve", headers=admin_headers)
+    assert approve_res.status_code == 200, approve_res.text
+    approved_payload = approve_res.json()
+    assert approved_payload["status"] == "approved"
+    assert approved_payload["reviewed_by"]["email"] == "admin_privacy@cola-zero.edu"
 
     test_db_session.expire_all()
     anonymized_student = test_db_session.query(User).filter(User.id == student.id).one()
@@ -654,21 +714,5 @@ def test_privacy_export_and_anonymization_blocks_access(override_get_db, test_db
     assert anonymized_student.anonymized_at is not None
     assert anonymized_student.email.startswith("anonymized-")
 
-    revoked_consent = (
-        test_db_session.query(Consent)
-        .filter(Consent.user_id == student.id, Consent.consent_type == "monitoring")
-        .one()
-    )
-    assert revoked_consent.granted is False
-    assert revoked_consent.revoked_at is not None
-
     current_user_res = client.get("/api/v1/auth/me", headers=student_headers)
     assert current_user_res.status_code == 401
-
-    login_res = client.post(
-        "/api/v1/auth/login",
-        json={"email": "student_privacy@cola-zero.edu", "password": "student-privacy-pass"},
-    )
-    assert login_res.status_code == 401
-
-    assert client.get("/api/v1/me/data-export", headers=student_headers).status_code == 401

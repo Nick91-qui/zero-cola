@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { listMyConsents, upsertMonitoringConsent, type Consent } from '@/lib/consents';
-import { exportMyData, requestAnonymization } from '@/lib/privacy';
+import {
+  exportMyData,
+  getMyPrivacyRequest,
+  requestAnonymization,
+  type PrivacyRequest,
+} from '@/lib/privacy';
 
 export default function ConsentsPage() {
   const [consents, setConsents] = useState<Consent[]>([]);
@@ -10,12 +15,17 @@ export default function ConsentsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [privacyRequest, setPrivacyRequest] = useState<PrivacyRequest | null>(null);
 
   const load = async () => {
     try {
       setLoading(true);
-      const data = await listMyConsents();
-      setConsents(data);
+      const [consentData, requestData] = await Promise.all([
+        listMyConsents(),
+        getMyPrivacyRequest().catch(() => null),
+      ]);
+      setConsents(consentData);
+      setPrivacyRequest(requestData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao carregar consentimentos');
     } finally {
@@ -66,7 +76,7 @@ export default function ConsentsPage() {
     setMessage(null);
     try {
       const result = await requestAnonymization();
-      setMessage(`Pedido concluído para o usuário ${result.user_id}.`);
+      setMessage(`Solicitação ${result.status} para o usuário ${result.user.email}.`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao solicitar anonimização');
@@ -118,11 +128,19 @@ export default function ConsentsPage() {
             <button
               type="button"
               onClick={handleAnonymize}
-              disabled={saving}
+              disabled={saving || privacyRequest?.status === 'pending'}
               className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:bg-slate-100"
             >
-              Solicitar anonimização
+              {privacyRequest?.status === 'pending' ? 'Solicitação já enviada' : 'Solicitar exclusão da conta'}
             </button>
+            {privacyRequest ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <p className="font-semibold text-slate-900">Status: {privacyRequest.status}</p>
+                <p className="mt-1">
+                  Enviado em {new Date(privacyRequest.created_at).toLocaleString('pt-BR')}
+                </p>
+              </div>
+            ) : null}
           </div>
         </section>
 
